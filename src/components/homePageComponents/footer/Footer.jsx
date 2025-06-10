@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Facebook,
   Twitter,
@@ -12,6 +13,7 @@ import {
 import { Button } from "../../ui";
 
 const Footer = () => {
+  const navigate = useNavigate();
   const footerLinks = {
     company: [
       { name: "About Us", href: "/about" },
@@ -28,7 +30,7 @@ const Footer = () => {
       { name: "Size Guide", href: "/size-guide" },
     ],
     sellers: [
-      { name: "Become a Seller", href: "/sell" },
+      { name: "Become a Seller", href: "/seller-registration" },
       { name: "Seller Dashboard", href: "/seller-dashboard" },
       { name: "Seller Resources", href: "/seller-resources" },
       { name: "API Documentation", href: "/api-docs" },
@@ -83,6 +85,7 @@ const Footer = () => {
                 variant="primary"
                 size="xl"
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:text-white hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold shadow-lg"
+                onClick={() => navigate("/seller-registration")}
               >
                 📦 Become a Seller
                 <ArrowRight className="ml-2 h-5 w-5" />
