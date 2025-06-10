@@ -1,0 +1,23 @@
+// Country data
+export const countries = [
+  { code: "US", name: "United States", flag: "🇺🇸", dialCode: "+1" },
+  { code: "CA", name: "Canada", flag: "🇨🇦", dialCode: "+1" },
+  { code: "GB", name: "United Kingdom", flag: "🇬🇧", dialCode: "+44" },
+  { code: "DE", name: "Germany", flag: "🇩🇪", dialCode: "+49" },
+  { code: "FR", name: "France", flag: "🇫🇷", dialCode: "+33" },
+  { code: "IT", name: "Italy", flag: "🇮🇹", dialCode: "+39" },
+  { code: "ES", name: "Spain", flag: "🇪🇸", dialCode: "+34" },
+  { code: "AU", name: "Australia", flag: "🇦🇺", dialCode: "+61" },
+  { code: "IN", name: "India", flag: "🇮🇳", dialCode: "+91" },
+  { code: "JP", name: "Japan", flag: "🇯🇵", dialCode: "+81" },
+  { code: "KR", name: "South Korea", flag: "🇰🇷", dialCode: "+82" },
+  { code: "CN", name: "China", flag: "🇨🇳", dialCode: "+86" },
+  { code: "BR", name: "Brazil", flag: "🇧🇷", dialCode: "+55" },
+  { code: "MX", name: "Mexico", flag: "🇲🇽", dialCode: "+52" },
+  { code: "AR", name: "Argentina", flag: "🇦🇷", dialCode: "+54" },
+  { code: "ZA", name: "South Africa", flag: "🇿🇦", dialCode: "+27" },
+  { code: "EG", name: "Egypt", flag: "🇪🇬", dialCode: "+20" },
+  { code: "NG", name: "Nigeria", flag: "🇳🇬", dialCode: "+234" },
+  { code: "RU", name: "Russia", flag: "🇷🇺", dialCode: "+7" },
+  { code: "TR", name: "Turkey", flag: "🇹🇷", dialCode: "+90" },
+];
