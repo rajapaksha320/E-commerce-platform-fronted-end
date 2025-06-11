@@ -11,10 +11,16 @@ import {
   Eye,
 } from "lucide-react";
 import { Card, Button, Badge } from "../../ui";
+import { useNavigate } from "react-router-dom";
 
 const Shops = () => {
   const [viewMode, setViewMode] = useState("grid");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const navigate = useNavigate();
+
+  const handleLoadMoreShops = () => {
+      navigate("/shop-collections");
+  }
 
   const categories = [
     { id: "all", name: "All Shops", count: 150 },
@@ -118,6 +124,7 @@ const Shops = () => {
       discount: "40% off clearance",
     },
   ];
+
 
   const filteredShops =
     selectedCategory === "all"
@@ -294,7 +301,7 @@ const Shops = () => {
 
         {/* Load More Button */}
         <div className="text-center">
-          <Button size="lg" variant="outline">
+          <Button size="lg" variant="outline" onClick={handleLoadMoreShops}>
             Load More Shops
           </Button>
         </div>

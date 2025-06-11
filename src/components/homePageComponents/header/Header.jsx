@@ -11,8 +11,10 @@ import {
   Gift,
 } from "lucide-react";
 import { Button, Card, Badge } from "../../ui";
+import { useNavigate } from "react-router-dom";
 
 const Header = () => {
+  const navigate = useNavigate();
   const stats = [
     {
       icon: ShoppingBag,
@@ -67,6 +69,14 @@ const Header = () => {
       gradient: "from-pink-500 to-rose-600",
     },
   ];
+
+  const handleShopping = () => {
+    navigate("/shop-collections");
+  }
+
+  const handleBrowseCategories = () => {
+    navigate("/category-collections");
+  };
 
   return (
     <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-hidden min-h-screen flex items-center">
@@ -131,6 +141,7 @@ const Header = () => {
               <Button
                 size="xl"
                 className="group shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                onClick={handleShopping}
               >
                 <ShoppingBag className="mr-3 h-5 w-5" />
                 Start Shopping
@@ -140,6 +151,7 @@ const Header = () => {
                 variant="outline"
                 size="xl"
                 className="border-2 border-blue-200 text-blue-700 hover:bg-blue-50 shadow-md hover:shadow-lg transition-all duration-300"
+                onClick={handleBrowseCategories}
               >
                 Browse Categories
               </Button>
