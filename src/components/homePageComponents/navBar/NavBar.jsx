@@ -19,6 +19,7 @@ import {
 
 import { Button } from "../../ui/NavUis/Button";
 import AuthModal from "../../authComponents/AuthModal";
+import { useNavigate } from "react-router-dom";
 
 const NavBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -26,14 +27,15 @@ const NavBar = () => {
   const [authView, setAuthView] = useState("login");
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
   const navItems = [
     { name: "Home", href: "/" },
-    { name: "Shops", href: "/shops" },
-    { name: "Categories", href: "/categories" },
+    { name: "Shops", href: "/shop-collections" },
+    { name: "Categories", href: "/category-collections" },
     { name: "Deals", href: "/deals" },
-    { name: "About", href: "/about" },
-    { name: "Contact", href: "/contact" },
+    { name: "About", href: "/about-us" },
+    { name: "Contact", href: "/contact-us" },
   ];
 
   const handleAuthModalOpen = (view = "login") => {
@@ -49,6 +51,10 @@ const NavBar = () => {
     });
     setIsAuthModalOpen(false);
   };
+
+  const handleSellWithUs = () => {
+    navigate("/seller-registration");
+  }
 
   const handleLogout = () => {
     setUser(null);
@@ -100,6 +106,7 @@ const NavBar = () => {
                     variant="ghost"
                     size="sm"
                     className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 font-semibold border border-orange-200 hover:border-orange-300 rounded-full px-4 xl:px-6 text-xs xl:text-sm"
+                    onClick={handleSellWithUs}
                   >
                     <Package className="h-3 w-3 xl:h-4 xl:w-4 mr-1 xl:mr-2" />
                     <span className="hidden xl:inline">Sell with us</span>

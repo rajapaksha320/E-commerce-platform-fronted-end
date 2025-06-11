@@ -284,11 +284,11 @@ const PopularShops = () => {
         </div>
 
         {/* View All Button */}
-        <div className="text-center">
+        {/* <div className="text-center">
           <Button size="lg" variant="outline">
             View All Popular Shops
           </Button>
-        </div>
+        </div> */}
       </div>
     </section>
   );

@@ -13,9 +13,6 @@ import {
   X,
   ExternalLink,
   Sparkles,
-  ArrowRight,
-  ArrowLeft,
-  Loader2,
   Home,
 } from "lucide-react";
 
