@@ -9,9 +9,11 @@ import {
   Award,
 } from "lucide-react";
 import { Card, Button, Badge } from "../../ui";
+import { useNavigate } from "react-router-dom";
 
 const BestItems = () => {
   const [activeTab, setActiveTab] = useState("trending");
+  const navigate = useNavigate();
 
   const tabs = [
     { id: "trending", name: "Trending", icon: TrendingUp },
@@ -155,6 +157,10 @@ const BestItems = () => {
     };
     return variants[badge] || "default";
   };
+
+  const handleShowAllProducts = () => {
+    navigate("/product-collections");
+  }
 
   return (
     <section className="py-16 bg-gray-50">
@@ -301,7 +307,7 @@ const BestItems = () => {
 
         {/* View All Button */}
         <div className="text-center">
-          <Button size="lg" variant="outline">
+          <Button size="lg" variant="outline" onClick={handleShowAllProducts}>
             View All Products
           </Button>
         </div>

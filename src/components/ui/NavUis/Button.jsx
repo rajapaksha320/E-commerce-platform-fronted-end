@@ -1,12 +1,16 @@
+import { Link } from "react-router-dom";
+
 export const Button = ({
   variant = "primary",
   size = "md",
   className = "",
+  href,
+  external = false,
   children,
   ...props
 }) => {
   const baseClasses =
-    "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2";
+    "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 no-underline";
 
   const variants = {
     primary:
@@ -23,13 +27,44 @@ export const Button = ({
     lg: "px-6 py-3 text-base",
   };
 
+  const combinedClasses = `${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`;
+
+  // If href is provided, render as link
+  if (href) {
+    // Check if it's an external link or starts with http/https
+    const isExternal =
+      external ||
+      href.startsWith("http") ||
+      href.startsWith("mailto:") ||
+      href.startsWith("tel:");
+
+    if (isExternal) {
+      // External link - use regular anchor tag
+      return (
+        <a
+          href={href}
+          className={combinedClasses}
+          target={href.startsWith("http") ? "_blank" : undefined}
+          rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+          {...props}
+        >
+          {children}
+        </a>
+      );
+    } else {
+      // Internal link - use React Router Link
+      return (
+        <Link to={href} className={combinedClasses} {...props}>
+          {children}
+        </Link>
+      );
+    }
+  }
+
+  // No href - render as button
   return (
-    <button
-      className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`}
-      {...props}
-    >
+    <button className={combinedClasses} {...props}>
       {children}
     </button>
   );
 };
-
