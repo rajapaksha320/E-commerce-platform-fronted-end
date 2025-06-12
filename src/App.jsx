@@ -18,6 +18,10 @@ import ShippingInfo from "./pages/shippingInfoPage/ShippingInfo";
 import SizeGuide from "./pages/sizeGuide/SizeGuide";
 import TrackParcel from "./pages/trackingPage/TrackParcel";
 import LeaveReview from "./pages/leaveReviewPage/LeaveReview";
+import Deals from "./pages/deals/Deals";
+import ShopView from "./components/shopComponents/ShopView/ShopView";
+import ShopProducts from "./components/shopComponents/shopProducts/shopProducts";
+import ContactShop from "./components/shopComponents/contactShop/ContactShop";
 
 function App() {
   return (
@@ -44,8 +48,11 @@ function App() {
           <Route path="size-guide" element={<SizeGuide />} />
           <Route path="track-parcel" element={<TrackParcel />} />
           <Route path="leave-review" element={<LeaveReview />} />
+          <Route path="deals" element={<Deals />} />
+          <Route path="shop/:shopId" element={<ShopView />} />
+          <Route path="shop-products/:shopId" element={<ShopProducts />} />
+          <Route path="contact-shop/:shopId" element={<ContactShop />} />
         </Route>
-
         {/* Routes that don't use the Layout (standalone pages) */}
         <Route path="/seller-registration" element={<SellerRegisterForm />} />
       </Routes>
