@@ -14,25 +14,25 @@ import {
 const Footer = () => {
   const footerLinks = {
     company: [
-      { name: "About Us", href: "/about" },
-      { name: "Our Story", href: "/story" },
-      { name: "Careers", href: "/careers" },
-      { name: "Press", href: "/press" },
-      { name: "Blog", href: "/blog" },
+      { name: "About Us", href: "/about-us" },
+      { name: "Our Story", href: "/our-story" },
+      // { name: "Careers", href: "/careers" },
+      // { name: "Press", href: "/press" },
+      { name: "Blog", href: "/blogs" },
     ],
     support: [
       { name: "Contact Us", href: "/contact-us" },
       { name: "FAQs", href: "/faqs" },
       { name: "Tracking & Returns", href: "/returns-and-refund" },
-      { name: "Shipping Info", href: "/shipping" },
+      { name: "Shipping Info", href: "/shipping-info" },
       { name: "Size Guide", href: "/size-guide" },
     ],
     sellers: [
       { name: "Become a Seller", href: "/seller-registration" },
       { name: "Seller Dashboard", href: "/seller-dashboard" },
-      { name: "Seller Resources", href: "/seller-resources" },
-      { name: "API Documentation", href: "/api-docs" },
-      { name: "Fees & Pricing", href: "/pricing" },
+      // { name: "Seller Resources", href: "/seller-resources" },
+      // { name: "API Documentation", href: "/api-docs" },
+      // { name: "Fees & Pricing", href: "/pricing" },
     ],
     legal: [
       { name: "Privacy Policy", href: "/privacy" },
@@ -40,13 +40,13 @@ const Footer = () => {
       { name: "Cookie Policy", href: "/cookies" },
       { name: "Refund Policy", href: "/refunds" },
     ],
-    categories: [
-      { name: "Electronics", href: "/electronics" },
-      { name: "Fashion", href: "/fashion" },
-      { name: "Home & Garden", href: "/home-garden" },
-      { name: "Sports", href: "/sports" },
-      { name: "Books", href: "/books" },
-    ],
+    // categories: [
+    //   { name: "Electronics", href: "/electronics" },
+    //   { name: "Fashion", href: "/fashion" },
+    //   { name: "Home & Garden", href: "/home-garden" },
+    //   { name: "Sports", href: "/sports" },
+    //   { name: "Books", href: "/books" },
+    // ],
   };
 
   const socialLinks = [
@@ -126,7 +126,7 @@ const Footer = () => {
 
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Company Info */}
           <div className="lg:col-span-2">
             <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
@@ -224,7 +224,7 @@ const Footer = () => {
           </div>
 
           {/* Categories Links */}
-          <div>
+          {/* <div>
             <h3 className="text-lg font-semibold text-white mb-4">
               Categories
             </h3>
@@ -240,7 +240,7 @@ const Footer = () => {
                 </li>
               ))}
             </ul>
-          </div>
+          </div> */}
         </div>
       </div>
 
