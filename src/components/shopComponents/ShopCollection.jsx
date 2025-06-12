@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, Fragment } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Star,
   MapPin,
@@ -15,10 +16,10 @@ import {
   ChevronUp,
 } from "lucide-react";
 
-import {Card, Button,Badge } from "../ui";
-
+import { Card, Button, Badge } from "../ui";
 
 const ShopCollection = () => {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState("grid");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -261,6 +262,16 @@ const ShopCollection = () => {
     return pages;
   };
 
+  // Handle navigation to shop view
+  const handleVisitShop = (shopId) => {
+    navigate(`/shop/${shopId}`);
+  };
+
+  // Handle shop card click (navigate to shop)
+  const handleShopCardClick = (shopId) => {
+    navigate(`/shop/${shopId}`);
+  };
+
   return (
     <section className="py-16 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -466,10 +477,11 @@ const ShopCollection = () => {
             {currentShops.map((shop) => (
               <Card
                 key={shop.id}
-                className={`group overflow-hidden hover:shadow-lg transition-shadow duration-300 ${
+                className={`group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer ${
                   viewMode === "list" ? "flex flex-col md:flex-row" : ""
                 }`}
                 padding={false}
+                onClick={() => handleShopCardClick(shop.id)}
               >
                 {/* Shop Image */}
                 <div
@@ -488,10 +500,22 @@ const ShopCollection = () => {
                     </Badge>
                   </div>
                   <div className="absolute top-4 right-4 flex gap-2">
-                    <button className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 transition-colors">
+                    <button
+                      className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Handle favorite logic here
+                      }}
+                    >
                       <Heart className="h-4 w-4" />
                     </button>
-                    <button className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors">
+                    <button
+                      className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleVisitShop(shop.id);
+                      }}
+                    >
                       <Eye className="h-4 w-4" />
                     </button>
                   </div>
@@ -534,7 +558,13 @@ const ShopCollection = () => {
                     <span className="text-sm text-gray-500">
                       {shop.products} products
                     </span>
-                    <Button size="sm">
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleVisitShop(shop.id);
+                      }}
+                    >
                       Visit Shop
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
