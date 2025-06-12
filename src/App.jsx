@@ -10,6 +10,14 @@ import ProductCollection from "./components/popularProducts/ProductCollection";
 import ContactUsPage from "./pages/contactUsPage/ContactUsPage";
 import FAQ from "./pages/faqPage/FAQ";
 import ReturnAndRefunds from "./pages/returnPage/ReturnAndRefunds";
+import AboutUs from "./pages/aboutUsPage/AboutUs";
+import OurStory from "./pages/outStoryPage/OurStory";
+import Blogs from "./pages/blogPage/Blogs";
+import BlogPostView from "./pages/blogPage/BlogPostView";
+import ShippingInfo from "./pages/shippingInfoPage/ShippingInfo";
+import SizeGuide from "./pages/sizeGuide/SizeGuide";
+import TrackParcel from "./pages/trackingPage/TrackParcel";
+import LeaveReview from "./pages/leaveReviewPage/LeaveReview";
 
 function App() {
   return (
@@ -28,6 +36,14 @@ function App() {
           <Route path="contact-us" element={<ContactUsPage />} />
           <Route path="faqs" element={<FAQ />} />
           <Route path="returns-and-refund" element={<ReturnAndRefunds />} />
+          <Route path="about-us" element={<AboutUs />} />
+          <Route path="our-story" element={<OurStory />} />
+          <Route path="blogs" element={<Blogs />} />
+          <Route path="blog/:id" element={<BlogPostView />} />
+          <Route path="shipping-info" element={<ShippingInfo />} />
+          <Route path="size-guide" element={<SizeGuide />} />
+          <Route path="track-parcel" element={<TrackParcel />} />
+          <Route path="leave-review" element={<LeaveReview />} />
         </Route>
 
         {/* Routes that don't use the Layout (standalone pages) */}
