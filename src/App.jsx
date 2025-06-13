@@ -22,6 +22,8 @@ import Deals from "./pages/deals/Deals";
 import ShopView from "./components/shopComponents/ShopView/ShopView";
 import ShopProducts from "./components/shopComponents/shopProducts/shopProducts";
 import ContactShop from "./components/shopComponents/contactShop/ContactShop";
+import MainSearchResult from "./pages/searchResultPage/MainSearchResult";
+import ProductPage from "./pages/productPage/ProductPage";
 
 function App() {
   return (
@@ -52,6 +54,8 @@ function App() {
           <Route path="shop/:shopId" element={<ShopView />} />
           <Route path="shop-products/:shopId" element={<ShopProducts />} />
           <Route path="contact-shop/:shopId" element={<ContactShop />} />
+          <Route path="/search" element={<MainSearchResult />} />
+          <Route path="product/:productId" element={<ProductPage />} />
         </Route>
         {/* Routes that don't use the Layout (standalone pages) */}
         <Route path="/seller-registration" element={<SellerRegisterForm />} />

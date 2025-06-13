@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useMemo, useEffect } from "react";
 import {
   Star,
@@ -11,7 +12,16 @@ import {
   Filter,
   ChevronDown,
   ChevronUp,
+  Package,
 } from "lucide-react";
+
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import {
+  Button,
+  Badge,
+  ContactCard as Card,
+} from "../../components/ui/ContactUis/Uis";
+import Pagination from "../../components/ui/ContactUis/Pagination";
 
 const ProductCollection = () => {
   const [viewMode, setViewMode] = useState("grid");
@@ -23,6 +33,10 @@ const ProductCollection = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [likedProducts, setLikedProducts] = useState(new Set());
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const itemsPerPage = 12;
 
   const categories = [
@@ -68,6 +82,7 @@ const ProductCollection = () => {
       id: 1,
       name: "Wireless Bluetooth Headphones Pro Max",
       shop: "TechHub Electronics",
+      shopId: 1,
       category: "electronics",
       image:
         "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
@@ -79,11 +94,15 @@ const ProductCollection = () => {
       discount: 38,
       isNew: false,
       featured: true,
+      inStock: true,
+      freeShipping: true,
+      fastDelivery: true,
     },
     {
       id: 2,
       name: "Smart Fitness Watch Series 7",
       shop: "SportZone Pro",
+      shopId: 2,
       category: "electronics",
       image:
         "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
@@ -95,11 +114,15 @@ const ProductCollection = () => {
       discount: 33,
       isNew: true,
       featured: true,
+      inStock: true,
+      freeShipping: true,
+      fastDelivery: false,
     },
     {
       id: 3,
       name: "Premium Coffee Maker Deluxe",
       shop: "Home Comfort Store",
+      shopId: 3,
       category: "home",
       image:
         "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=300&h=300&fit=crop",
@@ -111,11 +134,15 @@ const ProductCollection = () => {
       discount: 32,
       isNew: false,
       featured: false,
+      inStock: true,
+      freeShipping: false,
+      fastDelivery: true,
     },
     {
       id: 4,
       name: "Designer Leather Backpack",
       shop: "Fashion Forward",
+      shopId: 4,
       category: "fashion",
       image:
         "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop",
@@ -127,11 +154,15 @@ const ProductCollection = () => {
       discount: 36,
       isNew: false,
       featured: true,
+      inStock: true,
+      freeShipping: true,
+      fastDelivery: true,
     },
     {
       id: 5,
       name: "Professional Camera Lens 85mm",
       shop: "Photo Pro Studio",
+      shopId: 5,
       category: "electronics",
       image:
         "https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=300&h=300&fit=crop",
@@ -143,11 +174,15 @@ const ProductCollection = () => {
       discount: 25,
       isNew: false,
       featured: true,
+      inStock: true,
+      freeShipping: true,
+      fastDelivery: true,
     },
     {
       id: 6,
       name: "Gaming Mechanical Keyboard RGB",
       shop: "GameZone Central",
+      shopId: 6,
       category: "electronics",
       image:
         "https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=300&h=300&fit=crop",
@@ -159,11 +194,15 @@ const ProductCollection = () => {
       discount: 28,
       isNew: false,
       featured: false,
+      inStock: true,
+      freeShipping: true,
+      fastDelivery: false,
     },
     {
       id: 7,
       name: "Portable Bluetooth Speaker",
       shop: "Audio Excellence",
+      shopId: 7,
       category: "electronics",
       image:
         "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&h=300&fit=crop",
@@ -175,11 +214,15 @@ const ProductCollection = () => {
       discount: 50,
       isNew: false,
       featured: false,
+      inStock: true,
+      freeShipping: false,
+      fastDelivery: true,
     },
     {
       id: 8,
       name: "Wireless Charging Pad Fast",
       shop: "TechHub Electronics",
+      shopId: 1,
       category: "electronics",
       image:
         "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=300&h=300&fit=crop",
@@ -191,11 +234,15 @@ const ProductCollection = () => {
       discount: 50,
       isNew: true,
       featured: false,
+      inStock: false,
+      freeShipping: true,
+      fastDelivery: false,
     },
     {
       id: 9,
       name: "Organic Skincare Set Premium",
       shop: "Beauty Essentials",
+      shopId: 8,
       category: "beauty",
       image:
         "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=300&h=300&fit=crop",
@@ -207,11 +254,15 @@ const ProductCollection = () => {
       discount: 34,
       isNew: false,
       featured: true,
+      inStock: true,
+      freeShipping: true,
+      fastDelivery: true,
     },
     {
       id: 10,
       name: "Running Shoes Athletic Pro",
       shop: "SportZone Pro",
+      shopId: 2,
       category: "sports",
       image:
         "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=300&fit=crop",
@@ -223,11 +274,15 @@ const ProductCollection = () => {
       discount: 25,
       isNew: false,
       featured: false,
+      inStock: true,
+      freeShipping: true,
+      fastDelivery: false,
     },
     {
       id: 11,
       name: "Smart Home Security Camera",
       shop: "SecureHome Tech",
+      shopId: 9,
       category: "electronics",
       image:
         "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop",
@@ -239,11 +294,15 @@ const ProductCollection = () => {
       discount: 31,
       isNew: true,
       featured: false,
+      inStock: true,
+      freeShipping: false,
+      fastDelivery: true,
     },
     {
       id: 12,
       name: "Vintage Style Denim Jacket",
       shop: "Fashion Forward",
+      shopId: 4,
       category: "fashion",
       image:
         "https://images.unsplash.com/photo-1544966503-7cc5ac882d5e?w=300&h=300&fit=crop",
@@ -255,11 +314,15 @@ const ProductCollection = () => {
       discount: 30,
       isNew: false,
       featured: false,
+      inStock: true,
+      freeShipping: false,
+      fastDelivery: false,
     },
     {
       id: 13,
       name: "Indoor Plant Collection Set",
       shop: "Green Garden Store",
+      shopId: 10,
       category: "home",
       image:
         "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop",
@@ -271,11 +334,15 @@ const ProductCollection = () => {
       discount: 38,
       isNew: false,
       featured: true,
+      inStock: true,
+      freeShipping: true,
+      fastDelivery: false,
     },
     {
       id: 14,
       name: "Professional Hair Dryer",
       shop: "Beauty Essentials",
+      shopId: 8,
       category: "beauty",
       image:
         "https://images.unsplash.com/photo-1522338140262-f46f5913618c?w=300&h=300&fit=crop",
@@ -287,11 +354,15 @@ const ProductCollection = () => {
       discount: 30,
       isNew: false,
       featured: false,
+      inStock: true,
+      freeShipping: true,
+      fastDelivery: true,
     },
     {
       id: 15,
       name: "Educational STEM Robotics Kit",
       shop: "Learning Hub",
+      shopId: 11,
       category: "toys",
       image:
         "https://images.unsplash.com/photo-1518977956812-cd3dbadaaf31?w=300&h=300&fit=crop",
@@ -303,11 +374,15 @@ const ProductCollection = () => {
       discount: 31,
       isNew: true,
       featured: true,
+      inStock: true,
+      freeShipping: false,
+      fastDelivery: true,
     },
     {
       id: 16,
       name: "Car Phone Mount Magnetic",
       shop: "Auto Parts Pro",
+      shopId: 12,
       category: "automotive",
       image:
         "https://images.unsplash.com/photo-1544966503-7cc5ac882d5e?w=300&h=300&fit=crop",
@@ -319,8 +394,89 @@ const ProductCollection = () => {
       discount: 43,
       isNew: false,
       featured: false,
+      inStock: true,
+      freeShipping: false,
+      fastDelivery: false,
     },
   ];
+
+  // Read URL parameters on component mount and when location changes
+  useEffect(() => {
+    const categoryParam = searchParams.get("category");
+    const searchParam = searchParams.get("search");
+    const priceParam = searchParams.get("price");
+    const ratingParam = searchParams.get("rating");
+    const sortParam = searchParams.get("sort");
+
+    // Set category if valid category is passed
+    if (categoryParam && categories.find((cat) => cat.id === categoryParam)) {
+      setSelectedCategory(categoryParam);
+    }
+
+    // Set search term if passed
+    if (searchParam) {
+      setSearchTerm(searchParam);
+    }
+
+    // Set price range if valid
+    if (priceParam && priceRanges.find((range) => range.id === priceParam)) {
+      setSelectedPriceRange(priceParam);
+    }
+
+    // Set rating if valid
+    if (
+      ratingParam &&
+      ratingFilters.find((rating) => rating.id === ratingParam)
+    ) {
+      setSelectedRating(ratingParam);
+    }
+
+    // Set sort option if valid
+    if (sortParam && sortOptions.find((option) => option.id === sortParam)) {
+      setSortBy(sortParam);
+    }
+  }, [searchParams]);
+
+  // Update URL when filters change (optional - for better UX)
+  const updateURLParams = (updates) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value && value !== "all" && value !== "") {
+        newSearchParams.set(key, value);
+      } else {
+        newSearchParams.delete(key);
+      }
+    });
+
+    setSearchParams(newSearchParams, { replace: true });
+  };
+
+  // Modified filter handlers to update URL
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
+    updateURLParams({ category });
+  };
+
+  const handleSearchChange = (search) => {
+    setSearchTerm(search);
+    updateURLParams({ search });
+  };
+
+  const handlePriceRangeChange = (priceRange) => {
+    setSelectedPriceRange(priceRange);
+    updateURLParams({ price: priceRange });
+  };
+
+  const handleRatingChange = (rating) => {
+    setSelectedRating(rating);
+    updateURLParams({ rating });
+  };
+
+  const handleSortChange = (sort) => {
+    setSortBy(sort);
+    updateURLParams({ sort });
+  };
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
@@ -409,24 +565,24 @@ const ProductCollection = () => {
 
   const getBadgeVariant = (badge) => {
     const variants = {
-      Hot: "bg-red-100 text-red-800",
-      New: "bg-green-100 text-green-800",
-      Popular: "bg-blue-100 text-blue-800",
-      Trending: "bg-yellow-100 text-yellow-800",
-      "#1 Seller": "bg-purple-100 text-purple-800",
-      Bestseller: "bg-blue-100 text-blue-800",
-      "50% OFF": "bg-red-100 text-red-800",
-      "Flash Deal": "bg-orange-100 text-orange-800",
-      Organic: "bg-green-100 text-green-800",
-      Athletic: "bg-indigo-100 text-indigo-800",
-      Smart: "bg-cyan-100 text-cyan-800",
-      Vintage: "bg-amber-100 text-amber-800",
-      Eco: "bg-emerald-100 text-emerald-800",
-      Professional: "bg-slate-100 text-slate-800",
-      Educational: "bg-violet-100 text-violet-800",
-      Magnetic: "bg-gray-100 text-gray-800",
+      Hot: "danger",
+      New: "success",
+      Popular: "primary",
+      Trending: "warning",
+      "#1 Seller": "purple",
+      Bestseller: "primary",
+      "50% OFF": "danger",
+      "Flash Deal": "warning",
+      Organic: "success",
+      Athletic: "info",
+      Smart: "info",
+      Vintage: "warning",
+      Eco: "success",
+      Professional: "default",
+      Educational: "purple",
+      Magnetic: "default",
     };
-    return variants[badge] || "bg-gray-100 text-gray-800";
+    return variants[badge] || "default";
   };
 
   const handlePageChange = (page) => {
@@ -434,36 +590,8 @@ const ProductCollection = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const generatePageNumbers = () => {
-    const pages = [];
-    const maxVisible = 5;
-
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) pages.push(i);
-        pages.push("...");
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1);
-        pages.push("...");
-        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
-      } else {
-        pages.push(1);
-        pages.push("...");
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-        pages.push("...");
-        pages.push(totalPages);
-      }
-    }
-
-    return pages;
-  };
-
-  const toggleLike = (productId) => {
+  const toggleLike = (productId, e) => {
+    e.stopPropagation();
     setLikedProducts((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(productId)) {
@@ -473,6 +601,38 @@ const ProductCollection = () => {
       }
       return newSet;
     });
+  };
+
+  const handleAddToCart = (product, e) => {
+    e.stopPropagation();
+    console.log("Added to cart:", product.id);
+  };
+
+  const handleBuyNow = (product, e) => {
+    e.stopPropagation();
+    navigate(`/checkout?product=${product.id}&quantity=1`);
+  };
+
+  const handleVisitShop = (product, e) => {
+    e.stopPropagation();
+    navigate(`/shop/${product.shopId}`);
+  };
+
+  const handleQuickView = (product, e) => {
+    e.stopPropagation();
+    console.log("Quick view:", product.id);
+  };
+
+  // Reset all filters function
+  const resetAllFilters = () => {
+    setSearchTerm("");
+    setSelectedCategory("all");
+    setSelectedPriceRange("all");
+    setSelectedRating("all");
+    setSortBy("featured");
+
+    // Clear URL parameters
+    setSearchParams({}, { replace: true });
   };
 
   return (
@@ -498,130 +658,122 @@ const ProductCollection = () => {
                 type="text"
                 placeholder="Search products..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-white shadow-sm"
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-white shadow-sm touch-manipulation"
               />
             </div>
           </div>
         </div>
 
         {/* Filters and Controls */}
-        <div className="mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            {/* Filter Toggle for Mobile */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Filters & Sorting
-              </h3>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="md:hidden flex items-center gap-2 px-3 py-2 text-blue-600 hover:text-blue-700 font-medium"
-              >
-                <Filter className="h-4 w-4" />
-                {showFilters ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </button>
+        <Card className="p-6 mb-8">
+          {/* Filter Toggle for Mobile */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Filters & Sorting
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="md:hidden flex items-center gap-2 touch-manipulation"
+            >
+              <Filter className="h-4 w-4" />
+              {showFilters ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+
+          {/* Filters */}
+          <div
+            className={`${showFilters ? "block" : "hidden"} md:block space-y-4`}
+          >
+            {/* Categories */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Category
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {categories.slice(0, 6).map((category) => (
+                  <Button
+                    key={category.id}
+                    variant={
+                      selectedCategory === category.id ? "primary" : "outline"
+                    }
+                    size="sm"
+                    onClick={() => handleCategoryChange(category.id)}
+                    className="flex items-center gap-2 touch-manipulation"
+                  >
+                    <span>{category.name}</span>
+                    <Badge variant="default" size="sm">
+                      {category.count}
+                    </Badge>
+                  </Button>
+                ))}
+              </div>
             </div>
 
-            {/* Filters */}
-            <div
-              className={`${
-                showFilters ? "block" : "hidden"
-              } md:block space-y-4`}
-            >
-              {/* Categories */}
+            {/* Secondary Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Price Range */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category
+                  Price Range
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {categories.slice(0, 6).map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
-                        selectedCategory === category.id
-                          ? "bg-blue-600 text-white shadow-md"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
-                    >
-                      <span>{category.name}</span>
-                      <span
-                        className={`text-xs px-1.5 py-0.5 rounded-full ${
-                          selectedCategory === category.id
-                            ? "bg-blue-500 text-white"
-                            : "bg-gray-300 text-gray-600"
-                        }`}
-                      >
-                        {category.count}
-                      </span>
-                    </button>
+                <select
+                  value={selectedPriceRange}
+                  onChange={(e) => handlePriceRangeChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none touch-manipulation"
+                >
+                  {priceRanges.map((range) => (
+                    <option key={range.id} value={range.id}>
+                      {range.name}
+                    </option>
                   ))}
-                </div>
+                </select>
               </div>
 
-              {/* Secondary Filters */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Price Range */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Price Range
-                  </label>
-                  <select
-                    value={selectedPriceRange}
-                    onChange={(e) => setSelectedPriceRange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  >
-                    {priceRanges.map((range) => (
-                      <option key={range.id} value={range.id}>
-                        {range.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Rating */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Rating
+                </label>
+                <select
+                  value={selectedRating}
+                  onChange={(e) => handleRatingChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none touch-manipulation"
+                >
+                  {ratingFilters.map((rating) => (
+                    <option key={rating.id} value={rating.id}>
+                      {rating.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                {/* Rating */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Rating
-                  </label>
-                  <select
-                    value={selectedRating}
-                    onChange={(e) => setSelectedRating(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  >
-                    {ratingFilters.map((rating) => (
-                      <option key={rating.id} value={rating.id}>
-                        {rating.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Sort By */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Sort By
-                  </label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  >
-                    {sortOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Sort By */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sort By
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => handleSortChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none touch-manipulation"
+                >
+                  {sortOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Results Info and View Controls */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-8 gap-4">
@@ -649,7 +801,7 @@ const ProductCollection = () => {
               <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white">
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`p-2 transition-colors ${
+                  className={`p-2 transition-colors touch-manipulation ${
                     viewMode === "grid"
                       ? "bg-blue-600 text-white"
                       : "text-gray-600 hover:bg-gray-100"
@@ -659,7 +811,7 @@ const ProductCollection = () => {
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`p-2 transition-colors ${
+                  className={`p-2 transition-colors touch-manipulation ${
                     viewMode === "list"
                       ? "bg-blue-600 text-white"
                       : "text-gray-600 hover:bg-gray-100"
@@ -674,9 +826,9 @@ const ProductCollection = () => {
 
         {/* No Results Message */}
         {filteredProducts.length === 0 && (
-          <div className="text-center py-12">
+          <Card className="text-center py-12">
             <div className="text-gray-400 mb-4">
-              <Search className="h-16 w-16 mx-auto" />
+              <Package className="h-16 w-16 mx-auto" />
             </div>
             <h3 className="text-xl font-semibold text-gray-600 mb-2">
               No products found
@@ -686,49 +838,51 @@ const ProductCollection = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 text-sm rounded-lg transition-colors"
+                <Button
+                  variant="outline"
+                  onClick={() => handleSearchChange("")}
+                  className="touch-manipulation"
                 >
                   Clear Search
-                </button>
+                </Button>
               )}
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setSelectedCategory("all");
-                  setSelectedPriceRange("all");
-                  setSelectedRating("all");
-                  setSortBy("featured");
-                }}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm rounded-lg transition-colors"
+              <Button
+                variant="primary"
+                onClick={resetAllFilters}
+                className="touch-manipulation"
               >
                 Reset All Filters
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Products Grid */}
         {filteredProducts.length > 0 && (
           <div
-            className={`grid gap-6 mb-12 ${
+            className={`grid gap-4 sm:gap-6 lg:gap-8 mb-12 ${
               viewMode === "grid"
                 ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                 : "grid-cols-1"
             }`}
           >
             {currentProducts.map((product) => (
-              <div
+              <Card
                 key={product.id}
-                className={`bg-white rounded-lg shadow-md border border-gray-200 group overflow-hidden hover:shadow-lg transition-all duration-300 ${
-                  viewMode === "list" ? "flex flex-col md:flex-row" : ""
+                className={`group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer ${
+                  viewMode === "list"
+                    ? "flex flex-col md:flex-row"
+                    : "flex flex-col"
                 }`}
+                padding={false}
+                onClick={() => navigate(`/product/${product.id}`)}
               >
                 {/* Product Image */}
                 <div
                   className={`relative overflow-hidden ${
-                    viewMode === "list" ? "md:w-80 flex-shrink-0" : "h-64"
+                    viewMode === "list"
+                      ? "md:w-80 flex-shrink-0 h-64 md:h-auto"
+                      : "h-64 sm:h-72"
                   }`}
                 >
                   <img
@@ -738,14 +892,15 @@ const ProductCollection = () => {
                   />
 
                   {/* Badges */}
-                  <div className="absolute top-3 left-3">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBadgeVariant(
-                        product.badge
-                      )}`}
-                    >
+                  <div className="absolute top-3 left-3 flex flex-col gap-1">
+                    <Badge variant={getBadgeVariant(product.badge)} size="sm">
                       {product.badge}
-                    </span>
+                    </Badge>
+                    {!product.inStock && (
+                      <Badge variant="danger" size="sm">
+                        Out of Stock
+                      </Badge>
+                    )}
                   </div>
 
                   {/* Discount Badge */}
@@ -760,45 +915,70 @@ const ProductCollection = () => {
                   {/* Action Buttons */}
                   <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
-                      onClick={() => toggleLike(product.id)}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                      onClick={(e) => toggleLike(product.id, e)}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors touch-manipulation ${
                         likedProducts.has(product.id)
                           ? "bg-red-500 text-white"
                           : "bg-white/90 text-gray-600 hover:text-red-500"
                       }`}
+                      aria-label="Add to wishlist"
                     >
                       <Heart className="h-4 w-4" />
                     </button>
-                    <button className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors">
+                    <button
+                      onClick={(e) => handleQuickView(product, e)}
+                      className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors touch-manipulation"
+                      aria-label="Quick view"
+                    >
                       <Eye className="h-4 w-4" />
                     </button>
+                  </div>
+
+                  {/* Quick Features */}
+                  <div className="absolute bottom-3 left-3 flex gap-1 flex-wrap">
+                    {product.freeShipping && (
+                      <Badge variant="success" size="sm">
+                        Free Ship
+                      </Badge>
+                    )}
+                    {product.fastDelivery && (
+                      <Badge variant="warning" size="sm">
+                        Fast
+                      </Badge>
+                    )}
                   </div>
                 </div>
 
                 {/* Product Info */}
-                <div className="p-4 flex-1 flex flex-col">
-                  {/* Shop Name - Fixed Height */}
-                  <div className="h-4 mb-2">
-                    <p className="text-xs text-gray-500 truncate">
+                <div className="p-4 sm:p-5 flex-1 flex flex-col">
+                  {/* Shop Name */}
+                  <div className="mb-2">
+                    <span
+                      className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/shop/${product.shopId}`);
+                      }}
+                    >
                       {product.shop}
-                    </p>
+                    </span>
                   </div>
 
-                  {/* Product Title - Fixed Height */}
-                  <div className="h-12 mb-3">
+                  {/* Product Title */}
+                  <div className="mb-3 h-12 sm:h-14 flex items-start">
                     <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
                       {product.name}
                     </h3>
                   </div>
 
-                  {/* Rating - Fixed Height */}
-                  <div className="h-5 mb-3">
+                  {/* Rating */}
+                  <div className="mb-3 h-5">
                     <div className="flex items-center gap-1">
                       <div className="flex items-center">
                         {[...Array(5)].map((_, i) => (
                           <Star
                             key={i}
-                            className={`h-3 w-3 ${
+                            className={`h-4 w-4 ${
                               i < Math.floor(product.rating)
                                 ? "text-yellow-400 fill-current"
                                 : "text-gray-300"
@@ -806,22 +986,28 @@ const ProductCollection = () => {
                           />
                         ))}
                       </div>
-                      <span className="text-xs text-gray-600">
+                      <span className="text-sm text-gray-600">
                         {product.rating} ({product.reviews})
                       </span>
                     </div>
                   </div>
 
-                  {/* Price - Fixed Height */}
-                  <div className="h-8 mb-4">
-                    <div className="flex items-center">
+                  {/* Price */}
+                  <div className="mb-4 h-8">
+                    <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-gray-900">
                         ${product.price}
                       </span>
                       {product.originalPrice && (
-                        <span className="text-sm text-gray-500 line-through ml-2">
+                        <span className="text-sm text-gray-500 line-through">
                           ${product.originalPrice}
                         </span>
+                      )}
+                      {product.discount && (
+                        <Badge variant="success" size="sm">
+                          Save $
+                          {(product.originalPrice - product.price).toFixed(2)}
+                        </Badge>
                       )}
                     </div>
                   </div>
@@ -829,106 +1015,57 @@ const ProductCollection = () => {
                   {/* Spacer to push buttons to bottom */}
                   <div className="flex-grow"></div>
 
-                  {/* Action Buttons - Always at bottom */}
+                  {/* Action Buttons */}
                   <div className="space-y-2 mt-auto">
                     {/* Main Buy Now Button */}
-                    <button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-lg transition-all duration-200 font-semibold text-sm shadow-md hover:shadow-lg transform hover:scale-[1.02]">
-                      Buy it Now
-                    </button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="w-full py-3 font-semibold touch-manipulation"
+                      disabled={!product.inStock}
+                      onClick={(e) => handleBuyNow(product, e)}
+                    >
+                      {product.inStock ? "Buy it Now" : "Out of Stock"}
+                    </Button>
 
                     {/* Secondary Buttons */}
                     <div className="flex gap-2">
-                      <button className="flex-1 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg transition-colors flex items-center justify-center text-sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 touch-manipulation"
+                        onClick={(e) => handleAddToCart(product, e)}
+                        disabled={!product.inStock}
+                      >
                         <ShoppingCart className="h-4 w-4 mr-1" />
-                        Add to Cart
-                      </button>
-                      <button className="flex-1 border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-lg transition-colors flex items-center justify-center text-sm">
+                        Cart
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1 border border-blue-300 text-blue-700 hover:bg-blue-50 touch-manipulation"
+                        onClick={(e) => handleVisitShop(product, e)}
+                      >
                         <Store className="h-4 w-4 mr-1" />
-                        Visit Shop
-                      </button>
+                        Shop
+                      </Button>
                     </div>
                   </div>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}
 
         {/* Pagination */}
         {filteredProducts.length > 0 && totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600">
-              Page {currentPage} of {totalPages}
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Previous Button */}
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-                Previous
-              </button>
-
-              {/* Page Numbers */}
-              <div className="hidden sm:flex items-center gap-1">
-                {generatePageNumbers().map((page, index) => (
-                  <React.Fragment key={index}>
-                    {page === "..." ? (
-                      <span className="px-3 py-2 text-gray-500">...</span>
-                    ) : (
-                      <button
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 text-sm rounded-md transition-colors ${
-                          currentPage === page
-                            ? "bg-blue-600 text-white"
-                            : "text-gray-600 hover:bg-gray-100"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-
-              {/* Next Button */}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              >
-                Next
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            itemsPerPage={itemsPerPage}
+            totalItems={filteredProducts.length}
+          />
         )}
       </div>
     </section>
