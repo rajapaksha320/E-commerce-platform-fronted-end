@@ -39,7 +39,7 @@ const Deals = () => {
 
   const handleMoreDeals = () => {
     navigate("/product-collections");
-  }
+  };
 
   // Countdown timer effect
   useEffect(() => {
@@ -71,6 +71,7 @@ const Deals = () => {
       id: 1,
       name: "Premium Wireless Earbuds",
       shop: "AudioTech Pro",
+      shopId: 1,
       image:
         "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300&h=300&fit=crop",
       price: 49.99,
@@ -82,11 +83,13 @@ const Deals = () => {
       sold: 89,
       available: 120,
       badge: "Lightning Deal",
+      inStock: true,
     },
     {
       id: 2,
       name: "Smart Home Security Camera",
       shop: "SecureHome Tech",
+      shopId: 2,
       image:
         "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop",
       price: 79.99,
@@ -98,11 +101,13 @@ const Deals = () => {
       sold: 156,
       available: 200,
       badge: "50% OFF",
+      inStock: true,
     },
     {
       id: 3,
       name: "Fitness Tracker Pro",
       shop: "HealthTech Solutions",
+      shopId: 3,
       image:
         "https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=300&h=300&fit=crop",
       price: 89.99,
@@ -114,11 +119,13 @@ const Deals = () => {
       sold: 234,
       available: 300,
       badge: "Best Seller",
+      inStock: true,
     },
     {
       id: 4,
       name: "Portable Power Bank 20000mAh",
       shop: "PowerUp Electronics",
+      shopId: 4,
       image:
         "https://images.unsplash.com/photo-1609592806857-bc0fc4bffa94?w=300&h=300&fit=crop",
       price: 29.99,
@@ -130,6 +137,7 @@ const Deals = () => {
       sold: 67,
       available: 150,
       badge: "Hot Deal",
+      inStock: true,
     },
   ];
 
@@ -138,6 +146,7 @@ const Deals = () => {
       id: 5,
       name: "Bluetooth Gaming Headset",
       shop: "GameZone Pro",
+      shopId: 5,
       image:
         "https://images.unsplash.com/photo-1599669454699-248893623440?w=300&h=300&fit=crop",
       price: 119.99,
@@ -146,11 +155,13 @@ const Deals = () => {
       reviews: 1834,
       discount: 40,
       badge: "Daily Special",
+      inStock: true,
     },
     {
       id: 6,
       name: "Smart LED Strip Lights",
       shop: "HomeGlow Lighting",
+      shopId: 6,
       image:
         "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=300&h=300&fit=crop",
       price: 34.99,
@@ -159,6 +170,7 @@ const Deals = () => {
       reviews: 945,
       discount: 56,
       badge: "Today Only",
+      inStock: true,
     },
   ];
 
@@ -167,6 +179,7 @@ const Deals = () => {
       id: 7,
       name: "Vintage Leather Backpack",
       shop: "Heritage Bags",
+      shopId: 7,
       image:
         "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop",
       price: 45.99,
@@ -175,11 +188,13 @@ const Deals = () => {
       reviews: 423,
       discount: 67,
       badge: "Final Sale",
+      inStock: true,
     },
     {
       id: 8,
       name: "Ceramic Coffee Mug Set",
       shop: "Kitchen Essentials",
+      shopId: 8,
       image:
         "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=300&h=300&fit=crop",
       price: 19.99,
@@ -188,6 +203,7 @@ const Deals = () => {
       reviews: 289,
       discount: 60,
       badge: "Clearance",
+      inStock: false,
     },
   ];
 
@@ -196,6 +212,7 @@ const Deals = () => {
       id: 9,
       name: "Home Office Complete Bundle",
       shop: "OfficeMax Pro",
+      shopId: 9,
       image:
         "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=300&h=300&fit=crop",
       price: 299.99,
@@ -205,11 +222,13 @@ const Deals = () => {
       discount: 40,
       badge: "Bundle Deal",
       items: "Desk Lamp + Mouse Pad + Cable Organizer",
+      inStock: true,
     },
     {
       id: 10,
       name: "Kitchen Starter Pack",
       shop: "CookWell Supplies",
+      shopId: 10,
       image:
         "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&h=300&fit=crop",
       price: 149.99,
@@ -219,6 +238,7 @@ const Deals = () => {
       discount: 46,
       badge: "Save $130",
       items: "Knife Set + Cutting Board + Utensil Set",
+      inStock: true,
     },
   ];
 
@@ -246,11 +266,36 @@ const Deals = () => {
       "Daily Special": "primary",
       "Today Only": "info",
       "Final Sale": "purple",
-      Clearance: "indigo",
+      Clearance: "info",
       "Bundle Deal": "success",
       "Save $130": "success",
     };
     return variants[badge] || "default";
+  };
+
+  const handleAddToCart = (deal, e) => {
+    e.stopPropagation();
+    console.log("Added to cart:", deal.id);
+  };
+
+  const handleBuyNow = (deal, e) => {
+    e.stopPropagation();
+    navigate(`/checkout?product=${deal.id}&quantity=1`);
+  };
+
+  const handleWishlist = (deal, e) => {
+    e.stopPropagation();
+    console.log("Added to wishlist:", deal.id);
+  };
+
+  const handleQuickView = (deal, e) => {
+    e.stopPropagation();
+    console.log("Quick view:", deal.id);
+  };
+
+  const handleShopClick = (deal, e) => {
+    e.stopPropagation();
+    navigate(`/shop/${deal.shopId}`);
   };
 
   return (
@@ -263,7 +308,6 @@ const Deals = () => {
               variant="danger"
               size="lg"
               className="mb-6 bg-white/20 text-white border-white/30"
-              icon={<Flame size={16} />}
             >
               🔥 Deals of the Day
             </Badge>
@@ -281,11 +325,8 @@ const Deals = () => {
             </p>
 
             {/* Countdown Timer */}
-            <Card
-              shadow="xl"
-              className="max-w-md mx-auto bg-white/10 backdrop-blur-sm border-white/20"
-            >
-              <Card.Body>
+            <Card className="max-w-md mx-auto bg-white/10 backdrop-blur-sm border-white/20">
+              <div className="p-6">
                 <div className="text-center">
                   <div className="flex items-center justify-center space-x-2 mb-3">
                     <Timer size={24} className="text-yellow-300" />
@@ -316,7 +357,7 @@ const Deals = () => {
                     </div>
                   </div>
                 </div>
-              </Card.Body>
+              </div>
             </Card>
           </div>
         </div>
@@ -324,8 +365,8 @@ const Deals = () => {
 
       {/* Deals Categories Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
-        <Card shadow="xl" className="mb-8">
-          <Card.Body>
+        <Card className="mb-8">
+          <div className="p-6">
             <div className="flex flex-wrap justify-center gap-2">
               {tabs.map((tab) => {
                 const IconComponent = tab.icon;
@@ -333,7 +374,7 @@ const Deals = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 touch-manipulation ${
                       activeTab === tab.id
                         ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
@@ -345,7 +386,7 @@ const Deals = () => {
                 );
               })}
             </div>
-          </Card.Body>
+          </div>
         </Card>
       </div>
 
@@ -355,9 +396,9 @@ const Deals = () => {
           {getCurrentDeals().map((deal) => (
             <Card
               key={deal.id}
-              shadow="lg"
-              hover
-              className="group overflow-hidden"
+              className="group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
+              onClick={() => navigate(`/product/${deal.id}`)}
+              padding={false}
             >
               {/* Product Image */}
               <div className="relative overflow-hidden h-48">
@@ -373,6 +414,15 @@ const Deals = () => {
                     {deal.badge}
                   </Badge>
                 </div>
+
+                {/* Stock Status */}
+                {!deal.inStock && (
+                  <div className="absolute top-3 left-3 mt-8">
+                    <Badge variant="danger" size="sm">
+                      Out of Stock
+                    </Badge>
+                  </div>
+                )}
 
                 {/* Discount Badge */}
                 <div className="absolute top-3 right-3">
@@ -391,17 +441,33 @@ const Deals = () => {
 
                 {/* Action Buttons */}
                 <div className="absolute top-3 right-12 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 transition-colors">
+                  <button
+                    onClick={(e) => handleWishlist(deal, e)}
+                    className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 transition-colors touch-manipulation"
+                    aria-label="Add to wishlist"
+                  >
                     <Heart className="h-4 w-4" />
                   </button>
-                  <button className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors">
+                  <button
+                    onClick={(e) => handleQuickView(deal, e)}
+                    className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors touch-manipulation"
+                    aria-label="Quick view"
+                  >
                     <Eye className="h-4 w-4" />
                   </button>
                 </div>
               </div>
 
-              <Card.Body>
-                <p className="text-xs text-gray-500 mb-1">{deal.shop}</p>
+              <div className="p-4">
+                {/* Shop Name */}
+                <p
+                  className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer mb-1"
+                  onClick={(e) => handleShopClick(deal, e)}
+                >
+                  {deal.shop}
+                </p>
+
+                {/* Product Title */}
                 <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
                   {deal.name}
                 </h3>
@@ -467,12 +533,35 @@ const Deals = () => {
                   </Badge>
                 </div>
 
-                {/* Add to Cart Button */}
-                <Button variant="primary" size="md" className="w-full">
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Add to Cart
-                </Button>
-              </Card.Body>
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  {/* Main Action Button */}
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="w-full touch-manipulation"
+                    disabled={!deal.inStock}
+                    onClick={(e) =>
+                      deal.inStock ? handleBuyNow(deal, e) : e.stopPropagation()
+                    }
+                  >
+                    {deal.inStock ? "Buy It Now" : "Out of Stock"}
+                  </Button>
+
+                  {/* Secondary Button */}
+                  {deal.inStock && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full touch-manipulation"
+                      onClick={(e) => handleAddToCart(deal, e)}
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Add to Cart
+                    </Button>
+                  )}
+                </div>
+              </div>
             </Card>
           ))}
         </div>
@@ -482,7 +571,7 @@ const Deals = () => {
           <Button
             variant="outline"
             size="lg"
-            className="flex items-center space-x-2 mx-auto"
+            className="flex items-center space-x-2 mx-auto touch-manipulation"
             onClick={handleMoreDeals}
           >
             <span>Load More Deals</span>
@@ -490,45 +579,6 @@ const Deals = () => {
           </Button>
         </div>
       </div>
-
-      {/* Newsletter Signup */}
-      {/* <Card
-        shadow="xl"
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16 bg-gradient-to-br from-blue-50 to-purple-50 border-blue-100"
-      >
-        <Card.Body className="py-12">
-          <div className="text-center">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <Gift size={32} className="text-purple-600" />
-              <h3 className="text-3xl font-bold text-gray-900">
-                Never Miss a Deal!
-              </h3>
-            </div>
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Subscribe to our newsletter and be the first to know about flash
-              sales, exclusive discounts, and special offers delivered straight
-              to your inbox.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Enter your email address"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <Button variant="primary" size="lg">
-                Subscribe
-              </Button>
-            </div>
-
-            <div className="mt-6">
-              <Badge variant="success" size="lg" icon={<Users size={16} />}>
-                Join 50,000+ deal hunters already subscribed!
-              </Badge>
-            </div>
-          </div>
-        </Card.Body>
-      </Card> */}
     </div>
   );
 };

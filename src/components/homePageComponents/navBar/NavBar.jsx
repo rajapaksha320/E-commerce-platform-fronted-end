@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Search,
   ShoppingCart,
@@ -10,15 +10,14 @@ import {
   Settings,
   Package,
   UserCircle,
-  Filter,
-  MapPin,
   ChevronDown,
   Bell,
   Star,
 } from "lucide-react";
 
-import { Button } from "../../ui/NavUis/Button";
+import { Button } from "../../ui/ContactUis/Uis";
 import AuthModal from "../../authComponents/AuthModal";
+import SearchDropdown from "./SearchDropdown";
 import { useNavigate } from "react-router-dom";
 
 const NavBar = () => {
@@ -27,7 +26,15 @@ const NavBar = () => {
   const [authView, setAuthView] = useState("login");
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
+
+  // Search states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
   const navigate = useNavigate();
+  const searchRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   const navItems = [
     { name: "Home", href: "/" },
@@ -37,6 +44,79 @@ const NavBar = () => {
     { name: "About", href: "/about-us" },
     { name: "Contact", href: "/contact-us" },
   ];
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target)
+      ) {
+        setIsSearchDropdownOpen(false);
+        setIsSearchFocused(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Handle search input changes
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    // Show dropdown when typing or focused
+    if (value.length > 0 || isSearchFocused) {
+      setIsSearchDropdownOpen(true);
+    } else {
+      setIsSearchDropdownOpen(false);
+    }
+  };
+
+  // Handle search focus
+  const handleSearchFocus = () => {
+    setIsSearchFocused(true);
+    setIsSearchDropdownOpen(true);
+  };
+
+  // Handle search blur
+  const handleSearchBlur = () => {
+    // Delay to allow clicking on dropdown items
+    setTimeout(() => {
+      setIsSearchFocused(false);
+      if (!searchQuery) {
+        setIsSearchDropdownOpen(false);
+      }
+    }, 200);
+  };
+
+  // Handle search submission
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      handleViewAllResults(searchQuery.trim());
+    }
+  };
+
+  // Navigate to main search results
+  const handleViewAllResults = (query) => {
+    setIsSearchDropdownOpen(false);
+    setIsSearchFocused(false);
+    navigate(`/search?q=${encodeURIComponent(query)}`);
+  };
+
+  // Handle product selection from dropdown
+  const handleProductSelect = (product) => {
+    setIsSearchDropdownOpen(false);
+    setIsSearchFocused(false);
+    // Navigate to product page (you'll need to implement this)
+    navigate(`/product/${product.id}`);
+  };
 
   const handleAuthModalOpen = (view = "login") => {
     setAuthView(view);
@@ -54,7 +134,7 @@ const NavBar = () => {
 
   const handleSellWithUs = () => {
     navigate("/seller-registration");
-  }
+  };
 
   const handleLogout = () => {
     setUser(null);
@@ -276,39 +356,39 @@ const NavBar = () => {
         <div className="hidden md:block bg-gradient-to-r from-gray-50 to-blue-50/30 border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
             <div className="flex items-center justify-center">
-              <div className="w-full max-w-2xl xl:max-w-3xl">
-                <div className="relative group">
-                  <input
-                    type="text"
-                    placeholder="Search for products, brands and more..."
-                    className="w-full pl-4 xl:pl-6 pr-12 xl:pr-14 py-3 xl:py-4 border border-gray-200 rounded-xl xl:rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 bg-white shadow-sm hover:shadow-md text-gray-700 placeholder-gray-400 group-hover:border-gray-300 text-sm xl:text-base"
-                  />
-                  <button className="absolute right-2 top-2 xl:top-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-2 xl:p-2.5 rounded-lg xl:rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                    <Search className="h-4 w-4 xl:h-5 xl:w-5" />
-                  </button>
-
-                  {/* Trending suggestions dropdown */}
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg opacity-0 group-focus-within:opacity-100 transition-all duration-200 z-10">
-                    <div className="p-3 xl:p-4">
-                      <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2">
-                        <span>🔥 Trending searches:</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="bg-blue-50 text-blue-600 px-2.5 xl:px-3 py-1 rounded-full text-xs xl:text-sm hover:bg-blue-100 cursor-pointer">
-                          Electronics
-                        </span>
-                        <span className="bg-blue-50 text-blue-600 px-2.5 xl:px-3 py-1 rounded-full text-xs xl:text-sm hover:bg-blue-100 cursor-pointer">
-                          Fashion
-                        </span>
-                        <span className="bg-blue-50 text-blue-600 px-2.5 xl:px-3 py-1 rounded-full text-xs xl:text-sm hover:bg-blue-100 cursor-pointer">
-                          Home & Garden
-                        </span>
-                        <span className="bg-blue-50 text-blue-600 px-2.5 xl:px-3 py-1 rounded-full text-xs xl:text-sm hover:bg-blue-100 cursor-pointer">
-                          Sports
-                        </span>
-                      </div>
-                    </div>
+              <div
+                className="w-full max-w-2xl xl:max-w-3xl relative"
+                ref={searchRef}
+              >
+                <form onSubmit={handleSearchSubmit}>
+                  <div className="relative group">
+                    <input
+                      type="text"
+                      placeholder="Search for products, brands and more..."
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      onFocus={handleSearchFocus}
+                      onBlur={handleSearchBlur}
+                      className="w-full pl-4 xl:pl-6 pr-12 xl:pr-14 py-3 xl:py-4 border border-gray-200 rounded-xl xl:rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 bg-white shadow-sm hover:shadow-md text-gray-700 placeholder-gray-400 group-hover:border-gray-300 text-sm xl:text-base"
+                    />
+                    <button
+                      type="submit"
+                      className="absolute right-2 top-2 xl:top-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-2 xl:p-2.5 rounded-lg xl:rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    >
+                      <Search className="h-4 w-4 xl:h-5 xl:w-5" />
+                    </button>
                   </div>
+                </form>
+
+                {/* Search Dropdown */}
+                <div ref={dropdownRef}>
+                  <SearchDropdown
+                    searchQuery={searchQuery}
+                    isOpen={isSearchDropdownOpen}
+                    onClose={() => setIsSearchDropdownOpen(false)}
+                    onViewAll={handleViewAllResults}
+                    onProductSelect={handleProductSelect}
+                  />
                 </div>
               </div>
             </div>
@@ -318,16 +398,23 @@ const NavBar = () => {
         {/* Mobile Search */}
         <div className="md:hidden bg-gradient-to-r from-gray-50 to-blue-50/30 border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search products..."
-                className="w-full pl-4 pr-11 py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white shadow-sm text-sm placeholder-gray-400"
-              />
-              <button className="absolute right-2 top-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-colors touch-manipulation">
-                <Search className="h-4 w-4" />
-              </button>
-            </div>
+            <form onSubmit={handleSearchSubmit}>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  className="w-full pl-4 pr-11 py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white shadow-sm text-sm placeholder-gray-400"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-2 top-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-colors touch-manipulation"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 
@@ -371,7 +458,10 @@ const NavBar = () => {
                 <Button
                   variant="ghost"
                   className="w-full text-orange-600 hover:text-orange-700 hover:bg-orange-50 justify-start rounded-lg sm:rounded-xl border border-orange-200 py-3.5 text-base"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    handleSellWithUs();
+                  }}
                 >
                   <Package className="h-5 w-5 mr-3" />
                   Sell with us
