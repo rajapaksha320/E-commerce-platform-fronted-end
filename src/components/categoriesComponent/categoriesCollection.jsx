@@ -1,5 +1,17 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Grid, List } from "lucide-react";
+import {
+  Grid,
+  List,
+  Heart,
+  Eye,
+  TrendingUp,
+  ArrowRight,
+  Package,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button, Badge, ContactCard as Card } from "../ui/ContactUis/Uis";
+import { Input, Select, SearchInput } from "../ui/InputUis/Uis";
+import Pagination from "../ui/ContactUis/Pagination";
 
 const CategoriesCollection = () => {
   const [viewMode, setViewMode] = useState("grid");
@@ -7,6 +19,9 @@ const CategoriesCollection = () => {
   const [selectedType, setSelectedType] = useState("all");
   const [showAllTypes, setShowAllTypes] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [likedCategories, setLikedCategories] = useState(new Set());
+  const navigate = useNavigate();
+
   const itemsPerPage = 6;
   const maxVisibleTypes = 6;
 
@@ -24,6 +39,7 @@ const CategoriesCollection = () => {
     {
       id: 1,
       name: "Electronics & Technology",
+      slug: "electronics",
       type: "trending",
       image:
         "https://images.unsplash.com/photo-1518717758536-85ae29035b6d?w=400&h=300&fit=crop",
@@ -39,6 +55,7 @@ const CategoriesCollection = () => {
     {
       id: 2,
       name: "Fashion & Apparel",
+      slug: "fashion",
       type: "popular",
       image:
         "https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=300&fit=crop",
@@ -54,6 +71,7 @@ const CategoriesCollection = () => {
     {
       id: 3,
       name: "Home & Garden",
+      slug: "home",
       type: "featured",
       image:
         "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop",
@@ -69,6 +87,7 @@ const CategoriesCollection = () => {
     {
       id: 4,
       name: "Health & Beauty",
+      slug: "beauty",
       type: "trending",
       image:
         "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=300&fit=crop",
@@ -84,6 +103,7 @@ const CategoriesCollection = () => {
     {
       id: 5,
       name: "Sports & Fitness",
+      slug: "sports",
       type: "popular",
       image:
         "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop",
@@ -98,6 +118,7 @@ const CategoriesCollection = () => {
     {
       id: 6,
       name: "Food & Beverages",
+      slug: "food",
       type: "new",
       image:
         "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop",
@@ -113,6 +134,7 @@ const CategoriesCollection = () => {
     {
       id: 7,
       name: "Books & Media",
+      slug: "books",
       type: "featured",
       image:
         "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop",
@@ -127,6 +149,7 @@ const CategoriesCollection = () => {
     {
       id: 8,
       name: "Automotive",
+      slug: "automotive",
       type: "premium",
       image:
         "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop",
@@ -142,6 +165,7 @@ const CategoriesCollection = () => {
     {
       id: 9,
       name: "Toys & Games",
+      slug: "toys",
       type: "seasonal",
       image:
         "https://images.unsplash.com/photo-1558060370-d644479cb6f7?w=400&h=300&fit=crop",
@@ -193,17 +217,17 @@ const CategoriesCollection = () => {
 
   const getBadgeVariant = (badge) => {
     const variants = {
-      Hot: "bg-red-100 text-red-800",
-      Trending: "bg-yellow-100 text-yellow-800",
-      Featured: "bg-blue-100 text-blue-800",
-      Popular: "bg-cyan-100 text-cyan-800",
-      Athletic: "bg-green-100 text-green-800",
-      Organic: "bg-green-100 text-green-800",
-      Educational: "bg-blue-100 text-blue-800",
-      Professional: "bg-gray-100 text-gray-800",
-      Family: "bg-yellow-100 text-yellow-800",
+      Hot: "danger",
+      Trending: "warning",
+      Featured: "primary",
+      Popular: "info",
+      Athletic: "success",
+      Organic: "success",
+      Educational: "primary",
+      Professional: "default",
+      Family: "warning",
     };
-    return variants[badge] || "bg-gray-100 text-gray-800";
+    return variants[badge] || "default";
   };
 
   const handlePageChange = (page) => {
@@ -211,34 +235,39 @@ const CategoriesCollection = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const generatePageNumbers = () => {
-    const pages = [];
-    const maxVisible = 5;
-
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) pages.push(i);
-        pages.push("...");
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1);
-        pages.push("...");
-        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+  const toggleLike = (categoryId, e) => {
+    e.stopPropagation();
+    setLikedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
       } else {
-        pages.push(1);
-        pages.push("...");
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-        pages.push("...");
-        pages.push(totalPages);
+        newSet.add(categoryId);
       }
-    }
-
-    return pages;
+      return newSet;
+    });
   };
+
+  const handleBrowseCategory = (category, e) => {
+    e.stopPropagation();
+    // Navigate to product collection with category filter
+    navigate(`/product-collections?category=${category.slug}`);
+  };
+
+  const handleQuickView = (category, e) => {
+    e.stopPropagation();
+    console.log("Quick view category:", category.id);
+  };
+
+  const handleCategoryClick = (category) => {
+    // Navigate to product collection with category filter
+    navigate(`/product-collections?category=${category.slug}`);
+  };
+
+  const typeOptions = categoryTypes.map((type) => ({
+    value: type.id,
+    label: `${type.name} (${type.count})`,
+  }));
 
   return (
     <section className="py-16 bg-gray-50 min-h-screen">
@@ -256,73 +285,62 @@ const CategoriesCollection = () => {
 
         {/* Search Bar */}
         <div className="mb-8">
-          <div className="max-w-2xl mx-auto relative">
-            <div className="relative">
-              <svg
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607z"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search categories by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-white shadow-sm"
-              />
-            </div>
+          <div className="max-w-2xl mx-auto">
+            <SearchInput
+              placeholder="Search categories by name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="lg"
+            />
           </div>
         </div>
 
         {/* Category Type Filter */}
-        <div className="mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Category Types
-            </h3>
+        <Card className="p-6 mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Category Types
+          </h3>
 
-            {/* Type Buttons */}
+          {/* Mobile Dropdown */}
+          <div className="block md:hidden mb-4">
+            <Select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              options={typeOptions}
+              placeholder="Select category type"
+              size="md"
+            />
+          </div>
+
+          {/* Desktop Type Buttons */}
+          <div className="hidden md:block">
             <div className="flex flex-wrap gap-3 mb-4">
               {categoryTypes
                 .slice(0, showAllTypes ? categoryTypes.length : maxVisibleTypes)
                 .map((type) => (
-                  <button
+                  <Button
                     key={type.id}
+                    variant={selectedType === type.id ? "primary" : "outline"}
+                    size="sm"
                     onClick={() => setSelectedType(type.id)}
-                    className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
-                      selectedType === type.id
-                        ? "bg-blue-600 text-white shadow-md transform scale-105"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:shadow-sm"
-                    }`}
+                    className="flex items-center gap-2 touch-manipulation"
                   >
                     <span>{type.name}</span>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${
-                        selectedType === type.id
-                          ? "bg-blue-500 text-white"
-                          : "bg-gray-300 text-gray-600"
-                      }`}
-                    >
+                    <Badge variant="default" size="sm">
                       {type.count}
-                    </span>
-                  </button>
+                    </Badge>
+                  </Button>
                 ))}
             </div>
 
             {/* Show More/Less Button */}
             {categoryTypes.length > maxVisibleTypes && (
               <div className="flex justify-center">
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setShowAllTypes(!showAllTypes)}
-                  className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
+                  className="flex items-center gap-2 touch-manipulation"
                 >
                   {showAllTypes ? (
                     <>
@@ -362,11 +380,11 @@ const CategoriesCollection = () => {
                       </svg>
                     </>
                   )}
-                </button>
+                </Button>
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
         {/* Controls and Results Info */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-8 gap-4">
@@ -395,7 +413,7 @@ const CategoriesCollection = () => {
               <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white">
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`p-2 transition-colors ${
+                  className={`p-2 transition-colors touch-manipulation ${
                     viewMode === "grid"
                       ? "bg-blue-600 text-white"
                       : "text-gray-600 hover:bg-gray-100"
@@ -405,7 +423,7 @@ const CategoriesCollection = () => {
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`p-2 transition-colors ${
+                  className={`p-2 transition-colors touch-manipulation ${
                     viewMode === "list"
                       ? "bg-blue-600 text-white"
                       : "text-gray-600 hover:bg-gray-100"
@@ -420,21 +438,9 @@ const CategoriesCollection = () => {
 
         {/* No Results Message */}
         {filteredCategories.length === 0 && (
-          <div className="text-center py-12">
+          <Card className="text-center py-12">
             <div className="text-gray-400 mb-4">
-              <svg
-                className="h-16 w-16 mx-auto"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607z"
-                />
-              </svg>
+              <Package className="h-16 w-16 mx-auto" />
             </div>
             <h3 className="text-xl font-semibold text-gray-600 mb-2">
               No categories found
@@ -454,34 +460,37 @@ const CategoriesCollection = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               {searchTerm && (
-                <button
+                <Button
+                  variant="outline"
                   onClick={() => setSearchTerm("")}
-                  className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 text-sm rounded-lg transition-colors"
+                  className="touch-manipulation"
                 >
                   Clear Search
-                </button>
+                </Button>
               )}
               {selectedType !== "all" && (
-                <button
+                <Button
+                  variant="outline"
                   onClick={() => setSelectedType("all")}
-                  className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 text-sm rounded-lg transition-colors"
+                  className="touch-manipulation"
                 >
                   View All Types
-                </button>
+                </Button>
               )}
               {(searchTerm || selectedType !== "all") && (
-                <button
+                <Button
+                  variant="primary"
                   onClick={() => {
                     setSearchTerm("");
                     setSelectedType("all");
                   }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm rounded-lg transition-colors"
+                  className="touch-manipulation"
                 >
                   Reset All Filters
-                </button>
+                </Button>
               )}
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Categories Grid */}
@@ -494,16 +503,20 @@ const CategoriesCollection = () => {
             }`}
           >
             {currentCategories.map((category) => (
-              <div
+              <Card
                 key={category.id}
-                className={`bg-white rounded-lg shadow-md border border-gray-200 group overflow-hidden hover:shadow-lg transition-shadow duration-300 ${
+                className={`group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer ${
                   viewMode === "list" ? "flex flex-col md:flex-row" : ""
                 }`}
+                padding={false}
+                onClick={() => handleCategoryClick(category)}
               >
                 {/* Category Image */}
                 <div
                   className={`relative overflow-hidden ${
-                    viewMode === "list" ? "md:w-80 flex-shrink-0" : "h-48"
+                    viewMode === "list"
+                      ? "md:w-80 flex-shrink-0 h-64 md:h-auto"
+                      : "h-48"
                   }`}
                 >
                   <img
@@ -511,75 +524,49 @@ const CategoriesCollection = () => {
                     alt={category.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
+
+                  {/* Badge */}
                   <div className="absolute top-4 left-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBadgeVariant(
-                        category.badge
-                      )}`}
-                    >
+                    <Badge variant={getBadgeVariant(category.badge)} size="sm">
                       {category.badge}
-                    </span>
+                    </Badge>
                   </div>
-                  <div className="absolute top-4 right-4 flex gap-2">
-                    <button className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 transition-colors">
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                        />
-                      </svg>
+
+                  {/* Action Buttons */}
+                  <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => toggleLike(category.id, e)}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors touch-manipulation ${
+                        likedCategories.has(category.id)
+                          ? "bg-red-500 text-white"
+                          : "bg-white/90 text-gray-600 hover:text-red-500"
+                      }`}
+                      aria-label="Add to favorites"
+                    >
+                      <Heart className="h-4 w-4" />
                     </button>
-                    <button className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors">
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        />
-                      </svg>
+                    <button
+                      onClick={(e) => handleQuickView(category, e)}
+                      className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors touch-manipulation"
+                      aria-label="Quick view"
+                    >
+                      <Eye className="h-4 w-4" />
                     </button>
                   </div>
+
+                  {/* Discount Badge */}
                   {category.discount && (
                     <div className="absolute bottom-4 left-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      <Badge variant="success" size="sm">
                         {category.discount}
-                      </span>
+                      </Badge>
                     </div>
                   )}
+
+                  {/* Growth Indicator */}
                   <div className="absolute bottom-4 right-4">
                     <div className="flex items-center gap-1 text-xs bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full">
-                      <svg
-                        className="h-3 w-3 text-green-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                        />
-                      </svg>
+                      <TrendingUp className="h-3 w-3 text-green-600" />
                       <span className="text-green-600 font-medium">
                         {category.growth}
                       </span>
@@ -610,19 +597,7 @@ const CategoriesCollection = () => {
 
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center text-sm text-gray-500">
-                      <svg
-                        className="h-4 w-4 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                        />
-                      </svg>
+                      <Package className="h-4 w-4 mr-2" />
                       <span className="font-medium">{category.products}</span>
                       <span className="ml-1">products</span>
                     </div>
@@ -649,104 +624,31 @@ const CategoriesCollection = () => {
                     <span className="text-sm text-blue-600 font-medium">
                       Explore Category
                     </span>
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 text-sm rounded-lg transition-colors flex items-center">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={(e) => handleBrowseCategory(category, e)}
+                      className="flex items-center gap-2 touch-manipulation"
+                    >
                       Browse
-                      <svg
-                        className="ml-2 h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17 8l4 4m0 0l-4 4m4-4H3"
-                        />
-                      </svg>
-                    </button>
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}
 
         {/* Pagination */}
         {filteredCategories.length > 0 && totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600">
-              Page {currentPage} of {totalPages}
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Previous Button */}
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-                Previous
-              </button>
-
-              {/* Page Numbers */}
-              <div className="hidden sm:flex items-center gap-1">
-                {generatePageNumbers().map((page, index) => (
-                  <React.Fragment key={index}>
-                    {page === "..." ? (
-                      <span className="px-3 py-2 text-gray-500">...</span>
-                    ) : (
-                      <button
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 text-sm rounded-md transition-colors ${
-                          currentPage === page
-                            ? "bg-blue-600 text-white"
-                            : "text-gray-600 hover:bg-gray-100"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-
-              {/* Next Button */}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              >
-                Next
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            itemsPerPage={itemsPerPage}
+            totalItems={filteredCategories.length}
+          />
         )}
       </div>
     </section>
