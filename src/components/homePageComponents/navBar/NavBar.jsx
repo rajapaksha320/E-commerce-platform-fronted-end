@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useRef, useEffect } from "react";
 import {
   Search,
@@ -15,7 +16,7 @@ import {
   Star,
 } from "lucide-react";
 
-import { Button } from "../../ui/ContactUis/Uis";
+import { Button, Input } from "../../ui/ContactUis/Uis";
 import AuthModal from "../../authComponents/AuthModal";
 import SearchDropdown from "./SearchDropdown";
 import { useNavigate } from "react-router-dom";
@@ -31,6 +32,9 @@ const NavBar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // Cart state (you can move this to global state management)
+  const [cartItemsCount, setCartItemsCount] = useState(3);
 
   const navigate = useNavigate();
   const searchRef = useRef(null);
@@ -57,13 +61,21 @@ const NavBar = () => {
         setIsSearchDropdownOpen(false);
         setIsSearchFocused(false);
       }
+
+      // Close profile menu when clicking outside
+      if (
+        isProfileMenuOpen &&
+        !event.target.closest(".profile-menu-container")
+      ) {
+        setIsProfileMenuOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [isProfileMenuOpen]);
 
   // Handle search input changes
   const handleSearchChange = (e) => {
@@ -114,8 +126,12 @@ const NavBar = () => {
   const handleProductSelect = (product) => {
     setIsSearchDropdownOpen(false);
     setIsSearchFocused(false);
-    // Navigate to product page (you'll need to implement this)
     navigate(`/product/${product.id}`);
+  };
+
+  // Handle shopping cart navigation
+  const handleShoppingCartClick = () => {
+    navigate("/shopping-cart");
   };
 
   const handleAuthModalOpen = (view = "login") => {
@@ -141,6 +157,15 @@ const NavBar = () => {
     setIsProfileMenuOpen(false);
   };
 
+  const handleWishlistClick = () => {
+    navigate("/wish-list");
+  };
+
+  const handleNavItemClick = (href) => {
+    navigate(href);
+    setIsMenuOpen(false);
+  };
+
   const getInitials = (email) => {
     return email ? email.charAt(0).toUpperCase() : "U";
   };
@@ -154,27 +179,32 @@ const NavBar = () => {
             <div className="flex justify-between items-center h-16 sm:h-18 md:h-20">
               {/* Logo Section */}
               <div className="flex items-center">
-                <a href="/" className="flex items-center group">
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/")}
+                  className="flex items-center group p-0 hover:bg-transparent"
+                >
                   <div className="relative">
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent group-hover:from-blue-700 group-hover:via-purple-700 group-hover:to-blue-900 transition-all duration-300">
                       Emmover.
                     </h1>
                     <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-purple-600 group-hover:w-full transition-all duration-500"></div>
                   </div>
-                </a>
+                </Button>
               </div>
 
               {/* Desktop Navigation */}
               <div className="hidden lg:flex items-center space-x-1">
                 {navItems.map((item) => (
-                  <a
+                  <Button
                     key={item.name}
-                    href={item.href}
+                    variant="ghost"
+                    onClick={() => navigate(item.href)}
                     className="relative px-3 xl:px-4 py-2 text-gray-700 hover:text-blue-600 font-medium text-sm transition-all duration-200 rounded-lg hover:bg-blue-50/50 group"
                   >
                     {item.name}
                     <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-purple-600 group-hover:w-4/5 transition-all duration-300"></span>
-                  </a>
+                  </Button>
                 ))}
               </div>
 
@@ -197,31 +227,44 @@ const NavBar = () => {
                 {/* Action Icons */}
                 <div className="flex items-center space-x-1 sm:space-x-2">
                   {/* Notifications - Tablet and Desktop */}
-                  <button className="hidden md:block relative p-2 xl:p-2.5 text-gray-600 hover:text-blue-600 transition-all duration-200 rounded-xl hover:bg-blue-50 group">
+                  <Button
+                    variant="ghost"
+                    className="hidden md:block relative p-2 xl:p-2.5 text-gray-600 hover:text-blue-600 transition-all duration-200 rounded-xl hover:bg-blue-50 group"
+                  >
                     <Bell className="h-4 w-4 xl:h-5 xl:w-5" />
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-3 w-3 xl:h-4 xl:w-4 flex items-center justify-center animate-pulse text-[10px] xl:text-xs">
                       2
                     </span>
-                  </button>
+                  </Button>
 
                   {/* Wishlist - Mobile and up */}
-                  <button className="relative p-2 xl:p-2.5 text-gray-600 hover:text-pink-600 transition-all duration-200 rounded-xl hover:bg-pink-50 group">
+                  <Button
+                    variant="ghost"
+                    onClick={handleWishlistClick}
+                    className="relative p-2 xl:p-2.5 text-gray-600 hover:text-pink-600 transition-all duration-200 rounded-xl hover:bg-pink-50 group"
+                  >
                     <Heart className="h-4 w-4 xl:h-5 xl:w-5 group-hover:fill-pink-100" />
                     <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs rounded-full h-3 w-3 xl:h-4 xl:w-4 flex items-center justify-center text-[10px] xl:text-xs">
                       2
                     </span>
-                  </button>
+                  </Button>
 
-                  {/* Shopping Cart */}
-                  <button className="relative p-2 xl:p-2.5 text-gray-600 hover:text-blue-600 transition-all duration-200 rounded-xl hover:bg-blue-50 group">
+                  {/* Shopping Cart with Navigation */}
+                  <Button
+                    variant="ghost"
+                    onClick={handleShoppingCartClick}
+                    className="relative p-2 xl:p-2.5 text-gray-600 hover:text-blue-600 transition-all duration-200 rounded-xl hover:bg-blue-50 group"
+                  >
                     <ShoppingCart className="h-4 w-4 xl:h-5 xl:w-5" />
-                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs rounded-full h-4 w-4 xl:h-5 xl:w-5 flex items-center justify-center font-medium shadow-lg text-[10px] xl:text-xs">
-                      3
-                    </span>
-                  </button>
+                    {cartItemsCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs rounded-full h-4 w-4 xl:h-5 xl:w-5 flex items-center justify-center font-medium shadow-lg text-[10px] xl:text-xs">
+                        {cartItemsCount > 99 ? "99+" : cartItemsCount}
+                      </span>
+                    )}
+                  </Button>
 
                   {/* User Profile - Tablet and Desktop */}
-                  <div className="hidden md:block relative ml-1 xl:ml-2">
+                  <div className="hidden md:block relative ml-1 xl:ml-2 profile-menu-container">
                     {!user ? (
                       <div className="flex space-x-2 xl:space-x-3">
                         <Button
@@ -244,7 +287,8 @@ const NavBar = () => {
                       </div>
                     ) : (
                       <div className="relative">
-                        <button
+                        <Button
+                          variant="ghost"
                           onClick={() =>
                             setIsProfileMenuOpen(!isProfileMenuOpen)
                           }
@@ -267,7 +311,7 @@ const NavBar = () => {
                             </span>
                           </div>
                           <ChevronDown className="h-3 w-3 xl:h-4 xl:w-4 text-gray-400 hidden lg:block" />
-                        </button>
+                        </Button>
 
                         {/* Enhanced Profile Dropdown */}
                         {isProfileMenuOpen && (
@@ -289,44 +333,61 @@ const NavBar = () => {
                             </div>
 
                             <div className="py-2">
-                              <a
-                                href="/profile"
-                                className="flex items-center px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
+                              <Button
+                                variant="ghost"
+                                onClick={() => {
+                                  navigate("/profile");
+                                  setIsProfileMenuOpen(false);
+                                }}
+                                className="flex items-center w-full px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 justify-start"
                               >
                                 <UserCircle className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
                                 My Profile
-                              </a>
-                              <a
-                                href="/orders"
-                                className="flex items-center px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                onClick={() => {
+                                  navigate("/orders");
+                                  setIsProfileMenuOpen(false);
+                                }}
+                                className="flex items-center w-full px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 justify-start"
                               >
                                 <Package className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
                                 My Orders
-                              </a>
-                              <a
-                                href="/wishlist"
-                                className="flex items-center px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                onClick={() => {
+                                  handleWishlistClick();
+                                  setIsProfileMenuOpen(false);
+                                }}
+                                className="flex items-center w-full px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 justify-start"
                               >
                                 <Heart className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
                                 Wishlist
-                              </a>
-                              <a
-                                href="/settings"
-                                className="flex items-center px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                onClick={() => {
+                                  navigate("/settings");
+                                  setIsProfileMenuOpen(false);
+                                }}
+                                className="flex items-center w-full px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 justify-start"
                               >
                                 <Settings className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
                                 Settings
-                              </a>
+                              </Button>
                             </div>
 
                             <div className="border-t border-gray-100 pt-2">
-                              <button
+                              <Button
+                                variant="ghost"
                                 onClick={handleLogout}
-                                className="flex items-center w-full px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-red-600 hover:bg-red-50 transition-all duration-200"
+                                className="flex items-center w-full px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-red-600 hover:bg-red-50 transition-all duration-200 justify-start"
                               >
                                 <LogOut className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
                                 Logout
-                              </button>
+                              </Button>
                             </div>
                           </div>
                         )}
@@ -335,7 +396,8 @@ const NavBar = () => {
                   </div>
 
                   {/* Mobile menu button */}
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
                     className="md:hidden p-2 text-gray-600 hover:text-blue-600 transition-colors rounded-xl hover:bg-blue-50 touch-manipulation"
                     aria-label="Toggle menu"
@@ -345,7 +407,7 @@ const NavBar = () => {
                     ) : (
                       <Menu className="h-5 w-5" />
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -362,7 +424,7 @@ const NavBar = () => {
               >
                 <form onSubmit={handleSearchSubmit}>
                   <div className="relative group">
-                    <input
+                    <Input
                       type="text"
                       placeholder="Search for products, brands and more..."
                       value={searchQuery}
@@ -371,12 +433,13 @@ const NavBar = () => {
                       onBlur={handleSearchBlur}
                       className="w-full pl-4 xl:pl-6 pr-12 xl:pr-14 py-3 xl:py-4 border border-gray-200 rounded-xl xl:rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 bg-white shadow-sm hover:shadow-md text-gray-700 placeholder-gray-400 group-hover:border-gray-300 text-sm xl:text-base"
                     />
-                    <button
+                    <Button
                       type="submit"
+                      variant="primary"
                       className="absolute right-2 top-2 xl:top-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-2 xl:p-2.5 rounded-lg xl:rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                     >
                       <Search className="h-4 w-4 xl:h-5 xl:w-5" />
-                    </button>
+                    </Button>
                   </div>
                 </form>
 
@@ -400,19 +463,20 @@ const NavBar = () => {
           <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
             <form onSubmit={handleSearchSubmit}>
               <div className="relative">
-                <input
+                <Input
                   type="text"
                   placeholder="Search products..."
                   value={searchQuery}
                   onChange={handleSearchChange}
                   className="w-full pl-4 pr-11 py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white shadow-sm text-sm placeholder-gray-400"
                 />
-                <button
+                <Button
                   type="submit"
+                  variant="primary"
                   className="absolute right-2 top-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-colors touch-manipulation"
                 >
                   <Search className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -442,14 +506,14 @@ const NavBar = () => {
               {/* Navigation Items */}
               <div className="space-y-1">
                 {navItems.map((item) => (
-                  <a
+                  <Button
                     key={item.name}
-                    href={item.href}
-                    className="block px-4 py-3.5 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg sm:rounded-xl font-medium transition-all duration-200 text-base active:bg-blue-100"
-                    onClick={() => setIsMenuOpen(false)}
+                    variant="ghost"
+                    onClick={() => handleNavItemClick(item.href)}
+                    className="w-full text-left px-4 py-3.5 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg sm:rounded-xl font-medium transition-all duration-200 text-base active:bg-blue-100 justify-start"
                   >
                     {item.name}
-                  </a>
+                  </Button>
                 ))}
               </div>
 
@@ -467,27 +531,56 @@ const NavBar = () => {
                   Sell with us
                 </Button>
 
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    className="flex items-center justify-center space-x-2 p-3.5 border border-gray-200 rounded-lg hover:bg-pink-50 hover:border-pink-200 transition-all duration-200 group active:bg-pink-100"
+                <div className="grid grid-cols-3 gap-2.5">
+                  <Button
+                    variant="ghost"
+                    className="flex flex-col items-center justify-center space-y-1 p-3.5 border border-gray-200 rounded-lg hover:bg-pink-50 hover:border-pink-200 transition-all duration-200 group active:bg-pink-100"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      handleWishlistClick();
+                    }}
+                  >
+                    <div className="relative">
+                      <Heart className="h-5 w-5 text-pink-600 group-hover:fill-pink-100" />
+                      <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                        2
+                      </span>
+                    </div>
+                    <span className="text-xs font-medium">Wishlist</span>
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="flex flex-col items-center justify-center space-y-1 p-3.5 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-all duration-200 active:bg-blue-100"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    <Heart className="h-5 w-5 text-pink-600 group-hover:fill-pink-100" />
-                    <span className="text-sm font-medium">Wishlist</span>
-                    <span className="bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      2
-                    </span>
-                  </button>
-                  <button
-                    className="flex items-center justify-center space-x-2 p-3.5 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-all duration-200 active:bg-blue-100"
-                    onClick={() => setIsMenuOpen(false)}
+                    <div className="relative">
+                      <Bell className="h-5 w-5 text-blue-600" />
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                        2
+                      </span>
+                    </div>
+                    <span className="text-xs font-medium">Alerts</span>
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="flex flex-col items-center justify-center space-y-1 p-3.5 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-all duration-200 active:bg-blue-100"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      handleShoppingCartClick();
+                    }}
                   >
-                    <Bell className="h-5 w-5 text-blue-600" />
-                    <span className="text-sm font-medium">Alerts</span>
-                    <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      2
-                    </span>
-                  </button>
+                    <div className="relative">
+                      <ShoppingCart className="h-5 w-5 text-blue-600" />
+                      {cartItemsCount > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                          {cartItemsCount > 9 ? "9+" : cartItemsCount}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs font-medium">Cart</span>
+                  </Button>
                 </div>
 
                 {!user ? (
@@ -517,30 +610,39 @@ const NavBar = () => {
                 ) : (
                   <div className="space-y-3 pt-2">
                     <div className="space-y-2">
-                      <a
-                        href="/profile"
-                        className="flex items-center px-4 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 active:bg-blue-100"
-                        onClick={() => setIsMenuOpen(false)}
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          navigate("/profile");
+                          setIsMenuOpen(false);
+                        }}
+                        className="flex items-center w-full px-4 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 active:bg-blue-100 justify-start"
                       >
                         <UserCircle className="h-5 w-5 mr-3" />
                         <span className="text-base">My Profile</span>
-                      </a>
-                      <a
-                        href="/orders"
-                        className="flex items-center px-4 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 active:bg-blue-100"
-                        onClick={() => setIsMenuOpen(false)}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          navigate("/orders");
+                          setIsMenuOpen(false);
+                        }}
+                        className="flex items-center w-full px-4 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 active:bg-blue-100 justify-start"
                       >
                         <Package className="h-5 w-5 mr-3" />
                         <span className="text-base">My Orders</span>
-                      </a>
-                      <a
-                        href="/settings"
-                        className="flex items-center px-4 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 active:bg-blue-100"
-                        onClick={() => setIsMenuOpen(false)}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          navigate("/settings");
+                          setIsMenuOpen(false);
+                        }}
+                        className="flex items-center w-full px-4 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 active:bg-blue-100 justify-start"
                       >
                         <Settings className="h-5 w-5 mr-3" />
                         <span className="text-base">Settings</span>
-                      </a>
+                      </Button>
                     </div>
                     <Button
                       variant="outline"
