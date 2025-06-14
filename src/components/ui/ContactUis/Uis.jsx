@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import {mergeClasses} from "../../../utils/classMerger";
-
+import { useRef } from 'react';
 
 const Button = ({
   children,
@@ -12,8 +12,11 @@ const Button = ({
   unstyled = false,
   href,
   external = false,
+  onClick,
   ...props
 }) => {
+  const buttonRef = useRef(null);
+
   // Loading spinner component
   const LoadingSpinner = () => (
     <svg
@@ -37,6 +40,21 @@ const Button = ({
     </svg>
   );
 
+  // Handle click event and remove focus
+  const handleClick = (e) => {
+    // Call the original onClick if provided
+    if (onClick) {
+      onClick(e);
+    }
+    // Multiple approaches to remove focus
+    setTimeout(() => {
+      if (buttonRef.current) {
+        buttonRef.current.blur();
+      }
+      e.target.blur();
+    }, 0);
+  };
+
   // If unstyled is true, only apply user classes
   if (unstyled) {
     const content = (
@@ -47,25 +65,32 @@ const Button = ({
     );
 
     return (
-      <button className={className} disabled={disabled || loading} {...props}>
+      <button 
+        ref={buttonRef}
+        className={className} 
+        disabled={disabled || loading} 
+        onClick={handleClick}
+        style={{ outline: 'none' }}
+        {...props}
+      >
         {content}
       </button>
     );
   }
 
   const baseClasses =
-    "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed no-underline";
+    "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed no-underline [&:focus]:ring-0 [&:focus]:ring-offset-0";
 
   const variants = {
-    primary: "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500",
+    primary: "bg-blue-600 hover:bg-blue-700 text-white",
     secondary:
-      "bg-gray-100 hover:bg-gray-200 text-gray-900 focus:ring-gray-500",
+      "bg-gray-100 hover:bg-gray-200 text-gray-900",
     outline:
-      "border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white focus:ring-blue-500",
+      "border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white",
     ghost:
-      "text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:ring-gray-500",
-    danger: "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500",
-    success: "bg-green-600 hover:bg-green-700 text-white focus:ring-green-500",
+      "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
+    danger: "bg-red-600 hover:bg-red-700 text-white",
+    success: "bg-green-600 hover:bg-green-700 text-white",
   };
 
   const sizes = {
@@ -92,8 +117,11 @@ const Button = ({
 
   return (
     <button
+      ref={buttonRef}
       className={elementClasses}
       disabled={disabled || loading}
+      onClick={handleClick}
+      style={{ outline: 'none' }}
       {...props}
     >
       {content}
