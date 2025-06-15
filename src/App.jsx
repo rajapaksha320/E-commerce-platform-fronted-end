@@ -29,7 +29,7 @@ import ShoppingCartPage from "./pages/shoppingCartPage/ShoppingCartPage";
 import CheckoutPage from "./pages/checkoutPage/CheckoutPage";
 import Orders from "./pages/ordersPage/Orders";
 import Profile from "./pages/profilePage/Profile";
-
+import SellerLayout from "./components/sellerComponents/layout/SellerLayout";
 function App() {
   return (
     <BrowserRouter>
@@ -69,6 +69,7 @@ function App() {
         </Route>
         {/* Routes that don't use the Layout (standalone pages) */}
         <Route path="/seller-registration" element={<SellerRegisterForm />} />
+        <Route path="/seller-dashboard" element={<SellerLayout />} />
       </Routes>
     </BrowserRouter>
   );
