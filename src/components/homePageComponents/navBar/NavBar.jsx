@@ -369,7 +369,7 @@ const NavBar = () => {
                               <Button
                                 variant="ghost"
                                 onClick={() => {
-                                  navigate("/settings");
+                                  navigate("/profile");
                                   setIsProfileMenuOpen(false);
                                 }}
                                 className="flex items-center w-full px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 justify-start"
@@ -635,7 +635,7 @@ const NavBar = () => {
                       <Button
                         variant="ghost"
                         onClick={() => {
-                          navigate("/settings");
+                          navigate("/profile");
                           setIsMenuOpen(false);
                         }}
                         className="flex items-center w-full px-4 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 active:bg-blue-100 justify-start"
