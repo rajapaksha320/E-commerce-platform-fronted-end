@@ -24,7 +24,12 @@ import ShopProducts from "./components/shopComponents/shopProducts/shopProducts"
 import ContactShop from "./components/shopComponents/contactShop/ContactShop";
 import MainSearchResult from "./pages/searchResultPage/MainSearchResult";
 import ProductPage from "./pages/productPage/ProductPage";
-
+import WishList from "./pages/wishListPage/WishList";
+import ShoppingCartPage from "./pages/shoppingCartPage/ShoppingCartPage";
+import CheckoutPage from "./pages/checkoutPage/CheckoutPage";
+import Orders from "./pages/ordersPage/Orders";
+import Profile from "./pages/profilePage/Profile";
+import SellerLayout from "./components/sellerComponents/layout/SellerLayout";
 function App() {
   return (
     <BrowserRouter>
@@ -56,9 +61,15 @@ function App() {
           <Route path="contact-shop/:shopId" element={<ContactShop />} />
           <Route path="/search" element={<MainSearchResult />} />
           <Route path="product/:productId" element={<ProductPage />} />
+          <Route path="/wish-list" element={<WishList />} />
+          <Route path="/shopping-cart" element={<ShoppingCartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/profile" element={<Profile />} />
         </Route>
         {/* Routes that don't use the Layout (standalone pages) */}
         <Route path="/seller-registration" element={<SellerRegisterForm />} />
+        <Route path="/seller-dashboard" element={<SellerLayout />} />
       </Routes>
     </BrowserRouter>
   );
