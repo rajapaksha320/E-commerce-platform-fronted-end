@@ -16,9 +16,10 @@ import {
   Badge,
   ContactCard as Card,
 } from "../../components/ui/ContactUis/Uis";
+import { CardCvcElement, CardExpiryElement, CardNumberElement, Elements, useElements, useStripe } from '@stripe/react-stripe-js';
 
 const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
-  const [cardForm, setCardForm] = useState({
+  const [cardForm] = useState({
     cardNumber: "",
     expiryDate: "",
     cvv: "",
@@ -26,8 +27,10 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
     saveCard: false,
   });
 
-  const [showCvv, setShowCvv] = useState(false);
+  // const [showCvv, setShowCvv] = useState(false);
   const [errors, setErrors] = useState({});
+  const elements = useElements();
+  const stripe = useStripe();
 
   const paymentMethods = [
     {
@@ -68,30 +71,30 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
     },
   ];
 
-  const formatCardNumber = (value) => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || "";
-    const parts = [];
+  // const formatCardNumber = (value) => {
+  //   const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
+  //   const matches = v.match(/\d{4,16}/g);
+  //   const match = (matches && matches[0]) || "";
+  //   const parts = [];
 
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
+  //   for (let i = 0, len = match.length; i < len; i += 4) {
+  //     parts.push(match.substring(i, i + 4));
+  //   }
 
-    if (parts.length) {
-      return parts.join(" ");
-    } else {
-      return v;
-    }
-  };
+  //   if (parts.length) {
+  //     return parts.join(" ");
+  //   } else {
+  //     return v;
+  //   }
+  // };
 
-  const formatExpiryDate = (value) => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
-    if (v.length >= 2) {
-      return v.substring(0, 2) + "/" + v.substring(2, 4);
-    }
-    return v;
-  };
+  // const formatExpiryDate = (value) => {
+  //   const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
+  //   if (v.length >= 2) {
+  //     return v.substring(0, 2) + "/" + v.substring(2, 4);
+  //   }
+  //   return v;
+  // };
 
   const getCardType = (cardNumber) => {
     const number = cardNumber.replace(/\s/g, "");
@@ -103,22 +106,53 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
   };
 
   const handleCardFormChange = (field, value) => {
-    let formattedValue = value;
+    console.log(`Field: ${field}, Value: ${value}`);
+    
+    // let formattedValue = value;
 
-    if (field === "cardNumber") {
-      formattedValue = formatCardNumber(value);
-    } else if (field === "expiryDate") {
-      formattedValue = formatExpiryDate(value);
-    } else if (field === "cvv") {
-      formattedValue = value.replace(/[^0-9]/g, "").substring(0, 4);
-    }
+    // if (field === "cardNumber") {
+    //   formattedValue = formatCardNumber(value);
+    // } else if (field === "expiryDate") {
+    //   formattedValue = formatExpiryDate(value);
+    // } else if (field === "cvv") {
+    //   formattedValue = value.replace(/[^0-9]/g, "").substring(0, 4);
+    // }
 
-    setCardForm((prev) => ({ ...prev, [field]: formattedValue }));
+    // setCardForm((prev) => ({ ...prev, [field]: formattedValue }));
 
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
+    // if (errors[field]) {
+    //   setErrors((prev) => ({ ...prev, [field]: "" }));
+    // }
   };
+
+  const handleSubmit = async () => {
+    try {
+      console.log('hello');
+      
+      const cardNumberElement = elements.getElement(CardNumberElement);
+      const cardExpiryElement = elements.getElement(CardExpiryElement);
+      const cardCvcElement = elements.getElement(CardCvcElement);
+
+      console.log(`Card Number: ${cardNumberElement}`);
+      console.log(`Card Expiry: ${cardExpiryElement}`);
+      console.log(`Card CVC: ${cardCvcElement}`);
+
+
+      const {token , error} = await stripe.createToken(cardNumberElement);
+
+      if (error) {
+        console.error("Error creating token:", error);
+        setErrors((prev) => ({ ...prev, cardNumber: error.message }));
+        return;
+      }
+
+      console.log(`Token: ${token.id}`);
+
+    } catch (error) {
+      console.log(error);
+
+    }
+  }
 
   const cardType = getCardType(cardForm.cardNumber);
 
@@ -145,11 +179,10 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
             return (
               <div
                 key={method.id}
-                className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
-                  isSelected
-                    ? "border-blue-500 bg-blue-50 shadow-sm"
-                    : "border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm"
-                }`}
+                className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${isSelected
+                  ? "border-blue-500 bg-blue-50 shadow-sm"
+                  : "border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm"
+                  }`}
                 onClick={() => onPaymentChange(method.id)}
               >
                 {method.popular && (
@@ -162,14 +195,12 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
 
                 <div className="flex items-center space-x-3">
                   <div
-                    className={`flex-shrink-0 p-2 rounded-lg ${
-                      isSelected ? method.bgColor : "bg-gray-50"
-                    }`}
+                    className={`flex-shrink-0 p-2 rounded-lg ${isSelected ? method.bgColor : "bg-gray-50"
+                      }`}
                   >
                     <Icon
-                      className={`h-5 w-5 ${
-                        isSelected ? method.color : "text-gray-600"
-                      }`}
+                      className={`h-5 w-5 ${isSelected ? method.color : "text-gray-600"
+                        }`}
                     />
                   </div>
 
@@ -183,11 +214,10 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
                   </div>
 
                   <div
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors duration-200 ${
-                      isSelected
-                        ? "border-blue-500 bg-blue-500"
-                        : "border-gray-300"
-                    }`}
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors duration-200 ${isSelected
+                      ? "border-blue-500 bg-blue-500"
+                      : "border-gray-300"
+                      }`}
                   >
                     {isSelected && (
                       <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -230,9 +260,8 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
                 onChange={(e) =>
                   handleCardFormChange("cardholderName", e.target.value)
                 }
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${
-                  errors.cardholderName ? "border-red-500" : "border-gray-300"
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${errors.cardholderName ? "border-red-500" : "border-gray-300"
+                  }`}
                 placeholder="Enter name as shown on card"
               />
               {errors.cardholderName && (
@@ -240,6 +269,7 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
                   {errors.cardholderName}
                 </p>
               )}
+
             </div>
 
             {/* Card Number */}
@@ -247,21 +277,22 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Card Number *
               </label>
-              <input
+              {/* <input
                 type="text"
                 value={cardForm.cardNumber}
                 onChange={(e) =>
                   handleCardFormChange("cardNumber", e.target.value)
                 }
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${
-                  errors.cardNumber ? "border-red-500" : "border-gray-300"
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${errors.cardNumber ? "border-red-500" : "border-gray-300"
+                  }`}
                 placeholder="1234 5678 9012 3456"
                 maxLength={19}
               />
               {errors.cardNumber && (
                 <p className="mt-1 text-sm text-red-600">{errors.cardNumber}</p>
-              )}
+              )} */}
+              <CardNumberElement className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${errors.cardholderName ? "border-red-500" : "border-gray-300"
+                }`} />
             </div>
 
             {/* Expiry Date and CVV */}
@@ -270,15 +301,14 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Expiry Date *
                 </label>
-                <input
+                {/* <input
                   type="text"
                   value={cardForm.expiryDate}
                   onChange={(e) =>
                     handleCardFormChange("expiryDate", e.target.value)
                   }
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${
-                    errors.expiryDate ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${errors.expiryDate ? "border-red-500" : "border-gray-300"
+                    }`}
                   placeholder="MM/YY"
                   maxLength={5}
                 />
@@ -286,7 +316,10 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
                   <p className="mt-1 text-sm text-red-600">
                     {errors.expiryDate}
                   </p>
-                )}
+                )} */}
+
+                <CardExpiryElement className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${errors.cardholderName ? "border-red-500" : "border-gray-300"
+                  }`} />
               </div>
 
               <div>
@@ -301,15 +334,14 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
                   </button>
                 </label>
                 <div className="relative">
-                  <input
+                  {/* <input
                     type={showCvv ? "text" : "password"}
                     value={cardForm.cvv}
                     onChange={(e) =>
                       handleCardFormChange("cvv", e.target.value)
                     }
-                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${
-                      errors.cvv ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${errors.cvv ? "border-red-500" : "border-gray-300"
+                      }`}
                     placeholder="123"
                     maxLength={4}
                   />
@@ -323,11 +355,13 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
                     ) : (
                       <Eye className="h-4 w-4 text-gray-400" />
                     )}
-                  </button>
+                  </button> */}
+                  <CardCvcElement className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${errors.cardholderName ? "border-red-500" : "border-gray-300"
+                    }`} />
                 </div>
-                {errors.cvv && (
+                {/* {errors.cvv && (
                   <p className="mt-1 text-sm text-red-600">{errors.cvv}</p>
-                )}
+                )} */}
               </div>
             </div>
 
@@ -346,6 +380,10 @@ const PaymentSection = ({ selectedPayment, onPaymentChange }) => {
                 Save this card for future purchases
               </label>
             </div>
+
+            <Button onClick={handleSubmit} className="w-full bg-blue-600 hover:bg-blue-700">
+              Save
+            </Button>
           </div>
         </Card>
       )}
