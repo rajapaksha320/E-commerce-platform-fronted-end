@@ -6,6 +6,7 @@ import {
   User,
   Menu,
   X,
+  LocateFixed,
   Heart,
   LogOut,
   Settings,
@@ -365,6 +366,17 @@ const NavBar = () => {
                               >
                                 <Heart className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
                                 Wishlist
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                onClick={() => {
+                                  navigate("/track-parcel");
+                                  setIsProfileMenuOpen(false);
+                                }}
+                                className="flex items-center w-full px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 justify-start"
+                              >
+                                <LocateFixed className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
+                                Track Orders
                               </Button>
                               <Button
                                 variant="ghost"

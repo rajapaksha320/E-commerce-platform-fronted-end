@@ -27,6 +27,7 @@ import {
   ContactCard as Card,
 } from "../../components/ui/ContactUis/Uis";
 import Pagination from "../../components/ui/ContactUis/Pagination";
+import OrderDetailsModal from "./OrderDetailsModal";
 import { useNavigate } from "react-router-dom";
 
 const Orders = () => {
@@ -35,6 +36,8 @@ const Orders = () => {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const itemsPerPage = 5;
 
@@ -251,13 +254,25 @@ const Orders = () => {
   };
 
   const handleTrackOrder = (order) => {
-    // Navigate to order tracking page
-    navigate(`/order-tracking/${order.id}`);
+    // Navigate to order tracking page with tracking number in URL
+    if (order.trackingNumber) {
+      navigate(
+        `/track-parcel?number=${encodeURIComponent(order.trackingNumber)}`
+      );
+    } else {
+      navigate("/track-parcel");
+    }
   };
 
   const handleViewOrder = (order) => {
-    // Navigate to order details page
-    navigate(`/order-details/${order.id}`);
+    // Open modal with order details
+    setSelectedOrder(order);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedOrder(null);
   };
 
   const handleReorder = (order) => {
@@ -616,6 +631,13 @@ const Orders = () => {
           </div>
         )}
       </div>
+
+      {/* Order Details Modal */}
+      <OrderDetailsModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        order={selectedOrder}
+      />
     </div>
   );
 };
