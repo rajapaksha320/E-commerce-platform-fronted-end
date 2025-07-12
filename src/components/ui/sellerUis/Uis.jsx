@@ -1,5 +1,27 @@
-import React, { forwardRef } from "react";
-import { Search, X, ChevronDown, Check, Copy, AlertCircle } from "lucide-react";
+import React, {
+  forwardRef,
+  createContext,
+  useContext,
+  useState,
+  useRef,
+} from "react";
+import {
+  X,
+  Plus,
+  Upload,
+  Image as ImageIcon,
+  Tag,
+  Trash2,
+  Palette,
+  Search,
+  ChevronDown,
+  Check,
+  Copy,
+  AlertCircle,
+} from "lucide-react";
+
+
+const TabsContext = createContext();
 
 // Button Component
 export const Button = forwardRef(
@@ -684,6 +706,628 @@ export const TableCell = ({ children, className = "" }) => {
     >
       {children}
     </td>
+  );
+};
+
+export const Tabs = ({
+  value,
+  onValueChange,
+  defaultValue,
+  children,
+  className = "",
+}) => {
+  const [internalValue, setInternalValue] = useState(defaultValue || "");
+
+  const currentValue = value !== undefined ? value : internalValue;
+  const handleValueChange =
+    value !== undefined ? onValueChange : setInternalValue;
+
+  return (
+    <TabsContext.Provider
+      value={{ value: currentValue, onValueChange: handleValueChange }}
+    >
+      <div className={className}>{children}</div>
+    </TabsContext.Provider>
+  );
+};
+
+// TabsList Component
+export const TabsList = ({ children, className = "" }) => {
+  return (
+    <div
+      className={`inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 text-gray-500 ${className}`}
+    >
+      {children}
+    </div>
+  );
+};
+
+// TabsTrigger Component
+export const TabsTrigger = ({
+  value,
+  children,
+  disabled = false,
+  className = "",
+}) => {
+  const context = useContext(TabsContext);
+
+  if (!context) {
+    throw new Error("TabsTrigger must be used within a Tabs component");
+  }
+
+  const { value: selectedValue, onValueChange } = context;
+  const isSelected = selectedValue === value;
+
+  const handleClick = () => {
+    if (!disabled && onValueChange) {
+      onValueChange(value);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={handleClick}
+      className={`
+        inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-white transition-all 
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 
+        disabled:pointer-events-none disabled:opacity-50
+        ${
+          isSelected
+            ? "bg-white text-gray-950 shadow-sm"
+            : "hover:bg-gray-200 hover:text-gray-900"
+        }
+        ${className}
+      `}
+    >
+      {children}
+    </button>
+  );
+};
+
+// TabsContent Component
+export const TabsContent = ({ value, children, className = "" }) => {
+  const context = useContext(TabsContext);
+
+  if (!context) {
+    throw new Error("TabsContent must be used within a Tabs component");
+  }
+
+  const { value: selectedValue } = context;
+
+  if (selectedValue !== value) {
+    return null;
+  }
+
+  return (
+    <div
+      className={`mt-2 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${className}`}
+    >
+      {children}
+    </div>
+  );
+};
+
+
+export const ColorPicker = ({
+  colors = [],
+  onColorsChange,
+  className = "",
+}) => {
+  const [showPicker, setShowPicker] = useState(false);
+  const [currentColor, setCurrentColor] = useState("#000000");
+  const [colorName, setColorName] = useState("");
+
+  // Check if react-color is available
+  const ReactColor = window.ReactColor;
+  const SketchPicker = ReactColor?.SketchPicker;
+
+  const addColor = () => {
+    if (colorName && currentColor) {
+      const newColor = {
+        id: Date.now().toString(),
+        name: colorName,
+        hex: currentColor,
+      };
+      onColorsChange([...colors, newColor]);
+      setColorName("");
+      setCurrentColor("#000000");
+      setShowPicker(false);
+    }
+  };
+
+  const removeColor = (colorId) => {
+    onColorsChange(colors.filter((color) => color.id !== colorId));
+  };
+
+  const handleColorChange = (color) => {
+    setCurrentColor(color.hex);
+  };
+
+  return (
+    <div className={`space-y-4 ${className}`}>
+      {/* Selected Colors */}
+      {colors.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Product Colors ({colors.length})
+          </label>
+          <div className="flex flex-wrap gap-3">
+            {colors.map((color) => (
+              <div
+                key={color.id}
+                className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2 border hover:bg-gray-100 transition-colors"
+              >
+                <div
+                  className="w-6 h-6 rounded border border-gray-300 shadow-sm"
+                  style={{ backgroundColor: color.hex }}
+                />
+                <span className="text-sm text-gray-700 font-medium">
+                  {color.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeColor(color.id)}
+                  className="text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add Color Section */}
+      {showPicker ? (
+        <div className="border border-gray-200 rounded-lg p-4 space-y-4 bg-white shadow-sm">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium text-gray-900">Add New Color</h4>
+            <button
+              type="button"
+              onClick={() => setShowPicker(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <FormField label="Color Name" required>
+            <Input
+              value={colorName}
+              onChange={(e) => setColorName(e.target.value)}
+              placeholder="e.g., Midnight Blue, Cherry Red"
+            />
+          </FormField>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Pick Color
+            </label>
+            {SketchPicker ? (
+              <SketchPicker
+                color={currentColor}
+                onChange={handleColorChange}
+                disableAlpha={true}
+                presetColors={[
+                  "#FF0000",
+                  "#FF8000",
+                  "#FFFF00",
+                  "#80FF00",
+                  "#00FF00",
+                  "#00FF80",
+                  "#00FFFF",
+                  "#0080FF",
+                  "#0000FF",
+                  "#8000FF",
+                  "#FF00FF",
+                  "#FF0080",
+                  "#000000",
+                  "#404040",
+                  "#808080",
+                  "#C0C0C0",
+                  "#FFFFFF",
+                ]}
+              />
+            ) : (
+              <div className="text-center py-8 text-gray-500 border border-gray-200 rounded-lg">
+                <Palette className="h-8 w-8 mx-auto mb-2" />
+                <p>Color picker library not loaded</p>
+                <p className="text-xs">Please include react-color CDN</p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex space-x-2">
+            <Button onClick={addColor} size="sm" disabled={!colorName.trim()}>
+              Add Color
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => setShowPicker(false)}
+              size="sm"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setShowPicker(true)}
+          className="w-full border-dashed border-2 border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+        >
+          <Palette className="h-4 w-4 mr-2" />
+          Add Product Color
+        </Button>
+      )}
+    </div>
+  );
+};
+
+// ImageUpload Component
+export const ImageUpload = ({
+  images = [],
+  onImagesChange,
+  maxImages = 10,
+  className = "",
+}) => {
+  const fileInputRef = useRef(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    processFiles(files);
+  };
+
+  const processFiles = (files) => {
+    const validFiles = files.filter((file) => {
+      return file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024; // 5MB limit
+    });
+
+    const newImages = validFiles.map((file) => ({
+      id: Date.now().toString() + Math.random(),
+      file,
+      url: URL.createObjectURL(file),
+      name: file.name,
+      size: file.size,
+    }));
+
+    const totalImages = [...images, ...newImages].slice(0, maxImages);
+    onImagesChange(totalImages);
+  };
+
+  const removeImage = (imageId) => {
+    const updatedImages = images.filter((img) => img.id !== imageId);
+    onImagesChange(updatedImages);
+  };
+
+  const moveImage = (fromIndex, toIndex) => {
+    const updatedImages = [...images];
+    const [movedImage] = updatedImages.splice(fromIndex, 1);
+    updatedImages.splice(toIndex, 0, movedImage);
+    onImagesChange(updatedImages);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files);
+    processFiles(files);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  return (
+    <div className={`space-y-4 ${className}`}>
+      {/* Upload Area */}
+      <div
+        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+          dragOver
+            ? "border-blue-400 bg-blue-50"
+            : "border-gray-300 hover:border-gray-400"
+        }`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
+        <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          Upload Product Images
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Drag and drop images here, or click to browse
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          Choose Files
+        </Button>
+        <p className="text-xs text-gray-500 mt-2">
+          Maximum {maxImages} images, up to 5MB each. JPG, PNG, WebP supported.
+        </p>
+      </div>
+
+      {/* Image Preview Grid */}
+      {images.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm font-medium text-gray-700">
+              Product Images ({images.length}/{maxImages})
+            </label>
+            {images.length > 0 && (
+              <span className="text-xs text-gray-500">
+                First image will be the main product image
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {images.map((image, index) => (
+              <div
+                key={image.id}
+                className="relative group border border-gray-200 rounded-lg overflow-hidden bg-gray-50 aspect-square"
+              >
+                <img
+                  src={image.url}
+                  alt={image.name}
+                  className="w-full h-full object-cover"
+                />
+
+                {/* Main Image Badge */}
+                {index === 0 && (
+                  <div className="absolute top-2 left-2">
+                    <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
+                      Main
+                    </span>
+                  </div>
+                )}
+
+                {/* Image Controls */}
+                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
+                  {index > 0 && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => moveImage(index, index - 1)}
+                      className="bg-white text-gray-900"
+                    >
+                      ←
+                    </Button>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    onClick={() => removeImage(image.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+
+                  {index < images.length - 1 && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => moveImage(index, index + 1)}
+                      className="bg-white text-gray-900"
+                    >
+                      →
+                    </Button>
+                  )}
+                </div>
+
+                {/* Image Info */}
+                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <p className="text-xs truncate">{image.name}</p>
+                  <p className="text-xs text-gray-300">
+                    {(image.size / 1024 / 1024).toFixed(1)} MB
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// TagInput Component
+export const TagInput = ({
+  tags = [],
+  onTagsChange,
+  placeholder = "Add tags...",
+  maxTags = 20,
+  className = "",
+}) => {
+  const [inputValue, setInputValue] = useState("");
+  const [suggestions] = useState([
+    "Electronics",
+    "Wireless",
+    "Bluetooth",
+    "Audio",
+    "Music",
+    "Gaming",
+    "Professional",
+    "Portable",
+    "Premium",
+    "High-Quality",
+    "Durable",
+    "Waterproof",
+    "Fast-Charging",
+    "Long-Battery",
+    "Noise-Cancelling",
+  ]);
+
+  const addTag = (tagText) => {
+    const trimmedTag = tagText.trim();
+    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < maxTags) {
+      onTagsChange([...tags, trimmedTag]);
+    }
+    setInputValue("");
+  };
+
+  const removeTag = (tagToRemove) => {
+    onTagsChange(tags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addTag(inputValue);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    addTag(suggestion);
+  };
+
+  const filteredSuggestions = suggestions.filter(
+    (suggestion) =>
+      !tags.includes(suggestion) &&
+      suggestion.toLowerCase().includes(inputValue.toLowerCase())
+  );
+
+  return (
+    <div className={`space-y-3 ${className}`}>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Product Tags ({tags.length}/{maxTags})
+        </label>
+
+        {/* Tags Display */}
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3 p-3 bg-gray-50 rounded-lg border">
+            {tags.map((tag, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-md"
+              >
+                <Tag className="h-3 w-3 mr-1" />
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  className="ml-2 text-blue-600 hover:text-blue-800"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Tag Input */}
+        <Input
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder={placeholder}
+          disabled={tags.length >= maxTags}
+        />
+
+        <p className="text-xs text-gray-500 mt-1">
+          Press Enter or comma to add tag. Maximum {maxTags} tags allowed.
+        </p>
+      </div>
+
+      {/* Suggestions */}
+      {inputValue && filteredSuggestions.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Suggested Tags
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {filteredSuggestions.slice(0, 10).map((suggestion, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => handleSuggestionClick(suggestion)}
+                className="text-sm bg-white border border-gray-300 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-50 hover:border-blue-300 transition-colors"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Success Modal Component
+export const SuccessModal = ({
+  isOpen,
+  onClose,
+  title = "Success!",
+  message = "Operation completed successfully.",
+  actionLabel = "Continue",
+  onAction,
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="p-6 text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-8 h-8 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M5 13l4 4L19 7"
+              ></path>
+            </svg>
+          </div>
+
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">{title}</h3>
+
+          <p className="text-gray-600 mb-6">{message}</p>
+
+          <div className="flex space-x-3">
+            <Button variant="secondary" onClick={onClose} className="flex-1">
+              Close
+            </Button>
+            {onAction && (
+              <Button onClick={onAction} className="flex-1">
+                {actionLabel}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

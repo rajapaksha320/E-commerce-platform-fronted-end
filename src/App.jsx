@@ -30,6 +30,7 @@ import CheckoutPage from "./pages/checkoutPage/CheckoutPage";
 import Orders from "./pages/ordersPage/Orders";
 import Profile from "./pages/profilePage/Profile";
 import SellerLayout from "./components/sellerComponents/layout/SellerLayout";
+import Listing from "./pages/createListing/Listing";
 
 function App() {
   return (
@@ -67,6 +68,7 @@ function App() {
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/create-listing" element={<Listing />} />
         </Route>
         {/* Routes that don't use the Layout (standalone pages) */}
         <Route path="/seller-registration" element={<SellerRegisterForm />} />

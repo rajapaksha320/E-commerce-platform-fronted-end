@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -36,6 +37,7 @@ import {
   Award,
   Globe,
   Zap,
+  ExternalLink,
 } from "lucide-react";
 
 import {
@@ -47,26 +49,18 @@ import {
 
 const TrackParcel = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [trackingNumber, setTrackingNumber] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [trackingData, setTrackingData] = useState(null);
   const [error, setError] = useState("");
-
-  // Get tracking number from URL params if available
-  useEffect(() => {
-    const numberFromUrl = searchParams.get("number");
-    if (numberFromUrl) {
-      setTrackingNumber(numberFromUrl);
-      handleTrackPackage(numberFromUrl);
-    }
-  }, [searchParams]);
+  const [autoTracked, setAutoTracked] = useState(false);
 
   // Sample tracking data
   const sampleTrackingData = {
     trackingNumber: "EM1234567890",
     status: "In Transit",
-    statusType: "in-transit", 
+    statusType: "in-transit",
     estimatedDelivery: "2024-06-15",
     currentLocation: "Los Angeles, CA Distribution Center",
     carrier: "FedEx Express",
@@ -146,6 +140,16 @@ const TrackParcel = () => {
     ],
   };
 
+  // Get tracking number from URL params if available and auto-track
+  useEffect(() => {
+    const numberFromUrl = searchParams.get("number");
+    if (numberFromUrl && !autoTracked) {
+      setTrackingNumber(numberFromUrl);
+      setAutoTracked(true);
+      handleTrackPackage(numberFromUrl);
+    }
+  }, [searchParams, autoTracked]);
+
   const handleTrackPackage = async (number = trackingNumber) => {
     if (!number.trim()) {
       setError("Please enter a tracking number");
@@ -154,6 +158,13 @@ const TrackParcel = () => {
 
     setIsLoading(true);
     setError("");
+
+    // Update URL with tracking number if not already there
+    if (searchParams.get("number") !== number) {
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.set("number", number);
+      setSearchParams(newSearchParams, { replace: true });
+    }
 
     // Simulate API call
     setTimeout(() => {
@@ -176,10 +187,29 @@ const TrackParcel = () => {
     navigator.clipboard.writeText(
       trackingData?.trackingNumber || trackingNumber
     );
+    // You could add a toast notification here
   };
 
   const handleBackToShipping = () => {
     navigate("/shipping-info");
+  };
+
+  const handleBackToOrders = () => {
+    navigate("/orders");
+  };
+
+  const handleShareTracking = () => {
+    const currentUrl = window.location.href;
+    if (navigator.share) {
+      navigator.share({
+        title: "Track Package",
+        text: `Track package ${trackingData?.trackingNumber || trackingNumber}`,
+        url: currentUrl,
+      });
+    } else {
+      navigator.clipboard.writeText(currentUrl);
+      // You could add a toast notification here
+    }
   };
 
   const getStatusColor = (statusType) => {
@@ -218,23 +248,38 @@ const TrackParcel = () => {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={handleBackToShipping}
-              className="flex items-center space-x-2"
-            >
-              <ArrowLeft size={16} />
-              <span>Back to Shipping Info</span>
-            </Button>
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                onClick={handleBackToOrders}
+                className="flex items-center space-x-2"
+              >
+                <ArrowLeft size={16} />
+                <span>Back to Orders</span>
+              </Button>
+
+              {/* Breadcrumb */}
+              <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-500">
+                <span>Orders</span>
+                <span>•</span>
+                <span className="text-gray-900">Track Package</span>
+              </div>
+            </div>
 
             <div className="flex items-center space-x-4">
+              {trackingData && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShareTracking}
+                >
+                  <Share2 size={16} className="mr-2" />
+                  Share
+                </Button>
+              )}
               <Button variant="outline" size="sm">
                 <Bell size={16} className="mr-2" />
                 Get Updates
-              </Button>
-              <Button variant="outline" size="sm">
-                <Share2 size={16} className="mr-2" />
-                Share
               </Button>
             </div>
           </div>
@@ -272,6 +317,7 @@ const TrackParcel = () => {
                   placeholder="Enter tracking number (e.g., EM1234567890)"
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleTrackPackage()}
                   icon={<Search size={20} />}
                   size="lg"
                   className="bg-white/90 backdrop-blur-sm border-white/20 text-gray-800 flex-grow"
@@ -291,10 +337,21 @@ const TrackParcel = () => {
                   <span>{isLoading ? "Tracking..." : "Track Package"}</span>
                 </Button>
               </div>
+
               {error && (
                 <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-lg flex items-center text-red-700">
                   <AlertCircle size={16} className="mr-2" />
                   <span>{error}</span>
+                </div>
+              )}
+
+              {/* Auto-tracked notification */}
+              {autoTracked && trackingData && (
+                <div className="mt-4 p-3 bg-green-100 border border-green-300 rounded-lg flex items-center text-green-700">
+                  <CheckCircle size={16} className="mr-2" />
+                  <span>
+                    Package tracking loaded automatically from your order
+                  </span>
                 </div>
               )}
             </div>
@@ -355,6 +412,7 @@ const TrackParcel = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={handleCopyTracking}
+                                title="Copy tracking number"
                               >
                                 <Copy size={14} />
                               </Button>
@@ -459,6 +517,15 @@ const TrackParcel = () => {
                       >
                         <Download size={16} className="mr-2" />
                         Download Receipt
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={handleBackToOrders}
+                      >
+                        <Package size={16} className="mr-2" />
+                        View All Orders
                       </Button>
                     </div>
                   </div>
@@ -715,6 +782,27 @@ const TrackParcel = () => {
                       </p>
                     </div>
                   </div>
+
+                  <div className="mt-8 pt-8 border-t border-gray-200">
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                      <Button
+                        variant="outline"
+                        onClick={handleBackToOrders}
+                        className="flex items-center space-x-2"
+                      >
+                        <Package size={16} />
+                        <span>View My Orders</span>
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={() => navigate("/product-collections")}
+                        className="flex items-center space-x-2"
+                      >
+                        <ExternalLink size={16} />
+                        <span>Continue Shopping</span>
+                      </Button>
+                    </div>
+                  </div>
                 </Card.Body>
               </Card>
             </div>
@@ -733,9 +821,14 @@ const TrackParcel = () => {
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
                   Tracking Your Package
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-gray-600 mb-4">
                   Please wait while we fetch the latest information...
                 </p>
+                {trackingNumber && (
+                  <Badge variant="primary" className="font-mono">
+                    {trackingNumber}
+                  </Badge>
+                )}
               </Card.Body>
             </Card>
           </div>

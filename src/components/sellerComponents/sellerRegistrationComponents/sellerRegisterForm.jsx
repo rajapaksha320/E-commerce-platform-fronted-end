@@ -24,7 +24,7 @@ const SuccessModal = ({ isOpen, onClose, userData }) => {
   if (!isOpen) return null;
 
   const handleSellerHubNavigation = () => {
-    window.location.href = "/seller-hub";
+    window.location.href = "/seller-dashboard";
   };
 
 
