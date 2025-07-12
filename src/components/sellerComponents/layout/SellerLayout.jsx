@@ -37,8 +37,9 @@ import {
   Dropdown,
 } from "../../ui/sellerUis/Uis";
 
-// Import the OrderManagement component
+
 import OrderManagement from "../sellerDashboardComponents/OrderManagement/OrderManagement";
+import ListingManagement from "../sellerDashboardComponents/ListingManagement/ListingManagement";
 
 // Import the ProfileManagement component
 import ProfileManagement from "../sellerDashboardComponents/ProfileManagement/ProfileManagement";
@@ -75,12 +76,12 @@ const SellerLayout = ({
       { id: "disputes", name: "Requests and disputes" },
     ],
     listings: [
-      { id: "create-listing", name: "Create listing" },
-      { id: "active", name: "Active" },
-      { id: "unsold", name: "Unsold" },
-      { id: "drafts", name: "Drafts" },
-      { id: "scheduled", name: "Scheduled" },
-      { id: "ended", name: "Ended" },
+      { id: "all-listings", name: "All listings" },
+      { id: "active-listings", name: "Active listings" },
+      { id: "inactive-listings", name: "Inactive listings" },
+      { id: "out-of-stock", name: "Out of stock" },
+      { id: "draft-listings", name: "Draft listings" },
+      { id: "sold-listings", name: "Sold listings" },
     ],
     customer: [
       { id: "messages", name: "Customer messages" },
@@ -282,15 +283,16 @@ const SellerLayout = ({
       ],
     },
     listings: {
-      "create-listing": [], // No filters for create listing
-      active: [
+      "all-listings": [
         {
           type: "select",
-          label: "Listing Type",
+          label: "Status",
           options: [
-            { value: "all", label: "All Types" },
-            { value: "auction", label: "Auction" },
-            { value: "fixed-price", label: "Fixed Price" },
+            { value: "all", label: "All Status" },
+            { value: "active", label: "Active" },
+            { value: "paused", label: "Paused" },
+            { value: "out-of-stock", label: "Out of Stock" },
+            { value: "draft", label: "Draft" },
           ],
         },
         {
@@ -299,50 +301,126 @@ const SellerLayout = ({
           options: [
             { value: "all", label: "All Categories" },
             { value: "electronics", label: "Electronics" },
+            { value: "gaming", label: "Gaming" },
             { value: "fashion", label: "Fashion" },
             { value: "home", label: "Home & Garden" },
           ],
         },
         {
+          type: "select",
+          label: "Price Range",
+          options: [
+            { value: "all", label: "All Prices" },
+            { value: "0-100", label: "$0 - $100" },
+            { value: "100-500", label: "$100 - $500" },
+            { value: "500-1000", label: "$500 - $1,000" },
+            { value: "1000-5000", label: "$1,000+" },
+          ],
+        },
+        {
           type: "search",
-          label: "Search products",
+          label: "Search listings",
+          placeholder: "Product name, SKU, or tags...",
+        },
+      ],
+      "active-listings": [
+        {
+          type: "select",
+          label: "Category",
+          options: [
+            { value: "all", label: "All Categories" },
+            { value: "electronics", label: "Electronics" },
+            { value: "gaming", label: "Gaming" },
+            { value: "fashion", label: "Fashion" },
+          ],
+        },
+        {
+          type: "select",
+          label: "Performance",
+          options: [
+            { value: "all", label: "All Performance" },
+            { value: "high-views", label: "High Views" },
+            { value: "low-conversion", label: "Low Conversion" },
+            { value: "top-rated", label: "Top Rated" },
+          ],
+        },
+        {
+          type: "search",
+          label: "Search active listings",
           placeholder: "Product name or SKU...",
         },
       ],
-      unsold: [
+      "inactive-listings": [
         {
           type: "select",
           label: "Reason",
           options: [
             { value: "all", label: "All Reasons" },
-            { value: "ended", label: "Auction Ended" },
-            { value: "cancelled", label: "Cancelled" },
-            { value: "no-bids", label: "No Bids" },
+            { value: "paused", label: "Manually Paused" },
+            { value: "policy", label: "Policy Violation" },
+            { value: "temporary", label: "Temporary Hold" },
           ],
         },
         {
           type: "select",
           label: "Time Period",
           options: [
+            { value: "all", label: "All Time" },
             { value: "7days", label: "Last 7 days" },
             { value: "30days", label: "Last 30 days" },
-            { value: "90days", label: "Last 90 days" },
           ],
         },
         {
           type: "search",
-          label: "Search products",
+          label: "Search inactive",
           placeholder: "Product name...",
         },
       ],
-      drafts: [
+      "out-of-stock": [
         {
           type: "select",
           label: "Category",
           options: [
             { value: "all", label: "All Categories" },
             { value: "electronics", label: "Electronics" },
+            { value: "gaming", label: "Gaming" },
             { value: "fashion", label: "Fashion" },
+          ],
+        },
+        {
+          type: "select",
+          label: "Priority",
+          options: [
+            { value: "all", label: "All Items" },
+            { value: "high-demand", label: "High Demand" },
+            { value: "low-stock-alert", label: "Low Stock Alert" },
+          ],
+        },
+        {
+          type: "search",
+          label: "Search out of stock",
+          placeholder: "Product name...",
+        },
+      ],
+      "draft-listings": [
+        {
+          type: "select",
+          label: "Completion Status",
+          options: [
+            { value: "all", label: "All Drafts" },
+            { value: "incomplete", label: "Incomplete" },
+            { value: "ready", label: "Ready to Publish" },
+            { value: "needs-review", label: "Needs Review" },
+          ],
+        },
+        {
+          type: "select",
+          label: "Last Modified",
+          options: [
+            { value: "all", label: "All Time" },
+            { value: "today", label: "Today" },
+            { value: "7days", label: "Last 7 days" },
+            { value: "30days", label: "Last 30 days" },
           ],
         },
         {
@@ -351,45 +429,29 @@ const SellerLayout = ({
           placeholder: "Draft name...",
         },
       ],
-      scheduled: [
-        {
-          type: "select",
-          label: "Start Time",
-          options: [
-            { value: "all", label: "All Time" },
-            { value: "today", label: "Today" },
-            { value: "this-week", label: "This Week" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search scheduled",
-          placeholder: "Product name...",
-        },
-      ],
-      ended: [
-        {
-          type: "select",
-          label: "End Reason",
-          options: [
-            { value: "all", label: "All" },
-            { value: "sold", label: "Sold" },
-            { value: "cancelled", label: "Cancelled" },
-            { value: "expired", label: "Expired" },
-          ],
-        },
+      "sold-listings": [
         {
           type: "select",
           label: "Time Period",
           options: [
-            { value: "7days", label: "Last 7 days" },
             { value: "30days", label: "Last 30 days" },
             { value: "90days", label: "Last 90 days" },
+            { value: "year", label: "This year" },
+            { value: "all", label: "All time" },
+          ],
+        },
+        {
+          type: "select",
+          label: "Sales Performance",
+          options: [
+            { value: "all", label: "All Performance" },
+            { value: "best-sellers", label: "Best Sellers" },
+            { value: "low-performers", label: "Low Performers" },
           ],
         },
         {
           type: "search",
-          label: "Search ended",
+          label: "Search sold items",
           placeholder: "Product name...",
         },
       ],
@@ -1091,8 +1153,8 @@ const SellerLayout = ({
                         <OrderManagement activeSection={activeSubTab} />
                       )}
 
-                      {/* Other sections placeholder */}
-                      {activeTab !== "orders" && (
+                      {/* Other sections content */}
+                      {activeTab !== "orders" && activeTab !== "listings" && (
                         <>
                           <div className="flex items-center justify-between">
                             <div>
@@ -1119,9 +1181,6 @@ const SellerLayout = ({
                           <Card>
                             <CardContent className="text-center py-12">
                               <div className="text-gray-400 mb-4">
-                                {activeTab === "listings" && (
-                                  <Package className="h-16 w-16 mx-auto" />
-                                )}
                                 {activeTab === "customer" && (
                                   <Users className="h-16 w-16 mx-auto" />
                                 )}
@@ -1144,6 +1203,11 @@ const SellerLayout = ({
                             </CardContent>
                           </Card>
                         </>
+                      )}
+
+                      {/* Listings Management */}
+                      {activeTab === "listings" && activeSubTab && (
+                        <ListingManagement activeSection={activeSubTab} />
                       )}
                     </div>
                   </div>
