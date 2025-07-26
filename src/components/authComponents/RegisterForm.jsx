@@ -269,7 +269,7 @@ const RegisterForm = ({ switchView, onClose }) => {
               Create account
             </Button>
 
-            <div className="relative my-6">
+            {/* <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300"></div>
               </div>
@@ -278,7 +278,7 @@ const RegisterForm = ({ switchView, onClose }) => {
                   Or sign up with
                 </span>
               </div>
-            </div>
+            </div> */}
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               <Button
