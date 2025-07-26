@@ -153,7 +153,7 @@ const LoginForm = ({ switchView, onClose, onLogin }) => {
           Sign in
         </Button>
 
-        <div className="relative my-6">
+        {/* <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300"></div>
           </div>
@@ -191,7 +191,7 @@ const LoginForm = ({ switchView, onClose, onLogin }) => {
             </svg>
             Facebook
           </Button>
-        </div>
+        </div> */}
       </form>
 
       <p className="text-center text-sm text-gray-600">
