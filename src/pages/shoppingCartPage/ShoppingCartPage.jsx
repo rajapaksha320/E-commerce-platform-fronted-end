@@ -275,7 +275,7 @@ const ShoppingCartPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
       {/* Mobile-First Header */}
-      <div className="bg-white/90 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-50 shadow-sm">
+      <div className="bg-white/90 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-3">
@@ -287,7 +287,7 @@ const ShoppingCartPage = () => {
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <div className="min-w-0">
+              <div className="min-w-0 z-10">
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center truncate">
                   <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 mr-2 flex-shrink-0" />
                   <span className="hidden sm:inline">Shopping Cart</span>
