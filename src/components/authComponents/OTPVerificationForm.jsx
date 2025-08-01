@@ -1,21 +1,43 @@
+// components/auth/OTPVerificationForm.jsx
 import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { X, Shield } from "lucide-react";
 import Card from "../ui/AuthUis/Card";
 import { Button } from "../ui/AuthUis/Button";
-
+import {
+  verifyOTP,
+  clearError,
+  selectLoading,
+  selectError,
+  selectResetEmail,
+  selectOtpVerified,
+  forgotPassword,
+} from "../../store/slices/authSlice";
 
 const OTPVerificationForm = ({ switchView, onClose }) => {
+  const dispatch = useDispatch();
+  
+  const isLoading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+  const resetEmail = useSelector(selectResetEmail);
+  const otpVerified = useSelector(selectOtpVerified);
+
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timeLeft, setTimeLeft] = useState(60);
   const [isResending, setIsResending] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [error, setError] = useState("");
-  const [email] = useState("user@example.com"); // Would come from previous step
+  const [localError, setLocalError] = useState("");
 
   // References for OTP inputs
   const inputRefs = Array(6)
     .fill(0)
     .map(() => React.createRef());
+
+  // Handle OTP verification success
+  useEffect(() => {
+    if (otpVerified) {
+      switchView("new-password");
+    }
+  }, [otpVerified, switchView]);
 
   // Timer for OTP resend countdown
   useEffect(() => {
@@ -38,7 +60,8 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
     setOtp(newOtp);
 
     // Clear any previous errors
-    if (error) setError("");
+    if (localError) setLocalError("");
+    if (error) dispatch(clearError());
 
     // Auto move to next input if current one is filled
     if (value !== "" && index < 5) {
@@ -85,17 +108,18 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
     if (timeLeft > 0) return;
 
     setIsResending(true);
-
-    // Simulate resending OTP
-    setTimeout(() => {
+    
+    // Call forgot password again with the same email
+    try {
+      await dispatch(forgotPassword(resetEmail)).unwrap();
       setTimeLeft(60);
-      setIsResending(false);
-      setError("");
-      // Clear OTP fields
       setOtp(["", "", "", "", "", ""]);
-      // Focus the first input
       inputRefs[0].current.focus();
-    }, 1500);
+    } catch (err) {
+      console.error('Failed to resend OTP:', err);
+    } finally {
+      setIsResending(false);
+    }
   };
 
   // Submit OTP for verification
@@ -104,18 +128,21 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
 
     // Check if OTP is complete
     if (otp.some((digit) => digit === "")) {
-      setError("Please enter all 6 digits");
+      setLocalError("Please enter all 6 digits");
       return;
     }
 
-    setIsVerifying(true);
-
-    // Simulate OTP verification
-    setTimeout(() => {
-      setIsVerifying(false);
-      // Navigate to new password page
-      switchView("new-password");
-    }, 1500);
+    const otpString = otp.join("");
+    
+    try {
+      await dispatch(verifyOTP({ 
+        email: resetEmail, 
+        otp: otpString 
+      })).unwrap();
+    } catch (err) {
+      // Error is handled by Redux state
+      console.error('OTP verification failed:', err);
+    }
   };
 
   return (
@@ -130,7 +157,7 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
           </h2>
           <p className="text-gray-600">
             We've sent a 6-digit code to{" "}
-            <span className="font-medium">{email}</span>
+            <span className="font-medium">{resetEmail || 'your email'}</span>
           </p>
         </div>
         <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -154,7 +181,7 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
               className={`
                 w-12 h-14 text-center text-xl font-bold rounded-lg border-2 
                 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600
-                ${error ? "border-red-500" : "border-gray-300"}
+                ${error || localError ? "border-red-500" : "border-gray-300"}
                 bg-white/80 backdrop-blur-sm transition-all duration-300
               `}
             />
@@ -162,8 +189,10 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
         </div>
 
         {/* Error message */}
-        {error && (
-          <div className="text-red-500 text-sm text-center mb-4">{error}</div>
+        {(error || localError) && (
+          <div className="text-red-500 text-sm text-center mb-4">
+            {error || localError}
+          </div>
         )}
 
         {/* Verify button */}
@@ -171,9 +200,10 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
           type="submit"
           size="lg"
           className="w-full mb-6"
-          isLoading={isVerifying}
+          isLoading={isLoading}
+          disabled={isLoading}
         >
-          {isVerifying ? "Verifying..." : "Verify & Continue"}
+          {isLoading ? "Verifying..." : "Verify & Continue"}
         </Button>
 
         {/* Resend option */}

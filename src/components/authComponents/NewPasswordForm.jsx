@@ -1,17 +1,52 @@
-import React, { useState } from "react";
+/* eslint-disable no-unused-vars */
+// components/auth/NewPasswordForm.jsx
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { X, Lock, CheckCircle } from "lucide-react";
 import Card from "../ui/AuthUis/Card";
 import { Button } from "../ui/AuthUis/Button";
 import { Input } from "../ui/AuthUis/Input";
+import {
+  resetPassword,
+  clearError,
+  clearSuccess,
+  selectLoading,
+  selectError,
+  selectSuccess,
+  selectResetEmail,
+} from "../../store/slices/authSlice";
 
 const NewPasswordForm = ({ switchView, onClose }) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  
+  const isLoading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+  const success = useSelector(selectSuccess);
+  const resetEmail = useSelector(selectResetEmail);
+
   const [resetData, setResetData] = useState({
     password: "",
     confirmPassword: "",
   });
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
   const [resetComplete, setResetComplete] = useState(false);
+
+  // Handle successful password reset
+  useEffect(() => {
+    if (success && !error) {
+      setResetComplete(true);
+    }
+  }, [success, error]);
+
+  // Clear Redux state on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+      dispatch(clearSuccess());
+    };
+  }, [dispatch]);
 
   const getPasswordStrength = () => {
     const { password } = resetData;
@@ -55,6 +90,11 @@ const NewPasswordForm = ({ switchView, onClose }) => {
         [name]: "",
       }));
     }
+
+    // Clear Redux error
+    if (error) {
+      dispatch(clearError());
+    }
   };
 
   // Validate reset form
@@ -85,13 +125,16 @@ const NewPasswordForm = ({ switchView, onClose }) => {
     e.preventDefault();
 
     if (validateReset()) {
-      setIsLoading(true);
-
-      // Simulate password reset
-      setTimeout(() => {
-        setIsLoading(false);
-        setResetComplete(true);
-      }, 1500);
+      try {
+        await dispatch(resetPassword({
+          email: resetEmail,
+          newPassword: resetData.password,
+          confirmPassword: resetData.confirmPassword,
+        })).unwrap();
+      } catch (err) {
+        // Error is handled by Redux state
+        console.error('Password reset failed:', err);
+      }
     }
   };
 
@@ -124,73 +167,83 @@ const NewPasswordForm = ({ switchView, onClose }) => {
       </div>
 
       {!resetComplete ? (
-        <form onSubmit={handleResetSubmit}>
-          <div className="mb-4">
+        <>
+          {/* Display Redux error */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleResetSubmit}>
+            <div className="mb-4">
+              <Input
+                type="password"
+                label="New Password"
+                name="password"
+                value={resetData.password}
+                onChange={handleResetChange}
+                placeholder="••••••••"
+                error={errors.password}
+                required
+                icon={<Lock className="w-5 h-5" />}
+              />
+
+              {resetData.password && (
+                <div className="mt-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-xs text-gray-600">
+                      Password strength:
+                    </div>
+                    <div className="text-xs font-medium">
+                      {passwordStrength.label}
+                    </div>
+                  </div>
+                  <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${passwordStrength.color}`}
+                      style={{
+                        width: `${(passwordStrength.strength / 5) * 100}%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <Input
               type="password"
-              label="New Password"
-              name="password"
-              value={resetData.password}
+              label="Confirm New Password"
+              name="confirmPassword"
+              value={resetData.confirmPassword}
               onChange={handleResetChange}
               placeholder="••••••••"
-              error={errors.password}
+              error={errors.confirmPassword}
               required
-              icon={<Lock className="w-5 h-5" />}
+              icon={<CheckCircle className="w-5 h-5" />}
             />
 
-            {resetData.password && (
-              <div className="mt-2">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-xs text-gray-600">
-                    Password strength:
-                  </div>
-                  <div className="text-xs font-medium">
-                    {passwordStrength.label}
-                  </div>
-                </div>
-                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${passwordStrength.color}`}
-                    style={{
-                      width: `${(passwordStrength.strength / 5) * 100}%`,
-                    }}
-                  ></div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <Input
-            type="password"
-            label="Confirm New Password"
-            name="confirmPassword"
-            value={resetData.confirmPassword}
-            onChange={handleResetChange}
-            placeholder="••••••••"
-            error={errors.confirmPassword}
-            required
-            icon={<CheckCircle className="w-5 h-5" />}
-          />
-
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full mb-6"
-            isLoading={isLoading}
-          >
-            Reset Password
-          </Button>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => switchView("otp-verification")}
-              className="text-sm font-medium text-blue-600 hover:text-blue-700"
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full mb-6"
+              isLoading={isLoading}
+              disabled={isLoading}
             >
-              ← Back to Verification
-            </button>
-          </div>
-        </form>
+              {isLoading ? 'Resetting Password...' : 'Reset Password'}
+            </Button>
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => switchView("otp-verification")}
+                className="text-sm font-medium text-blue-600 hover:text-blue-700"
+              >
+                ← Back to Verification
+              </button>
+            </div>
+          </form>
+        </>
       ) : (
         <div className="text-center py-4">
           <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">

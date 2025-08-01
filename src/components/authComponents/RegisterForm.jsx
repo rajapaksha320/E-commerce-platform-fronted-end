@@ -1,10 +1,28 @@
-import React, { useState } from "react";
+// components/auth/RegisterForm.jsx
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { X, Mail, Lock, User } from "lucide-react";
 import Card from "../ui/AuthUis/Card";
 import { Button } from "../ui/AuthUis/Button";
 import { Input } from "../ui/AuthUis/Input";
+import {
+  signupUser,
+  clearError,
+  clearSuccess,
+  selectLoading,
+  selectError,
+  selectSuccess,
+  selectMessage,
+} from "../../store/slices/authSlice";
 
 const RegisterForm = ({ switchView, onClose }) => {
+  const dispatch = useDispatch();
+  
+  const isLoading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+  const success = useSelector(selectSuccess);
+  const message = useSelector(selectMessage);
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -14,8 +32,23 @@ const RegisterForm = ({ switchView, onClose }) => {
     agreeTerms: false,
   });
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+
+  // Handle successful registration
+  useEffect(() => {
+    if (success && message === "User created successfully") {
+      setRegistrationSuccess(true);
+      dispatch(clearSuccess());
+    }
+  }, [success, message, dispatch]);
+
+  // Clear Redux state on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+      dispatch(clearSuccess());
+    };
+  }, [dispatch]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -30,10 +63,23 @@ const RegisterForm = ({ switchView, onClose }) => {
         [name]: "",
       }));
     }
+    
+    // Clear Redux error when user types
+    if (error) {
+      dispatch(clearError());
+    }
   };
 
   const validate = () => {
     const newErrors = {};
+
+    if (!formData.firstName) {
+      newErrors.firstName = "First name is required";
+    }
+
+    if (!formData.lastName) {
+      newErrors.lastName = "Last name is required";
+    }
 
     if (!formData.email) {
       newErrors.email = "Email is required";
@@ -45,9 +91,9 @@ const RegisterForm = ({ switchView, onClose }) => {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 8) {
       newErrors.password = "Password must be at least 8 characters";
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(formData.password)) {
       newErrors.password =
-        "Password must include uppercase, lowercase and numbers";
+        "Password must include uppercase, lowercase, numbers and special characters";
     }
 
     if (!formData.confirmPassword) {
@@ -66,14 +112,14 @@ const RegisterForm = ({ switchView, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     if (validate()) {
-      setIsLoading(true);
-
-      // Simulate registration
-      setTimeout(() => {
-        setIsLoading(false);
-        setRegistrationSuccess(true);
-      }, 1500);
+      try {
+        await dispatch(signupUser(formData)).unwrap();
+      } catch (err) {
+        // Error is handled by Redux state
+        console.error('Signup failed:', err);
+      }
     }
   };
 
@@ -128,6 +174,13 @@ const RegisterForm = ({ switchView, onClose }) => {
             </button>
           </div>
 
+          {/* Display Redux error */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <Input
@@ -137,6 +190,7 @@ const RegisterForm = ({ switchView, onClose }) => {
                 value={formData.firstName}
                 onChange={handleChange}
                 placeholder="John"
+                error={errors.firstName}
                 icon={<User className="w-5 h-5" />}
               />
 
@@ -147,6 +201,7 @@ const RegisterForm = ({ switchView, onClose }) => {
                 value={formData.lastName}
                 onChange={handleChange}
                 placeholder="Doe"
+                error={errors.lastName}
                 icon={<User className="w-5 h-5" />}
               />
             </div>
@@ -265,49 +320,10 @@ const RegisterForm = ({ switchView, onClose }) => {
               size="lg"
               className="w-full mb-6"
               isLoading={isLoading}
+              disabled={isLoading}
             >
-              Create account
+              {isLoading ? 'Creating account...' : 'Create account'}
             </Button>
-
-            {/* <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  Or sign up with
-                </span>
-              </div>
-            </div> */}
-
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <Button
-                variant="outline"
-                className="flex items-center justify-center"
-              >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"></path>
-                </svg>
-                Google
-              </Button>
-              <Button
-                variant="outline"
-                className="flex items-center justify-center"
-              >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M13.397 20.997v-8.196h2.765l.411-3.209h-3.176V7.548c0-.926.258-1.56 1.587-1.56h1.684V3.127A22.336 22.336 0 0 0 14.201 3c-2.444 0-4.122 1.492-4.122 4.231v2.355H7.332v3.209h2.753v8.202h3.312z"></path>
-                </svg>
-                Facebook
-              </Button>
-            </div>
 
             <p className="text-center text-gray-600 text-sm">
               Already have an account?{" "}

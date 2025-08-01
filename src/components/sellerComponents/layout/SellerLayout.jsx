@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+// components/seller/SellerLayout.jsx
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import {
   BarChart3,
   Package,
@@ -21,6 +23,13 @@ import {
   CreditCard,
 } from "lucide-react";
 
+// Import Redux actions and selectors
+import { 
+  logout, 
+  selectUser, 
+  selectIsAuthenticated 
+} from "../../../store/slices/authSlice";
+
 // Import UI components
 import {
   Button,
@@ -37,24 +46,33 @@ import {
   Dropdown,
 } from "../../ui/sellerUis/Uis";
 
-
 import OrderManagement from "../sellerDashboardComponents/OrderManagement/OrderManagement";
 import ListingManagement from "../sellerDashboardComponents/ListingManagement/ListingManagement";
-
-// Import the ProfileManagement component
 import ProfileManagement from "../sellerDashboardComponents/ProfileManagement/ProfileManagement";
 
-const SellerLayout = ({
-  children,
-  shopName = "My shop",
-  shopRating = "257 ⭐",
-}) => {
+const SellerLayout = ({ children }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  
+  // Redux selectors
+  const user = useSelector(selectUser);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  
+  // Get shop info from user data or use defaults
+  const shopName = user?.businessInfo?.businessName || "My shop";
+  const shopRating = "257 ⭐"; // This could come from another API or Redux state
+
   const [activeTab, setActiveTab] = useState("overview");
   const [activeSubTab, setActiveSubTab] = useState(null);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [notificationDropdownOpen, setNotificationDropdownOpen] =
-    useState(false);
+  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+
+  // Check authentication on mount
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
   const navigation = [
     { id: "overview", name: "Overview", href: "/seller/overview" },
@@ -99,7 +117,8 @@ const SellerLayout = ({
     ],
   };
 
-  const filterConfigurations = {
+  // Filter configurations remain the same
+const filterConfigurations = {
     orders: {
       "all-orders": [
         {
@@ -719,13 +738,12 @@ const SellerLayout = ({
   };
 
   const handleLogout = () => {
-    // Clear any stored auth tokens, user data, etc.
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userData");
-
+    // Dispatch logout action
+    dispatch(logout());
+    
     // Navigate to home/login page
     navigate("/");
-
+    
     // Close the dropdown
     setProfileDropdownOpen(false);
   };
@@ -741,6 +759,7 @@ const SellerLayout = ({
     activeTab !== "profile" &&
     sidebarNavigation[activeTab];
 
+  // Filter Bar Component
   const FilterBar = ({ filters }) => {
     if (!filters || filters.length === 0) return null;
 
@@ -791,6 +810,7 @@ const SellerLayout = ({
     );
   };
 
+  // Overview Content Component
   const OverviewContent = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -845,6 +865,7 @@ const SellerLayout = ({
         </Card>
       </div>
 
+      {/* Rest of overview content remains the same */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
@@ -917,6 +938,7 @@ const SellerLayout = ({
             <Button
               variant="ghost"
               className="flex items-center gap-3 p-4 h-auto"
+              onClick={() => navigate('/create-listing')}
             >
               <PlusCircle className="h-5 w-5 text-blue-600" />
               <span className="text-sm font-medium">Create Listing</span>
@@ -971,6 +993,11 @@ const SellerLayout = ({
 
             {/* Right side */}
             <div className="flex items-center space-x-4">
+              {/* User info */}
+              <div className="text-sm text-gray-600">
+                Welcome, {user?.firstName || 'Seller'}
+              </div>
+
               {/* Messages */}
               <Button variant="secondary" size="sm">
                 Messages (0)
@@ -1031,7 +1058,10 @@ const SellerLayout = ({
                     variant="ghost"
                     className="flex items-center space-x-3 p-2"
                   >
-                    <Avatar size="sm" fallback="U" />
+                    <Avatar 
+                      size="sm" 
+                      fallback={user?.firstName?.charAt(0) || "U"} 
+                    />
                     <ChevronDown className="h-4 w-4 text-gray-400" />
                   </Button>
                 }
@@ -1133,7 +1163,7 @@ const SellerLayout = ({
               {activeTab === "profile" && (
                 <div className="py-8">
                   <div className="max-w-7/12 mx-auto px-4 sm:px-6 lg:px-8">
-                    <ProfileManagement />
+                    <ProfileManagement user={user} />
                   </div>
                 </div>
               )}
@@ -1151,6 +1181,11 @@ const SellerLayout = ({
                       {/* Orders Management */}
                       {activeTab === "orders" && activeSubTab && (
                         <OrderManagement activeSection={activeSubTab} />
+                      )}
+
+                      {/* Listings Management */}
+                      {activeTab === "listings" && activeSubTab && (
+                        <ListingManagement activeSection={activeSubTab} />
                       )}
 
                       {/* Other sections content */}
@@ -1203,11 +1238,6 @@ const SellerLayout = ({
                             </CardContent>
                           </Card>
                         </>
-                      )}
-
-                      {/* Listings Management */}
-                      {activeTab === "listings" && activeSubTab && (
-                        <ListingManagement activeSection={activeSubTab} />
                       )}
                     </div>
                   </div>

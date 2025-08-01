@@ -1,19 +1,41 @@
 /* eslint-disable no-unused-vars */
+// components/auth/AuthModal.jsx
 import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import LoginForm from "./LoginForm";
 import RegisterForm from "./RegisterForm";
 import ResetPasswordForm from "./ResetPasswordForm";
 import OTPVerificationForm from "./OTPVerificationForm";
 import NewPasswordForm from "./NewPasswordForm";
+import { selectResetEmail, selectOtpVerified } from "../../store/slices/authSlice";
 
 const AuthModal = ({ isOpen, onClose, initialView = "login", onLogin }) => {
+  const dispatch = useDispatch();
+  const resetEmail = useSelector(selectResetEmail);
+  const otpVerified = useSelector(selectOtpVerified);
+  
   const [currentView, setCurrentView] = useState(initialView);
 
   useEffect(() => {
     // Update current view when initialView prop changes
     setCurrentView(initialView);
   }, [initialView]);
+
+  // Automatically switch to OTP view if reset email is set
+  useEffect(() => {
+    if (resetEmail && currentView === "reset-password") {
+      // This handles the case where the user successfully requested a password reset
+      // The form component will handle the switch after showing success message
+    }
+  }, [resetEmail, currentView]);
+
+  // Automatically switch to new password view if OTP is verified
+  useEffect(() => {
+    if (otpVerified && currentView === "otp-verification") {
+      // This is handled within the OTPVerificationForm component
+    }
+  }, [otpVerified, currentView]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
