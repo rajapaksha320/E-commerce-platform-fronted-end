@@ -1,4 +1,6 @@
 /* eslint-disable no-unused-vars */
+
+// src/components/authComponents/AuthModal.jsx
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import LoginForm from "./LoginForm";

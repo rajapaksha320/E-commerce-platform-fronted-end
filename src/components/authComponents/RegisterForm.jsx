@@ -1,3 +1,7 @@
+
+// src/components/authComponents/RegisterForm.jsx
+
+
 import React, { useState } from "react";
 import { X, Mail, Lock, User } from "lucide-react";
 import Card from "../ui/AuthUis/Card";

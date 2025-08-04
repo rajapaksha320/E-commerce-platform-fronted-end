@@ -1,3 +1,6 @@
+
+// src/components/authComponents/ResetPasswordForm.jsx
+
 import React, { useState } from "react";
 import { X, Mail, Key } from "lucide-react";
 import Card from "../ui/AuthUis/Card";

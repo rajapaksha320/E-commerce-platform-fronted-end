@@ -1,4 +1,6 @@
 /* eslint-disable no-unused-vars */
+
+// src/components/homePageComponents/navBar/NavBar.jsx
 import React, { useState, useRef, useEffect } from "react";
 import {
   Search,
