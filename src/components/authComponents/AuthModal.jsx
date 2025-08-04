@@ -2,18 +2,27 @@
 // components/auth/AuthModal.jsx
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import LoginForm from "./LoginForm";
 import RegisterForm from "./RegisterForm";
 import ResetPasswordForm from "./ResetPasswordForm";
 import OTPVerificationForm from "./OTPVerificationForm";
 import NewPasswordForm from "./NewPasswordForm";
-import { selectResetEmail, selectOtpVerified } from "../../store/slices/authSlice";
+import { selectResetEmail, selectOtpVerified, selectIsAuthenticated } from "../../store/slices/authSlice";
 
-const AuthModal = ({ isOpen, onClose, initialView = "login", onLogin }) => {
+const AuthModal = ({ 
+  isOpen, 
+  onClose, 
+  initialView = "login", 
+  onLogin, 
+  intendedDestination = null 
+}) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const resetEmail = useSelector(selectResetEmail);
   const otpVerified = useSelector(selectOtpVerified);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
   
   const [currentView, setCurrentView] = useState(initialView);
 
@@ -21,6 +30,28 @@ const AuthModal = ({ isOpen, onClose, initialView = "login", onLogin }) => {
     // Update current view when initialView prop changes
     setCurrentView(initialView);
   }, [initialView]);
+
+  // Handle successful authentication
+  useEffect(() => {
+    if (isAuthenticated && isOpen) {
+      // Close modal first
+      onClose();
+      
+      // Call onLogin callback if provided
+      if (onLogin) {
+        onLogin();
+      }
+      
+      // Navigate to intended destination after a brief delay
+      setTimeout(() => {
+        if (intendedDestination && intendedDestination !== '/') {
+          navigate(intendedDestination);
+        }
+        // If no intended destination or it's home, stay where we are
+        // The normal routing will handle it
+      }, 100);
+    }
+  }, [isAuthenticated, isOpen, onClose, onLogin, intendedDestination, navigate]);
 
   // Automatically switch to OTP view if reset email is set
   useEffect(() => {
@@ -66,10 +97,17 @@ const AuthModal = ({ isOpen, onClose, initialView = "login", onLogin }) => {
             switchView={setCurrentView}
             onClose={onClose}
             onLogin={onLogin}
+            intendedDestination={intendedDestination}
           />
         );
       case "register":
-        return <RegisterForm switchView={setCurrentView} onClose={onClose} />;
+        return (
+          <RegisterForm 
+            switchView={setCurrentView} 
+            onClose={onClose}
+            intendedDestination={intendedDestination}
+          />
+        );
       case "reset-password":
         return (
           <ResetPasswordForm switchView={setCurrentView} onClose={onClose} />
@@ -88,6 +126,7 @@ const AuthModal = ({ isOpen, onClose, initialView = "login", onLogin }) => {
             switchView={setCurrentView}
             onClose={onClose}
             onLogin={onLogin}
+            intendedDestination={intendedDestination}
           />
         );
     }

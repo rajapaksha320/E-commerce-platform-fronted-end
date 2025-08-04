@@ -3,20 +3,93 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '../../services/authService';
 import { setAuthToken, removeAuthToken } from '../../utils/tokenManager';
 
-// Initial state
-const initialState = {
-  user: null,
-  accessToken: localStorage.getItem('accessToken'),
-  userRole: null,
-  tenantId: null,
-  emailVerified: false,
-  isAuthenticated: !!localStorage.getItem('accessToken'),
-  loading: false,
-  error: null,
-  success: false,
-  message: '',
-  resetEmail: null, // For password reset flow
-  otpVerified: false,
+// 🏢 PROFESSIONAL: Safe localStorage utility functions
+const storage = {
+  get: (key, defaultValue = null) => {
+    try {
+      const item = localStorage.getItem(key);
+      if (!item) return defaultValue;
+      
+      // Handle JSON data
+      if (key === 'userData') {
+        return JSON.parse(item);
+      }
+      
+      // Handle boolean data
+      if (key === 'emailVerified') {
+        return item === 'true';
+      }
+      
+      return item;
+    } catch (error) {
+      console.error(`Error reading ${key} from localStorage:`, error);
+      return defaultValue;
+    }
+  },
+  
+  set: (key, value) => {
+    try {
+      if (typeof value === 'object') {
+        localStorage.setItem(key, JSON.stringify(value));
+      } else {
+        localStorage.setItem(key, String(value));
+      }
+    } catch (error) {
+      console.error(`Error saving ${key} to localStorage:`, error);
+    }
+  },
+  
+  remove: (key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error(`Error removing ${key} from localStorage:`, error);
+    }
+  },
+  
+  clear: () => {
+    try {
+      const authKeys = ['accessToken', 'userData', 'userRole', 'tenantId', 'emailVerified'];
+      authKeys.forEach(key => localStorage.removeItem(key));
+    } catch (error) {
+      console.error('Error clearing auth data from localStorage:', error);
+    }
+  }
+};
+
+// 🏢 PROFESSIONAL: Initialize state from localStorage (Industry Standard)
+const getInitialAuthState = () => {
+  const accessToken = storage.get('accessToken');
+  const userData = storage.get('userData');
+  const userRole = storage.get('userRole');
+  const tenantId = storage.get('tenantId');
+  const emailVerified = storage.get('emailVerified', false);
+  
+  return {
+    user: userData,
+    accessToken: accessToken,
+    userRole: userRole,
+    tenantId: tenantId,
+    emailVerified: emailVerified,
+    isAuthenticated: !!accessToken,
+    loading: false,
+    error: null,
+    success: false,
+    message: '',
+    resetEmail: null,
+    otpVerified: false,
+  };
+};
+
+// 🏢 PROFESSIONAL: Initial state with complete restoration
+const initialState = getInitialAuthState();
+
+// 🏢 PROFESSIONAL: Helper to persist auth data
+const persistAuthData = (authData) => {
+  storage.set('userData', authData.user);
+  storage.set('userRole', authData.userRole);
+  storage.set('tenantId', authData.tenantId);
+  storage.set('emailVerified', authData.emailVerified);
 };
 
 // Async thunks
@@ -125,24 +198,32 @@ export const refreshAccessToken = createAsyncThunk(
   }
 );
 
-// Auth slice
+// 🏢 PROFESSIONAL: Auth slice with complete persistence
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
     logout: (state) => {
+      // Clear tokens (your existing logic)
       removeAuthToken();
-      state.user = null;
-      state.accessToken = null;
-      state.userRole = null;
-      state.tenantId = null;
-      state.emailVerified = false;
-      state.isAuthenticated = false;
-      state.error = null;
-      state.success = false;
-      state.message = '';
-      state.resetEmail = null;
-      state.otpVerified = false;
+      
+      // 🏢 PROFESSIONAL: Clear all auth data from localStorage
+      storage.clear();
+      
+      // Reset state to initial values
+      Object.assign(state, {
+        user: null,
+        accessToken: null,
+        userRole: null,
+        tenantId: null,
+        emailVerified: false,
+        isAuthenticated: false,
+        error: null,
+        success: false,
+        message: '',
+        resetEmail: null,
+        otpVerified: false,
+      });
     },
     clearError: (state) => {
       state.error = null;
@@ -177,7 +258,7 @@ const authSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Seller Registration
+    // 🏢 PROFESSIONAL: Seller Registration with complete persistence
     builder
       .addCase(sellerRegistration.pending, (state) => {
         state.loading = true;
@@ -187,12 +268,23 @@ const authSlice = createSlice({
         state.loading = false;
         state.success = true;
         state.message = action.payload.message;
+        
+        // Update state
         state.user = action.payload.user;
         state.accessToken = action.payload.accessToken;
         state.userRole = action.payload.user.userRole;
         state.tenantId = action.payload.user.tenantId;
         state.emailVerified = action.payload.user.emailVerified;
         state.isAuthenticated = true;
+        
+        // 🏢 PROFESSIONAL: Persist complete auth data
+        persistAuthData({
+          user: action.payload.user,
+          userRole: action.payload.user.userRole,
+          tenantId: action.payload.user.tenantId,
+          emailVerified: action.payload.user.emailVerified,
+        });
+        
         setAuthToken(action.payload.accessToken, action.payload.refreshToken);
       })
       .addCase(sellerRegistration.rejected, (state, action) => {
@@ -200,7 +292,7 @@ const authSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Login
+    // 🏢 PROFESSIONAL: Login with complete persistence
     builder
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
@@ -210,18 +302,42 @@ const authSlice = createSlice({
         state.loading = false;
         state.success = true;
         state.message = action.payload.message;
+        
+        // Build complete user object
+        const userData = {
+          userId: action.payload.userId,
+          tenantId: action.payload.tenantId,
+          userRole: action.payload.userRole,
+          emailVerified: action.payload.emailVerified,
+          email: action.payload.email,
+          firstName: action.payload.firstName,
+          lastName: action.payload.lastName,
+          businessInfo: action.payload.businessInfo,
+        };
+        
+        // Update state
+        state.user = userData;
         state.accessToken = action.payload.access_token;
         state.userRole = action.payload.userRole;
         state.tenantId = action.payload.tenantId;
         state.emailVerified = action.payload.emailVerified;
         state.isAuthenticated = true;
-        state.user = {
-          userId: action.payload.userId,
-          tenantId: action.payload.tenantId,
+        
+        // 🏢 PROFESSIONAL: Persist complete auth data
+        persistAuthData({
+          user: userData,
           userRole: action.payload.userRole,
+          tenantId: action.payload.tenantId,
           emailVerified: action.payload.emailVerified,
-        };
+        });
+        
         setAuthToken(action.payload.access_token, action.payload.refresh_token);
+        
+        console.log('✅ Professional auth persistence complete:', {
+          userRole: action.payload.userRole,
+          isAuthenticated: true,
+          hasUserData: true,
+        });
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -282,7 +398,7 @@ const authSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Refresh Token
+    // 🏢 PROFESSIONAL: Refresh Token handling
     builder
       .addCase(refreshAccessToken.pending, (state) => {
         state.loading = true;
@@ -297,7 +413,13 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.user = null;
         state.accessToken = null;
+        state.userRole = null;
+        state.tenantId = null;
+        state.emailVerified = false;
+        
+        // 🏢 PROFESSIONAL: Clear all data on token refresh failure
         removeAuthToken();
+        storage.clear();
       });
   },
 });

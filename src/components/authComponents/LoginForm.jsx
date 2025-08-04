@@ -16,7 +16,7 @@ import {
   selectIsAuthenticated 
 } from "../../store/slices/authSlice";
 
-const LoginForm = ({ switchView, onClose, onLogin }) => {
+const LoginForm = ({ switchView, onClose, onLogin, intendedDestination }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
@@ -38,20 +38,56 @@ const LoginForm = ({ switchView, onClose, onLogin }) => {
       // Close modal
       onClose();
       
-      // Navigate based on user role
-      if (userRole === 'seller') {
-        navigate('/seller-dashboard');
-      } else if (userRole === 'buyer') {
-        // Buyer stays on current page or goes to homepage
-        navigate('/');
-      }
-      
       // Call onLogin callback if provided
       if (onLogin) {
         onLogin(formData.email);
       }
+
+      // Navigate to intended destination or fallback based on role
+      setTimeout(() => {
+        if (intendedDestination && intendedDestination !== '/') {
+          // Check if the intended destination is allowed for this user role
+          const isDestinationAllowed = checkDestinationAccess(intendedDestination, userRole);
+          
+          if (isDestinationAllowed) {
+            navigate(intendedDestination);
+          } else {
+            // If intended destination is not allowed, navigate to role-appropriate page
+            navigateByRole(userRole);
+          }
+        } else {
+          // No intended destination, navigate based on role
+          navigateByRole(userRole);
+        }
+      }, 100);
     }
-  }, [isAuthenticated, userRole, navigate, onClose, onLogin, formData.email]);
+  }, [isAuthenticated, userRole, navigate, onClose, onLogin, formData.email, intendedDestination]);
+
+  // Helper function to check if destination is allowed for user role
+  const checkDestinationAccess = (destination, role) => {
+    const sellerRoutes = ['/seller-dashboard', '/create-listing'];
+    const buyerRoutes = ['/profile', '/orders', '/wish-list', '/checkout', '/track-parcel', '/leave-review'];
+    
+    if (role === 'seller') {
+      // Sellers can access seller routes, but not buyer-specific routes
+      return !buyerRoutes.some(route => destination.startsWith(route));
+    } else if (role === 'buyer') {
+      // Buyers can access buyer routes, but not seller-specific routes
+      return !sellerRoutes.some(route => destination.startsWith(route));
+    }
+    
+    return true; // Default allow
+  };
+
+  // Helper function to navigate based on user role
+  const navigateByRole = (role) => {
+    if (role === 'seller') {
+      navigate('/seller-dashboard');
+    } else {
+      // For buyers, stay on current page or go to homepage if no intended destination
+      navigate('/');
+    }
+  };
 
   // Clear errors when component unmounts
   useEffect(() => {
@@ -128,7 +164,12 @@ const LoginForm = ({ switchView, onClose, onLogin }) => {
           <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-1">
             Welcome back
           </h2>
-          <p className="text-gray-600">Please enter your details to continue</p>
+          <p className="text-gray-600">
+            {intendedDestination && intendedDestination !== '/' 
+              ? `Please sign in to continue to ${getPageName(intendedDestination)}`
+              : 'Please enter your details to continue'
+            }
+          </p>
         </div>
         <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
           <X className="w-6 h-6" />
@@ -234,6 +275,21 @@ const LoginForm = ({ switchView, onClose, onLogin }) => {
       </p>
     </Card>
   );
+};
+
+// Helper function to get user-friendly page names
+const getPageName = (path) => {
+  const pageNames = {
+    '/profile': 'your profile',
+    '/orders': 'your orders',
+    '/wish-list': 'your wishlist',
+    '/checkout': 'checkout',
+    '/track-parcel': 'order tracking',
+    '/leave-review': 'leave a review',
+    '/seller-dashboard': 'seller dashboard',
+    '/create-listing': 'create listing'
+  };
+  return pageNames[path] || 'the requested page';
 };
 
 export default LoginForm;
