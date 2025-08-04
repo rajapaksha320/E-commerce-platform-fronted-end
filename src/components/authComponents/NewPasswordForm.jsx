@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 // components/auth/NewPasswordForm.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { X, Lock, CheckCircle } from "lucide-react";
@@ -39,6 +39,30 @@ const NewPasswordForm = ({ switchView, onClose, emailFromUrl, removeEmailFromUrl
   const [resetComplete, setResetComplete] = useState(false);
   const [countdown, setCountdown] = useState(5);
 
+  // FIXED: Memoize goToLogin to prevent dependency issues
+  const goToLogin = useCallback(() => {
+    console.log("🎯 goToLogin called - navigating to login form");
+    
+    // Clear local state first
+    setResetComplete(false);
+    setCountdown(0);
+    
+    // Clear Redux states
+    dispatch(clearSuccess());
+    dispatch(clearError());
+    
+    // Remove email from URL
+    if (removeEmailFromUrl) {
+      removeEmailFromUrl();
+    }
+    
+    // Small delay to ensure state is cleared before navigation
+    setTimeout(() => {
+      console.log("🚀 Calling switchView('login')");
+      switchView("login");
+    }, 100);
+  }, [dispatch, removeEmailFromUrl, switchView]);
+
   // Clear any previous success state when component mounts
   useEffect(() => {
     dispatch(clearSuccess());
@@ -54,44 +78,66 @@ const NewPasswordForm = ({ switchView, onClose, emailFromUrl, removeEmailFromUrl
     }
   }, [currentEmail, switchView]);
 
-  // FIXED: Better success detection logic
+  // FIXED: Improved success detection with better logging
   useEffect(() => {
-    console.log("Success state changed:", { success, error, message });
+    console.log("Password reset state changed:", { success, error, message, resetComplete });
     
-    // More flexible success detection
-    if (success && !error) {
-      // Check for various possible success messages or just rely on success flag
-      const isPasswordResetSuccess = !message || 
-        message.toLowerCase().includes("password") ||
-        message.toLowerCase().includes("reset") ||
-        message.toLowerCase().includes("success") ||
-        message.toLowerCase().includes("changed") ||
-        message.toLowerCase().includes("updated");
+    // Only process if we haven't already detected success
+    if (!resetComplete && success && !error) {
+      console.log("🔍 Checking for password reset success...");
+      
+      // More comprehensive success detection
+      const successIndicators = [
+        "password reset successfully",
+        "password changed successfully", 
+        "password updated successfully",
+        "new password set successfully",
+        "password has been reset",
+        "password has been changed",
+        "password has been updated",
+        "reset successful",
+        "password reset complete"
+      ];
+      
+      const isPasswordResetSuccess = 
+        !message || // If no message but success is true
+        successIndicators.some(indicator => 
+          message.toLowerCase().includes(indicator.toLowerCase())
+        ) ||
+        (message.toLowerCase().includes("password") && message.toLowerCase().includes("success")) ||
+        (message.toLowerCase().includes("reset") && message.toLowerCase().includes("success"));
       
       if (isPasswordResetSuccess) {
-        console.log("Password reset success detected! Message:", message);
+        console.log("✅ Password reset SUCCESS detected! Message:", message);
+        setResetComplete(true);
+        setCountdown(5);
+      } else {
+        console.log("🤔 Success detected but message doesn't match password reset patterns:", message);
+        // Fallback: if success is true and no error, assume it worked
+        console.log("🔧 Using fallback success detection");
         setResetComplete(true);
         setCountdown(5);
       }
     }
-  }, [success, error, message]);
+  }, [success, error, message, resetComplete]);
 
-  // Auto-redirect countdown when password reset is complete
+  // FIXED: Auto-redirect countdown with proper cleanup
   useEffect(() => {
     let timer;
     if (resetComplete && countdown > 0) {
+      console.log(`⏰ Password reset redirect countdown: ${countdown} seconds remaining`);
       timer = setTimeout(() => {
-        setCountdown(countdown - 1);
+        setCountdown(prev => prev - 1);
       }, 1000);
     } else if (resetComplete && countdown === 0) {
-      console.log("Auto-redirecting to login after countdown");
+      console.log("🚀 Auto-redirecting to login after password reset");
       goToLogin();
     }
 
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [resetComplete, countdown]);
+  }, [resetComplete, countdown, goToLogin]);
 
   // Clear Redux state on unmount
   useEffect(() => {
@@ -179,35 +225,24 @@ const NewPasswordForm = ({ switchView, onClose, emailFromUrl, removeEmailFromUrl
 
     if (validateReset()) {
       try {
-        console.log("Submitting password reset for email:", currentEmail);
+        console.log("🔄 Submitting password reset for email:", currentEmail);
         const result = await dispatch(resetPassword({
           email: currentEmail,
           newPassword: resetData.password,
           confirmPassword: resetData.confirmPassword,
         })).unwrap();
-        console.log("Password reset API response:", result);
+        console.log("✅ Password reset API response:", result);
+        
+        // ADDITIONAL: Manual success detection as backup
+        if (result && !error) {
+          console.log("🔧 Manually triggering password reset success");
+          setResetComplete(true);
+          setCountdown(5);
+        }
       } catch (err) {
-        console.error('Password reset failed:', err);
+        console.error('❌ Password reset failed:', err);
       }
     }
-  };
-
-  // FIXED: Enhanced goToLogin function with better logging
-  const goToLogin = () => {
-    console.log("goToLogin called - navigating to login form");
-    
-    // Clear states
-    dispatch(clearSuccess());
-    dispatch(clearError());
-    
-    // Remove email from URL
-    if (removeEmailFromUrl) {
-      removeEmailFromUrl();
-    }
-    
-    // Navigate to login
-    console.log("Calling switchView('login')");
-    switchView("login");
   };
 
   // Show error if no email is available
@@ -280,7 +315,6 @@ const NewPasswordForm = ({ switchView, onClose, emailFromUrl, removeEmailFromUrl
             </div>
           )}
 
-        
 
           <form onSubmit={handleResetSubmit}>
             <div className="mb-4">
@@ -369,7 +403,7 @@ const NewPasswordForm = ({ switchView, onClose, emailFromUrl, removeEmailFromUrl
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-1">
-            Password Reset Complete!
+            Password Reset Complete! 🎉
           </h2>
           <p className="text-gray-600 mb-4">
             Your password has been successfully reset for{" "}
@@ -392,7 +426,7 @@ const NewPasswordForm = ({ switchView, onClose, emailFromUrl, removeEmailFromUrl
               size="lg" 
               className="w-full" 
               onClick={() => {
-                console.log("Manual login button clicked");
+                console.log("🔴 Manual 'Go to Login Now' button clicked");
                 goToLogin();
               }}
             >
@@ -401,9 +435,9 @@ const NewPasswordForm = ({ switchView, onClose, emailFromUrl, removeEmailFromUrl
             <button
               type="button"
               onClick={() => {
-                console.log("Stay on page clicked");
+                console.log("⏸️ Stay on password reset success page");
                 setResetComplete(false);
-                setCountdown(0); // Stop countdown
+                setCountdown(0);
               }}
               className="text-sm text-gray-500 hover:text-gray-700"
             >

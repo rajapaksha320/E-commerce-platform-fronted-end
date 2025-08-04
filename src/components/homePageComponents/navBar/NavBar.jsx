@@ -154,6 +154,10 @@ const NavBar = () => {
     setIsAuthModalOpen(false);
   };
 
+  const handleViewChange = (newView) => {
+    setAuthView(newView);
+  };
+
   const handleSellWithUs = () => {
     navigate("/seller-registration");
   };
@@ -754,6 +758,7 @@ const NavBar = () => {
         onClose={() => setIsAuthModalOpen(false)}
         initialView={authView}
         onLogin={handleLogin}
+        onViewChange={handleViewChange}
       />
     </>
   );

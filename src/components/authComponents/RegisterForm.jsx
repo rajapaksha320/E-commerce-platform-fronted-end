@@ -1,5 +1,5 @@
 // components/auth/RegisterForm.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { X, Mail, Lock, User } from "lucide-react";
 import Card from "../ui/AuthUis/Card";
@@ -33,14 +33,66 @@ const RegisterForm = ({ switchView, onClose }) => {
   });
   const [errors, setErrors] = useState({});
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(3);
 
-  // Handle successful registration
+  // Memoize goToLogin to prevent dependency issues
+  const goToLogin = useCallback(() => {
+    console.log("🎯 goToLogin called - navigating to login form");
+    setRegistrationSuccess(false);
+    setCountdown(0);
+    dispatch(clearSuccess());
+    dispatch(clearError());
+    switchView("login");
+  }, [dispatch, switchView]);
+
+  // FIXED: Better success detection with multiple possible success indicators
   useEffect(() => {
-    if (success && message === "User created successfully") {
-      setRegistrationSuccess(true);
-      dispatch(clearSuccess());
+    console.log("Registration state changed:", { success, message, error });
+    
+    // More flexible success detection
+    if (success && !error) {
+      const successMessages = [
+        "User created successfully",
+        "Registration successful", 
+        "Account created successfully",
+        "user created successfully", // lowercase variation
+        "registration successful" // lowercase variation
+      ];
+      
+      const isRegistrationSuccess = 
+        !message || // If no specific message but success is true
+        successMessages.some(msg => 
+          message?.toLowerCase().includes(msg.toLowerCase())
+        ) ||
+        message?.toLowerCase().includes("created") ||
+        message?.toLowerCase().includes("success");
+      
+      if (isRegistrationSuccess) {
+        console.log("✅ Registration SUCCESS detected! Message:", message);
+        setRegistrationSuccess(true);
+        setCountdown(3);
+        // DON'T clear success immediately - let the countdown handle it
+      }
     }
-  }, [success, message, dispatch]);
+  }, [success, message, error]);
+
+  // FIXED: Auto-redirect countdown with proper dependency array
+  useEffect(() => {
+    let timer;
+    if (registrationSuccess && countdown > 0) {
+      console.log(`⏰ Registration redirect countdown: ${countdown} seconds remaining`);
+      timer = setTimeout(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+    } else if (registrationSuccess && countdown === 0) {
+      console.log("🚀 Auto-redirecting to login after registration");
+      goToLogin();
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [registrationSuccess, countdown, goToLogin]);
 
   // Clear Redux state on unmount
   useEffect(() => {
@@ -115,17 +167,21 @@ const RegisterForm = ({ switchView, onClose }) => {
     
     if (validate()) {
       try {
-        await dispatch(signupUser(formData)).unwrap();
+        console.log("🔄 Submitting registration for:", formData.email);
+        const result = await dispatch(signupUser(formData)).unwrap();
+        console.log("✅ Registration API response:", result);
+        
+        // ADDITIONAL: If the API doesn't set success state properly, 
+        // we can manually trigger success here
+        if (result && !error) {
+          console.log("🔧 Manually triggering registration success");
+          setRegistrationSuccess(true);
+          setCountdown(3);
+        }
       } catch (err) {
-        // Error is handled by Redux state
-        console.error('Signup failed:', err);
+        console.error("❌ Registration failed:", err);
       }
     }
-  };
-
-  const handleContinue = () => {
-    setRegistrationSuccess(false);
-    switchView("login");
   };
 
   // Password strength indicator
@@ -180,6 +236,7 @@ const RegisterForm = ({ switchView, onClose }) => {
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
+
 
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4 mb-4">
@@ -339,6 +396,15 @@ const RegisterForm = ({ switchView, onClose }) => {
         </>
       ) : (
         <div className="text-center py-6">
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          
           <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
             <svg
               className="w-8 h-8 text-green-600"
@@ -355,16 +421,47 @@ const RegisterForm = ({ switchView, onClose }) => {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            Registration Successful!
+            Registration Successful! 🎉
           </h2>
+          <p className="text-gray-600 mb-4">
+            Welcome aboard! Your account has been created successfully.
+          </p>
           <p className="text-gray-600 mb-6">
-            Your account has been created successfully. We've sent a
-            verification email to{" "}
+            We've sent a verification email to{" "}
             <span className="font-medium">{formData.email}</span>.
           </p>
-          <Button size="lg" className="w-full" onClick={handleContinue}>
-            Continue to Login
-          </Button>
+
+          {/* Countdown and auto-redirect message */}
+          <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-600">
+              Redirecting to login page in{" "}
+              <span className="font-bold text-blue-700">{countdown}</span> seconds...
+            </p>
+          </div>
+
+          <div className="flex flex-col space-y-3">
+            <Button 
+              size="lg" 
+              className="w-full" 
+              onClick={() => {
+                console.log("🔴 Manual 'Go to Login Now' button clicked");
+                goToLogin();
+              }}
+            >
+              Go to Login Now
+            </Button>
+            <button
+              type="button"
+              onClick={() => {
+                console.log("⏸️ Stay on registration success page");
+                setRegistrationSuccess(false);
+                setCountdown(0);
+              }}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Stay here
+            </button>
+          </div>
         </div>
       )}
     </Card>

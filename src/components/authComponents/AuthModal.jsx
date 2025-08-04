@@ -16,7 +16,8 @@ const AuthModal = ({
   onClose, 
   initialView = "login", 
   onLogin, 
-  intendedDestination = null 
+  intendedDestination = null,
+  onViewChange = null
 }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -147,6 +148,11 @@ const AuthModal = ({
     }
     
     setCurrentView(newView);
+    
+    // Notify parent component of view change
+    if (onViewChange) {
+      onViewChange(newView);
+    }
   };
 
   const renderView = () => {
