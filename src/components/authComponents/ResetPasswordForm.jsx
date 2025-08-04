@@ -16,7 +16,7 @@ import {
   selectMessage,
 } from "../../store/slices/authSlice";
 
-const ResetPasswordForm = ({ switchView, onClose }) => {
+const ResetPasswordForm = ({ switchView, onClose, initialEmail = "", setEmailInUrl }) => {
   const dispatch = useDispatch();
   
   const isLoading = useSelector(selectLoading);
@@ -25,18 +25,32 @@ const ResetPasswordForm = ({ switchView, onClose }) => {
   const message = useSelector(selectMessage);
 
   const [requestData, setRequestData] = useState({
-    email: "",
+    email: initialEmail || "",
   });
   const [errors, setErrors] = useState({});
   const [requestSent, setRequestSent] = useState(false);
+
+  // Set initial email from URL parameter
+  useEffect(() => {
+    if (initialEmail && !requestData.email) {
+      setRequestData(prev => ({
+        ...prev,
+        email: initialEmail
+      }));
+    }
+  }, [initialEmail]);
 
   // Handle successful reset email sent
   useEffect(() => {
     if (success && message === "Reset email sent , check your inbox") {
       setRequestSent(true);
       dispatch(setResetEmail(requestData.email));
+      // Set email in URL for the next steps
+      if (setEmailInUrl) {
+        setEmailInUrl(requestData.email);
+      }
     }
-  }, [success, message, dispatch, requestData.email]);
+  }, [success, message, dispatch, requestData.email, setEmailInUrl]);
 
   // Clear Redux state on unmount
   useEffect(() => {
@@ -93,13 +107,18 @@ const ResetPasswordForm = ({ switchView, onClose }) => {
   };
 
   const goToOTPVerification = () => {
-    switchView("otp-verification");
+    // Pass email to OTP verification via URL parameter
+    switchView("otp-verification", requestData.email);
   };
 
   const handleRequestAnother = () => {
     setRequestData({ email: "" });
     setRequestSent(false);
     dispatch(clearSuccess());
+    // Clear email from URL
+    if (setEmailInUrl) {
+      setEmailInUrl("");
+    }
   };
 
   return (

@@ -7,6 +7,7 @@ import { Button } from "../ui/AuthUis/Button";
 import {
   verifyOTP,
   clearError,
+  clearSuccess,
   selectLoading,
   selectError,
   selectResetEmail,
@@ -14,7 +15,7 @@ import {
   forgotPassword,
 } from "../../store/slices/authSlice";
 
-const OTPVerificationForm = ({ switchView, onClose }) => {
+const OTPVerificationForm = ({ switchView, onClose, emailFromUrl }) => {
   const dispatch = useDispatch();
   
   const isLoading = useSelector(selectLoading);
@@ -22,22 +23,28 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
   const resetEmail = useSelector(selectResetEmail);
   const otpVerified = useSelector(selectOtpVerified);
 
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  // Use email from URL parameter or fallback to Redux state
+  const currentEmail = emailFromUrl || resetEmail;
+
+  const [otp, setOtp] = useState(["", "", "", ""]);
   const [timeLeft, setTimeLeft] = useState(60);
   const [isResending, setIsResending] = useState(false);
   const [localError, setLocalError] = useState("");
 
   // References for OTP inputs
-  const inputRefs = Array(6)
+  const inputRefs = Array(4)
     .fill(0)
     .map(() => React.createRef());
 
   // Handle OTP verification success
   useEffect(() => {
     if (otpVerified) {
-      switchView("new-password");
+      // Clear the success state before switching to prevent issues in NewPasswordForm
+      dispatch(clearSuccess());
+      // Pass email to new password form via URL parameter
+      switchView("new-password", currentEmail);
     }
-  }, [otpVerified, switchView]);
+  }, [otpVerified, switchView, dispatch, currentEmail]);
 
   // Timer for OTP resend countdown
   useEffect(() => {
@@ -49,6 +56,20 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
 
     return () => clearTimeout(timer);
   }, [timeLeft]);
+
+  // Clear any previous states when component mounts
+  useEffect(() => {
+    dispatch(clearError());
+    setLocalError("");
+  }, [dispatch]);
+
+  // Redirect to reset password if no email available
+  useEffect(() => {
+    if (!currentEmail) {
+      console.warn("No email found for OTP verification, redirecting to reset password");
+      switchView("reset-password");
+    }
+  }, [currentEmail, switchView]);
 
   // Handle OTP input changes
   const handleOtpChange = (index, value) => {
@@ -64,7 +85,7 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
     if (error) dispatch(clearError());
 
     // Auto move to next input if current one is filled
-    if (value !== "" && index < 5) {
+    if (value !== "" && index < 3) {
       inputRefs[index + 1].current.focus();
     }
   };
@@ -84,12 +105,12 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
     // Check if pasted content contains only digits
     if (!/^\d+$/.test(pastedData)) return;
 
-    const digits = pastedData.split("").slice(0, 6);
+    const digits = pastedData.split("").slice(0, 4);
 
     // Fill in as many inputs as we have digits
     const newOtp = [...otp];
     digits.forEach((digit, index) => {
-      if (index < 6) newOtp[index] = digit;
+      if (index < 4) newOtp[index] = digit;
     });
 
     setOtp(newOtp);
@@ -97,7 +118,7 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
     // Focus the next empty input or the last one if all filled
     const nextEmptyIndex = newOtp.findIndex((val) => val === "");
     if (nextEmptyIndex === -1) {
-      inputRefs[5].current.focus();
+      inputRefs[3].current.focus();
     } else {
       inputRefs[nextEmptyIndex].current.focus();
     }
@@ -105,15 +126,15 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
 
   // Resend OTP
   const handleResendOtp = async () => {
-    if (timeLeft > 0) return;
+    if (timeLeft > 0 || !currentEmail) return;
 
     setIsResending(true);
     
     // Call forgot password again with the same email
     try {
-      await dispatch(forgotPassword(resetEmail)).unwrap();
+      await dispatch(forgotPassword(currentEmail)).unwrap();
       setTimeLeft(60);
-      setOtp(["", "", "", "", "", ""]);
+      setOtp(["", "", "", ""]);
       inputRefs[0].current.focus();
     } catch (err) {
       console.error('Failed to resend OTP:', err);
@@ -128,7 +149,12 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
 
     // Check if OTP is complete
     if (otp.some((digit) => digit === "")) {
-      setLocalError("Please enter all 6 digits");
+      setLocalError("Please enter all 4 digits");
+      return;
+    }
+
+    if (!currentEmail) {
+      setLocalError("Email not found. Please start the reset process again.");
       return;
     }
 
@@ -136,7 +162,7 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
     
     try {
       await dispatch(verifyOTP({ 
-        email: resetEmail, 
+        email: currentEmail, 
         otp: otpString 
       })).unwrap();
     } catch (err) {
@@ -144,6 +170,37 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
       console.error('OTP verification failed:', err);
     }
   };
+
+  // Show error if no email is available
+  if (!currentEmail) {
+    return (
+      <Card className="border border-blue-200/20">
+        <div className="flex justify-between items-start">
+          <div className="text-center mb-6 flex-grow">
+            <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+              <X className="w-8 h-8 text-red-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-red-600 mb-1">
+              Email Not Found
+            </h2>
+            <p className="text-gray-600 mb-6">
+              No email address found for verification. Please start the password reset process again.
+            </p>
+            <Button 
+              size="lg" 
+              className="w-full" 
+              onClick={() => switchView("reset-password")}
+            >
+              Start Password Reset
+            </Button>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border border-blue-200/20">
@@ -156,8 +213,8 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
             Verification Code
           </h2>
           <p className="text-gray-600">
-            We've sent a 6-digit code to{" "}
-            <span className="font-medium">{resetEmail || 'your email'}</span>
+            We've sent a 4-digit code to{" "}
+            <span className="font-medium">{currentEmail}</span>
           </p>
         </div>
         <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -167,7 +224,7 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
 
       <form onSubmit={handleSubmit}>
         {/* OTP Input fields */}
-        <div className="flex justify-between gap-2 mb-6">
+        <div className="flex justify-center gap-3 mb-6">
           {otp.map((digit, index) => (
             <input
               key={index}
@@ -218,10 +275,10 @@ const OTPVerificationForm = ({ switchView, onClose }) => {
             <button
               type="button"
               onClick={handleResendOtp}
-              disabled={isResending}
+              disabled={isResending || !currentEmail}
               className={`
                 text-blue-600 font-medium text-sm hover:text-blue-700
-                ${isResending ? "opacity-50 cursor-not-allowed" : ""}
+                ${isResending || !currentEmail ? "opacity-50 cursor-not-allowed" : ""}
               `}
             >
               {isResending ? "Sending..." : "Resend Code"}

@@ -15,9 +15,10 @@ import {
   selectError,
   selectSuccess,
   selectResetEmail,
+  selectMessage,
 } from "../../store/slices/authSlice";
 
-const NewPasswordForm = ({ switchView, onClose }) => {
+const NewPasswordForm = ({ switchView, onClose, emailFromUrl, removeEmailFromUrl }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
@@ -25,6 +26,10 @@ const NewPasswordForm = ({ switchView, onClose }) => {
   const error = useSelector(selectError);
   const success = useSelector(selectSuccess);
   const resetEmail = useSelector(selectResetEmail);
+  const message = useSelector(selectMessage);
+
+  // Use email from URL parameter or fallback to Redux state
+  const currentEmail = emailFromUrl || resetEmail;
 
   const [resetData, setResetData] = useState({
     password: "",
@@ -32,13 +37,61 @@ const NewPasswordForm = ({ switchView, onClose }) => {
   });
   const [errors, setErrors] = useState({});
   const [resetComplete, setResetComplete] = useState(false);
+  const [countdown, setCountdown] = useState(5);
 
-  // Handle successful password reset
+  // Clear any previous success state when component mounts
   useEffect(() => {
-    if (success && !error) {
-      setResetComplete(true);
+    dispatch(clearSuccess());
+    dispatch(clearError());
+    setResetComplete(false);
+  }, [dispatch]);
+
+  // Redirect to reset password if no email available
+  useEffect(() => {
+    if (!currentEmail) {
+      console.warn("No email found for password reset, redirecting to reset password");
+      switchView("reset-password");
     }
-  }, [success, error]);
+  }, [currentEmail, switchView]);
+
+  // FIXED: Better success detection logic
+  useEffect(() => {
+    console.log("Success state changed:", { success, error, message });
+    
+    // More flexible success detection
+    if (success && !error) {
+      // Check for various possible success messages or just rely on success flag
+      const isPasswordResetSuccess = !message || 
+        message.toLowerCase().includes("password") ||
+        message.toLowerCase().includes("reset") ||
+        message.toLowerCase().includes("success") ||
+        message.toLowerCase().includes("changed") ||
+        message.toLowerCase().includes("updated");
+      
+      if (isPasswordResetSuccess) {
+        console.log("Password reset success detected! Message:", message);
+        setResetComplete(true);
+        setCountdown(5);
+      }
+    }
+  }, [success, error, message]);
+
+  // Auto-redirect countdown when password reset is complete
+  useEffect(() => {
+    let timer;
+    if (resetComplete && countdown > 0) {
+      timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+    } else if (resetComplete && countdown === 0) {
+      console.log("Auto-redirecting to login after countdown");
+      goToLogin();
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [resetComplete, countdown]);
 
   // Clear Redux state on unmount
   useEffect(() => {
@@ -75,7 +128,6 @@ const NewPasswordForm = ({ switchView, onClose }) => {
 
   const passwordStrength = getPasswordStrength();
 
-  // Handle reset form changes
   const handleResetChange = (e) => {
     const { name, value } = e.target;
     setResetData((prev) => ({
@@ -83,7 +135,6 @@ const NewPasswordForm = ({ switchView, onClose }) => {
       [name]: value,
     }));
 
-    // Clear error when user types
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -91,13 +142,11 @@ const NewPasswordForm = ({ switchView, onClose }) => {
       }));
     }
 
-    // Clear Redux error
     if (error) {
       dispatch(clearError());
     }
   };
 
-  // Validate reset form
   const validateReset = () => {
     const newErrors = {};
 
@@ -120,28 +169,77 @@ const NewPasswordForm = ({ switchView, onClose }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle reset form submission
   const handleResetSubmit = async (e) => {
     e.preventDefault();
 
+    if (!currentEmail) {
+      setErrors({ general: "Email not found. Please start the reset process again." });
+      return;
+    }
+
     if (validateReset()) {
       try {
-        await dispatch(resetPassword({
-          email: resetEmail,
+        console.log("Submitting password reset for email:", currentEmail);
+        const result = await dispatch(resetPassword({
+          email: currentEmail,
           newPassword: resetData.password,
           confirmPassword: resetData.confirmPassword,
         })).unwrap();
+        console.log("Password reset API response:", result);
       } catch (err) {
-        // Error is handled by Redux state
         console.error('Password reset failed:', err);
       }
     }
   };
 
-  // Go to login form
+  // FIXED: Enhanced goToLogin function with better logging
   const goToLogin = () => {
+    console.log("goToLogin called - navigating to login form");
+    
+    // Clear states
+    dispatch(clearSuccess());
+    dispatch(clearError());
+    
+    // Remove email from URL
+    if (removeEmailFromUrl) {
+      removeEmailFromUrl();
+    }
+    
+    // Navigate to login
+    console.log("Calling switchView('login')");
     switchView("login");
   };
+
+  // Show error if no email is available
+  if (!currentEmail) {
+    return (
+      <Card className="border border-blue-200/20">
+        <div className="flex justify-between items-start">
+          <div className="text-center mb-6 flex-grow">
+            <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+              <X className="w-8 h-8 text-red-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-red-600 mb-1">
+              Email Not Found
+            </h2>
+            <p className="text-gray-600 mb-6">
+              No email address found for password reset. Please start the password reset process again.
+            </p>
+            <Button 
+              size="lg" 
+              className="w-full" 
+              onClick={() => switchView("reset-password")}
+            >
+              Start Password Reset
+            </Button>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border border-blue-200/20">
@@ -155,7 +253,7 @@ const NewPasswordForm = ({ switchView, onClose }) => {
               Set New Password
             </h2>
             <p className="text-gray-600">
-              Create a strong password for your account
+              Create a strong password for <span className="font-medium">{currentEmail}</span>
             </p>
           </div>
         ) : (
@@ -174,6 +272,15 @@ const NewPasswordForm = ({ switchView, onClose }) => {
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
+
+          {/* Display general errors */}
+          {errors.general && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{errors.general}</p>
+            </div>
+          )}
+
+        
 
           <form onSubmit={handleResetSubmit}>
             <div className="mb-4">
@@ -236,7 +343,7 @@ const NewPasswordForm = ({ switchView, onClose }) => {
             <div className="text-center">
               <button
                 type="button"
-                onClick={() => switchView("otp-verification")}
+                onClick={() => switchView("otp-verification", currentEmail)}
                 className="text-sm font-medium text-blue-600 hover:text-blue-700"
               >
                 ← Back to Verification
@@ -262,15 +369,47 @@ const NewPasswordForm = ({ switchView, onClose }) => {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-1">
-            Password Reset Complete
+            Password Reset Complete!
           </h2>
-          <p className="text-gray-600 mb-6">
-            Your password has been successfully reset. You can now log in with
-            your new password.
+          <p className="text-gray-600 mb-4">
+            Your password has been successfully reset for{" "}
+            <span className="font-medium">{currentEmail}</span>.
           </p>
-          <Button size="lg" className="w-full" onClick={goToLogin}>
-            Return to Login
-          </Button>
+          <p className="text-gray-600 mb-6">
+            You can now log in with your new password.
+          </p>
+          
+          {/* Countdown and auto-redirect message */}
+          <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-600">
+              Redirecting to login page in{" "}
+              <span className="font-bold text-blue-700">{countdown}</span> seconds...
+            </p>
+          </div>
+
+          <div className="flex flex-col space-y-3">
+            <Button 
+              size="lg" 
+              className="w-full" 
+              onClick={() => {
+                console.log("Manual login button clicked");
+                goToLogin();
+              }}
+            >
+              Go to Login Now
+            </Button>
+            <button
+              type="button"
+              onClick={() => {
+                console.log("Stay on page clicked");
+                setResetComplete(false);
+                setCountdown(0); // Stop countdown
+              }}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Stay on this page
+            </button>
+          </div>
         </div>
       )}
     </Card>
