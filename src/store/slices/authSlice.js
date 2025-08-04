@@ -51,10 +51,13 @@ export const sellerRegistration = createAsyncThunk(
 export const loginUser = createAsyncThunk(
   'auth/login',
   async (credentials, { rejectWithValue }) => {
+    console.log('loginUser thunk called with credentials:', credentials);
     try {
       const response = await authService.login(credentials);
+      console.log('loginUser thunk response:', response);
       return response.data;
     } catch (error) {
+      console.error('loginUser thunk error:', error);
       return rejectWithValue(
         error.response?.data?.message || 'Login failed'
       );

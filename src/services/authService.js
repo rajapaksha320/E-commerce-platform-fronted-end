@@ -56,7 +56,18 @@ const authService = {
       password: credentials.password,
     };
     
-    return await axiosInstance.post('/api/v1/auth/login', payload);
+    console.log('Login attempt with payload:', payload);
+    console.log('Making API call to:', '/api/v1/auth/login');
+    
+    try {
+      const response = await axiosInstance.post('/api/v1/auth/login', payload);
+      console.log('Login response:', response);
+      return response;
+    } catch (error) {
+      console.error('Login error:', error);
+      console.error('Error response:', error.response);
+      throw error;
+    }
   },
 
   // Forgot password

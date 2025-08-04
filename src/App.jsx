@@ -6,7 +6,8 @@ import { store } from '../src/store/index';
 
 // Import components
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import SellerLayout from './components/layout/Layout';
+import Layout from './components/layout/Layout';
+import SellerLayout from './components/sellerComponents/layout/SellerLayout';
 import MultiStepSellerForm from './components/sellerComponents/sellerRegistrationComponents/sellerRegisterForm';
 
 // Import pages (you'll need to create these)
@@ -23,51 +24,16 @@ function App() {
     <Provider store={store}>
       <Router>
         <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/seller-registration" element={<MultiStepSellerForm />} />
-
-          {/* Buyer Protected Routes */}
-          <Route
-            path="/wish-list"
-            element={
-              <ProtectedRoute allowedRoles={['buyer']}>
-                <WishListPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/shopping-cart"
-            element={
-              <ProtectedRoute allowedRoles={['buyer']}>
-                <ShoppingCartPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/orders"
-            element={
-              <ProtectedRoute allowedRoles={['buyer']}>
-                <OrdersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/track-parcel"
-            element={
-              <ProtectedRoute allowedRoles={['buyer']}>
-                <TrackParcelPage />
-              </ProtectedRoute>
-            }
-          />
+          {/* Public Routes with Layout */}
+          <Route path="/" element={<Layout />}>
+            <Route index element={<HomePage />} />
+            <Route path="seller-registration" element={<MultiStepSellerForm />} />
+            <Route path="wish-list" element={<WishListPage />} />
+            <Route path="shopping-cart" element={<ShoppingCartPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="orders" element={<OrdersPage />} />
+            <Route path="track-parcel" element={<TrackParcelPage />} />
+          </Route>
 
           {/* Seller Protected Routes */}
           <Route

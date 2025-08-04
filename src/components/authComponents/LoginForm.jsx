@@ -102,17 +102,22 @@ const LoginForm = ({ switchView, onClose, onLogin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Form submitted with data:', formData);
     
     if (validate()) {
+      console.log('Validation passed, dispatching login action');
       try {
         await dispatch(loginUser({
           email: formData.email,
           password: formData.password,
         })).unwrap();
+        console.log('Login action completed successfully');
       } catch (err) {
         // Error is handled by Redux state
         console.error('Login failed:', err);
       }
+    } else {
+      console.log('Validation failed');
     }
   };
 
