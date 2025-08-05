@@ -1,4 +1,3 @@
-// store/slices/authSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '../../services/authService';
 import { setAuthToken, removeAuthToken } from '../../utils/tokenManager';
@@ -292,7 +291,7 @@ const authSlice = createSlice({
         state.error = action.payload;
       });
 
-    // 🏢 PROFESSIONAL: Login with complete persistence
+    // 🏢 PROFESSIONAL: Login with NEW response structure
     builder
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
@@ -303,16 +302,30 @@ const authSlice = createSlice({
         state.success = true;
         state.message = action.payload.message;
         
-        // Build complete user object
+        // Extract data from the new nested profile structure
+        const profile = action.payload.profile;
+        
+        // Build complete user object with new structure
         const userData = {
+          _id: profile._id,
           userId: action.payload.userId,
           tenantId: action.payload.tenantId,
           userRole: action.payload.userRole,
           emailVerified: action.payload.emailVerified,
-          email: action.payload.email,
-          firstName: action.payload.firstName,
-          lastName: action.payload.lastName,
-          businessInfo: action.payload.businessInfo,
+          email: profile.email,
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          agreeTerms: profile.agreeTerms,
+          // Business info (for sellers)
+          businessInfo: profile.businessInfo || null,
+          // Contact info
+          contactInfo: profile.contactInfo || null,
+          // Additional profile fields
+          userWishlist: profile.userWishlist || [],
+          otp: profile.otp || null,
+          otpExpires: profile.otpExpires || null,
+          createdAt: profile.createdAt,
+          updatedAt: profile.updatedAt,
         };
         
         // Update state
@@ -337,6 +350,9 @@ const authSlice = createSlice({
           userRole: action.payload.userRole,
           isAuthenticated: true,
           hasUserData: true,
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          businessName: profile.businessInfo?.businessName || null,
         });
       })
       .addCase(loginUser.rejected, (state, action) => {
@@ -426,7 +442,7 @@ const authSlice = createSlice({
 
 export const { logout, clearError, clearSuccess, setTokens, setResetEmail } = authSlice.actions;
 
-// Selectors
+// 🆕 ENHANCED SELECTORS: For UI display purposes
 export const selectAuth = (state) => state.auth;
 export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
 export const selectUserRole = (state) => state.auth.userRole;
@@ -437,5 +453,79 @@ export const selectSuccess = (state) => state.auth.success;
 export const selectMessage = (state) => state.auth.message;
 export const selectResetEmail = (state) => state.auth.resetEmail;
 export const selectOtpVerified = (state) => state.auth.otpVerified;
+
+// 🆕 NEW SELECTORS: For navbar and profile display
+export const selectUserFirstName = (state) => state.auth.user?.firstName || '';
+export const selectUserLastName = (state) => state.auth.user?.lastName || '';
+export const selectUserFullName = (state) => {
+  const user = state.auth.user;
+  if (!user) return '';
+  return `${user.firstName || ''} ${user.lastName || ''}`.trim();
+};
+export const selectUserEmail = (state) => state.auth.user?.email || '';
+export const selectUserInitials = (state) => {
+  const user = state.auth.user;
+  if (!user) return '';
+  const firstInitial = user.firstName?.charAt(0)?.toUpperCase() || '';
+  const lastInitial = user.lastName?.charAt(0)?.toUpperCase() || '';
+  return `${firstInitial}${lastInitial}`;
+};
+
+// 🆕 BUSINESS SELECTORS: For seller-specific information
+export const selectBusinessInfo = (state) => state.auth.user?.businessInfo || null;
+export const selectBusinessName = (state) => state.auth.user?.businessInfo?.businessName || '';
+export const selectBusinessType = (state) => state.auth.user?.businessInfo?.businessType || '';
+export const selectBusinessWebsite = (state) => state.auth.user?.businessInfo?.website || '';
+export const selectTaxId = (state) => state.auth.user?.businessInfo?.taxIdOrEIN || '';
+
+// 🆕 CONTACT SELECTORS: For contact information
+export const selectContactInfo = (state) => state.auth.user?.contactInfo || null;
+export const selectUserAddress = (state) => {
+  const contactInfo = state.auth.user?.contactInfo;
+  if (!contactInfo) return '';
+  
+  const parts = [
+    contactInfo.streetAddress,
+    contactInfo.city,
+    contactInfo.state,
+    contactInfo.zipCode,
+    contactInfo.country
+  ].filter(Boolean);
+  
+  return parts.join(', ');
+};
+export const selectUserPhone = (state) => state.auth.user?.contactInfo?.phoneNumber || '';
+
+// 🆕 ROLE-BASED SELECTORS: For conditional rendering
+export const selectIsSeller = (state) => state.auth.userRole === 'seller';
+export const selectIsBuyer = (state) => state.auth.userRole === 'buyer';
+
+// 🆕 DISPLAY HELPERS: For common UI patterns
+export const selectDisplayName = (state) => {
+  const user = state.auth.user;
+  if (!user) return 'User';
+  
+  // For sellers, prefer business name if available
+  if (state.auth.userRole === 'seller' && user.businessInfo?.businessName) {
+    return user.businessInfo.businessName;
+  }
+  
+  // For buyers or sellers without business name, use full name
+  return selectUserFullName(state) || user.email || 'User';
+};
+
+export const selectProfileDisplayInfo = (state) => {
+  const user = state.auth.user;
+  if (!user) return null;
+  
+  return {
+    name: selectUserFullName(state),
+    email: user.email,
+    initials: selectUserInitials(state),
+    role: state.auth.userRole,
+    businessName: user.businessInfo?.businessName || null,
+    displayName: selectDisplayName(state),
+  };
+};
 
 export default authSlice.reducer;
