@@ -1,7 +1,7 @@
-// src/components/sellerComponents/layout/SellerLayout.jsx
-
-import React, { useState } from "react";
+// components/seller/SellerLayout.jsx
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import {
   BarChart3,
   Package,
@@ -23,6 +23,13 @@ import {
   CreditCard,
 } from "lucide-react";
 
+// Import Redux actions and selectors
+import { 
+  logout, 
+  selectUser, 
+  selectIsAuthenticated 
+} from "../../../store/slices/authSlice";
+
 // Import UI components
 import {
   Button,
@@ -39,25 +46,35 @@ import {
   Dropdown,
 } from "../../ui/sellerUis/Uis";
 
-
 import OrderManagement from "../sellerDashboardComponents/OrderManagement/OrderManagement";
 import ListingManagement from "../sellerDashboardComponents/ListingManagement/ListingManagement";
-
-// Import the ProfileManagement component
 import ProfileManagement from "../sellerDashboardComponents/ProfileManagement/ProfileManagement";
 
-const SellerLayout = ({
-  children,
-  shopName = "My shop",
-  shopRating = "257 ⭐",
-}) => {
+const SellerLayout = ({ children }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  
+  // Redux selectors
+  const user = useSelector(selectUser);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  
+  // Get shop info from user data or use defaults
+  const shopName = user?.businessInfo?.businessName || "My shop";
+  const shopRating = "257 ⭐";
+
   const [activeTab, setActiveTab] = useState("overview");
   const [activeSubTab, setActiveSubTab] = useState(null);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [notificationDropdownOpen, setNotificationDropdownOpen] =
-    useState(false);
+  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
 
+  // Check authentication on mount
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
+
+  // PLACEHOLDER ARRAYS - Add your content here later
   const navigation = [
     { id: "overview", name: "Overview", href: "/seller/overview" },
     { id: "orders", name: "Orders", href: "/seller/orders", badge: "12" },
@@ -67,7 +84,7 @@ const SellerLayout = ({
     { id: "profile", name: "Profile", href: "/seller/profile" },
   ];
 
-  const sidebarNavigation = {
+const sidebarNavigation = {
     orders: [
       { id: "all-orders", name: "All orders" },
       { id: "awaiting-payment", name: "Awaiting payment" },
@@ -101,7 +118,8 @@ const SellerLayout = ({
     ],
   };
 
-  const filterConfigurations = {
+  // PLACEHOLDER FILTER CONFIGURATIONS - Add your filters here later
+   const filterConfigurations = {
     orders: {
       "all-orders": [
         {
@@ -683,6 +701,7 @@ const SellerLayout = ({
     },
   };
 
+  // PLACEHOLDER NOTIFICATIONS - Add real notifications later
   const notifications = [
     {
       id: 1,
@@ -700,6 +719,7 @@ const SellerLayout = ({
     },
   ];
 
+  // Navigation handlers
   const handleNavigation = (tabId) => {
     setActiveTab(tabId);
     if (tabId === "overview" || tabId === "profile") {
@@ -721,14 +741,8 @@ const SellerLayout = ({
   };
 
   const handleLogout = () => {
-    // Clear any stored auth tokens, user data, etc.
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userData");
-
-    // Navigate to home/login page
+    dispatch(logout());
     navigate("/");
-
-    // Close the dropdown
     setProfileDropdownOpen(false);
   };
 
@@ -743,6 +757,7 @@ const SellerLayout = ({
     activeTab !== "profile" &&
     sidebarNavigation[activeTab];
 
+  // Filter Bar Component
   const FilterBar = ({ filters }) => {
     if (!filters || filters.length === 0) return null;
 
@@ -793,6 +808,7 @@ const SellerLayout = ({
     );
   };
 
+  // Overview Content Component
   const OverviewContent = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -847,6 +863,7 @@ const SellerLayout = ({
         </Card>
       </div>
 
+      {/* Tasks, Sales, Orders Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
@@ -910,6 +927,7 @@ const SellerLayout = ({
         </Card>
       </div>
 
+      {/* Quick Actions */}
       <Card>
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
@@ -919,6 +937,7 @@ const SellerLayout = ({
             <Button
               variant="ghost"
               className="flex items-center gap-3 p-4 h-auto"
+              onClick={() => navigate('/create-listing')}
             >
               <PlusCircle className="h-5 w-5 text-blue-600" />
               <span className="text-sm font-medium">Create Listing</span>
@@ -966,19 +985,28 @@ const SellerLayout = ({
                   Seller Hub
                 </span>
               </div>
+              {/* Shop Name Display */}
               <div className="ml-4 text-sm text-gray-500">
-                {shopName} ({shopRating})
+                <span className="font-medium">{shopName}</span>
+                {shopRating && (
+                  <span className="ml-1">({shopRating})</span>
+                )}
               </div>
             </div>
 
             {/* Right side */}
             <div className="flex items-center space-x-4">
+              {/* User welcome message */}
+              <div className="text-sm text-gray-600">
+                Welcome, <span className="font-medium">{user?.firstName || user?.email?.split('@')[0] || 'Seller'}</span>
+              </div>
+
               {/* Messages */}
               <Button variant="secondary" size="sm">
                 Messages (0)
               </Button>
 
-              {/* Notifications */}
+              {/* Notifications Dropdown */}
               <Dropdown
                 trigger={
                   <IconButton className="relative">
@@ -987,9 +1015,7 @@ const SellerLayout = ({
                   </IconButton>
                 }
                 isOpen={notificationDropdownOpen}
-                onToggle={() =>
-                  setNotificationDropdownOpen(!notificationDropdownOpen)
-                }
+                onToggle={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
                 className="w-80"
               >
                 <div className="p-4 border-b border-gray-200">
@@ -1027,38 +1053,85 @@ const SellerLayout = ({
               </Dropdown>
 
               {/* Profile Dropdown */}
-              <Dropdown
-                trigger={
-                  <Button
-                    variant="ghost"
-                    className="flex items-center space-x-3 p-2"
-                  >
-                    <Avatar size="sm" fallback="U" />
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
-                  </Button>
-                }
-                isOpen={profileDropdownOpen}
-                onToggle={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="w-48"
-              >
-                <div className="py-2">
-                  <button
-                    className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                    onClick={handleProfileNavigation}
-                  >
-                    <User className="mr-3 h-4 w-4" />
-                    Profile
-                  </button>
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <button
-                    className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                    onClick={handleLogout}
-                  >
-                    <LogOut className="mr-3 h-4 w-4" />
-                    Log out
-                  </button>
+              {isAuthenticated && user ? (
+                <Dropdown
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      className="flex items-center space-x-3 p-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      <Avatar 
+                        size="sm" 
+                        fallback={user?.firstName?.charAt(0) || user?.email?.charAt(0) || "S"} 
+                      />
+                      <div className="hidden md:block text-left">
+                        <div className="text-sm font-medium text-gray-900">
+                          {user?.firstName || user?.email?.split('@')[0] || 'Seller'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {user?.userRole || 'seller'}
+                        </div>
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    </Button>
+                  }
+                  isOpen={profileDropdownOpen}
+                  onToggle={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className="w-56"
+                >
+                  <div className="p-3 border-b border-gray-100 bg-gray-50">
+                    <div className="flex items-center space-x-3">
+                      <Avatar 
+                        size="md" 
+                        fallback={user?.firstName?.charAt(0) || user?.email?.charAt(0) || "S"} 
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 
+                           user?.email?.split('@')[0] || 'Seller'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {user?.email || 'No email'}
+                        </div>
+                        <div className="text-xs text-blue-600 font-medium capitalize">
+                          {user?.userRole || 'seller'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="py-2">
+                    <button
+                      className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center text-left"
+                      onClick={handleProfileNavigation}
+                    >
+                      <User className="mr-3 h-4 w-4" />
+                      Profile Settings
+                    </button>
+                    <button
+                      className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center text-left"
+                      onClick={() => navigate('/seller-dashboard')}
+                    >
+                      <Settings className="mr-3 h-4 w-4" />
+                      Dashboard
+                    </button>
+                  </div>
+                  
+                  <div className="border-t border-gray-100 py-2">
+                    <button
+                      className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center text-left"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="mr-3 h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                </Dropdown>
+              ) : (
+                <div className="text-sm text-gray-500">
+                  Not authenticated
                 </div>
-              </Dropdown>
+              )}
             </div>
           </div>
         </div>
@@ -1131,19 +1204,19 @@ const SellerLayout = ({
                 </div>
               )}
 
-              {/* Profile Management - Constrained Width, No Sidebar */}
+              {/* Profile Management */}
               {activeTab === "profile" && (
                 <div className="py-8">
-                  <div className="max-w-7/12 mx-auto px-4 sm:px-6 lg:px-8">
-                    <ProfileManagement />
+                  <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <ProfileManagement user={user} />
                   </div>
                 </div>
               )}
 
-              {/* Other tabs content - With Sidebar */}
+              {/* Other tabs content */}
               {activeTab !== "overview" && activeTab !== "profile" && (
                 <div className="space-y-0">
-                  {/* Filter Bar - Show for all sections with filters */}
+                  {/* Filter Bar */}
                   {activeSubTab && getCurrentFilters().length > 0 && (
                     <FilterBar filters={getCurrentFilters()} />
                   )}
@@ -1153,6 +1226,11 @@ const SellerLayout = ({
                       {/* Orders Management */}
                       {activeTab === "orders" && activeSubTab && (
                         <OrderManagement activeSection={activeSubTab} />
+                      )}
+
+                      {/* Listings Management */}
+                      {activeTab === "listings" && activeSubTab && (
+                        <ListingManagement activeSection={activeSubTab} />
                       )}
 
                       {/* Other sections content */}
@@ -1199,17 +1277,12 @@ const SellerLayout = ({
                               </h3>
                               <p className="text-gray-500">
                                 {activeSubTab
-                                  ? "We didn't find any results. Try adjusting your filters."
+                                  ? "Add your content here."
                                   : "Choose an option from the sidebar to get started."}
                               </p>
                             </CardContent>
                           </Card>
                         </>
-                      )}
-
-                      {/* Listings Management */}
-                      {activeTab === "listings" && activeSubTab && (
-                        <ListingManagement activeSection={activeSubTab} />
                       )}
                     </div>
                   </div>

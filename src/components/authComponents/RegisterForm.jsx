@@ -1,14 +1,28 @@
-
-// src/components/authComponents/RegisterForm.jsx
-
-
-import React, { useState } from "react";
+// components/auth/RegisterForm.jsx
+import React, { useState, useEffect, useCallback } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { X, Mail, Lock, User } from "lucide-react";
 import Card from "../ui/AuthUis/Card";
 import { Button } from "../ui/AuthUis/Button";
 import { Input } from "../ui/AuthUis/Input";
+import {
+  signupUser,
+  clearError,
+  clearSuccess,
+  selectLoading,
+  selectError,
+  selectSuccess,
+  selectMessage,
+} from "../../store/slices/authSlice";
 
 const RegisterForm = ({ switchView, onClose }) => {
+  const dispatch = useDispatch();
+  
+  const isLoading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+  const success = useSelector(selectSuccess);
+  const message = useSelector(selectMessage);
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -18,8 +32,75 @@ const RegisterForm = ({ switchView, onClose }) => {
     agreeTerms: false,
   });
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(3);
+
+  // Memoize goToLogin to prevent dependency issues
+  const goToLogin = useCallback(() => {
+    console.log("🎯 goToLogin called - navigating to login form");
+    setRegistrationSuccess(false);
+    setCountdown(0);
+    dispatch(clearSuccess());
+    dispatch(clearError());
+    switchView("login");
+  }, [dispatch, switchView]);
+
+  // FIXED: Better success detection with multiple possible success indicators
+  useEffect(() => {
+    console.log("Registration state changed:", { success, message, error });
+    
+    // More flexible success detection
+    if (success && !error) {
+      const successMessages = [
+        "User created successfully",
+        "Registration successful", 
+        "Account created successfully",
+        "user created successfully", // lowercase variation
+        "registration successful" // lowercase variation
+      ];
+      
+      const isRegistrationSuccess = 
+        !message || // If no specific message but success is true
+        successMessages.some(msg => 
+          message?.toLowerCase().includes(msg.toLowerCase())
+        ) ||
+        message?.toLowerCase().includes("created") ||
+        message?.toLowerCase().includes("success");
+      
+      if (isRegistrationSuccess) {
+        console.log("✅ Registration SUCCESS detected! Message:", message);
+        setRegistrationSuccess(true);
+        setCountdown(3);
+        // DON'T clear success immediately - let the countdown handle it
+      }
+    }
+  }, [success, message, error]);
+
+  // FIXED: Auto-redirect countdown with proper dependency array
+  useEffect(() => {
+    let timer;
+    if (registrationSuccess && countdown > 0) {
+      console.log(`⏰ Registration redirect countdown: ${countdown} seconds remaining`);
+      timer = setTimeout(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+    } else if (registrationSuccess && countdown === 0) {
+      console.log("🚀 Auto-redirecting to login after registration");
+      goToLogin();
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [registrationSuccess, countdown, goToLogin]);
+
+  // Clear Redux state on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+      dispatch(clearSuccess());
+    };
+  }, [dispatch]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -34,10 +115,23 @@ const RegisterForm = ({ switchView, onClose }) => {
         [name]: "",
       }));
     }
+    
+    // Clear Redux error when user types
+    if (error) {
+      dispatch(clearError());
+    }
   };
 
   const validate = () => {
     const newErrors = {};
+
+    if (!formData.firstName) {
+      newErrors.firstName = "First name is required";
+    }
+
+    if (!formData.lastName) {
+      newErrors.lastName = "Last name is required";
+    }
 
     if (!formData.email) {
       newErrors.email = "Email is required";
@@ -49,9 +143,9 @@ const RegisterForm = ({ switchView, onClose }) => {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 8) {
       newErrors.password = "Password must be at least 8 characters";
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(formData.password)) {
       newErrors.password =
-        "Password must include uppercase, lowercase and numbers";
+        "Password must include uppercase, lowercase, numbers and special characters";
     }
 
     if (!formData.confirmPassword) {
@@ -70,20 +164,24 @@ const RegisterForm = ({ switchView, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     if (validate()) {
-      setIsLoading(true);
-
-      // Simulate registration
-      setTimeout(() => {
-        setIsLoading(false);
-        setRegistrationSuccess(true);
-      }, 1500);
+      try {
+        console.log("🔄 Submitting registration for:", formData.email);
+        const result = await dispatch(signupUser(formData)).unwrap();
+        console.log("✅ Registration API response:", result);
+        
+        // ADDITIONAL: If the API doesn't set success state properly, 
+        // we can manually trigger success here
+        if (result && !error) {
+          console.log("🔧 Manually triggering registration success");
+          setRegistrationSuccess(true);
+          setCountdown(3);
+        }
+      } catch (err) {
+        console.error("❌ Registration failed:", err);
+      }
     }
-  };
-
-  const handleContinue = () => {
-    setRegistrationSuccess(false);
-    switchView("login");
   };
 
   // Password strength indicator
@@ -132,6 +230,14 @@ const RegisterForm = ({ switchView, onClose }) => {
             </button>
           </div>
 
+          {/* Display Redux error */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <Input
@@ -141,6 +247,7 @@ const RegisterForm = ({ switchView, onClose }) => {
                 value={formData.firstName}
                 onChange={handleChange}
                 placeholder="John"
+                error={errors.firstName}
                 icon={<User className="w-5 h-5" />}
               />
 
@@ -151,6 +258,7 @@ const RegisterForm = ({ switchView, onClose }) => {
                 value={formData.lastName}
                 onChange={handleChange}
                 placeholder="Doe"
+                error={errors.lastName}
                 icon={<User className="w-5 h-5" />}
               />
             </div>
@@ -269,49 +377,10 @@ const RegisterForm = ({ switchView, onClose }) => {
               size="lg"
               className="w-full mb-6"
               isLoading={isLoading}
+              disabled={isLoading}
             >
-              Create account
+              {isLoading ? 'Creating account...' : 'Create account'}
             </Button>
-
-            {/* <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  Or sign up with
-                </span>
-              </div>
-            </div> */}
-
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <Button
-                variant="outline"
-                className="flex items-center justify-center"
-              >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"></path>
-                </svg>
-                Google
-              </Button>
-              <Button
-                variant="outline"
-                className="flex items-center justify-center"
-              >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M13.397 20.997v-8.196h2.765l.411-3.209h-3.176V7.548c0-.926.258-1.56 1.587-1.56h1.684V3.127A22.336 22.336 0 0 0 14.201 3c-2.444 0-4.122 1.492-4.122 4.231v2.355H7.332v3.209h2.753v8.202h3.312z"></path>
-                </svg>
-                Facebook
-              </Button>
-            </div>
 
             <p className="text-center text-gray-600 text-sm">
               Already have an account?{" "}
@@ -327,6 +396,15 @@ const RegisterForm = ({ switchView, onClose }) => {
         </>
       ) : (
         <div className="text-center py-6">
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          
           <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
             <svg
               className="w-8 h-8 text-green-600"
@@ -343,16 +421,47 @@ const RegisterForm = ({ switchView, onClose }) => {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            Registration Successful!
+            Registration Successful! 🎉
           </h2>
+          <p className="text-gray-600 mb-4">
+            Welcome aboard! Your account has been created successfully.
+          </p>
           <p className="text-gray-600 mb-6">
-            Your account has been created successfully. We've sent a
-            verification email to{" "}
+            We've sent a verification email to{" "}
             <span className="font-medium">{formData.email}</span>.
           </p>
-          <Button size="lg" className="w-full" onClick={handleContinue}>
-            Continue to Login
-          </Button>
+
+          {/* Countdown and auto-redirect message */}
+          <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-600">
+              Redirecting to login page in{" "}
+              <span className="font-bold text-blue-700">{countdown}</span> seconds...
+            </p>
+          </div>
+
+          <div className="flex flex-col space-y-3">
+            <Button 
+              size="lg" 
+              className="w-full" 
+              onClick={() => {
+                console.log("🔴 Manual 'Go to Login Now' button clicked");
+                goToLogin();
+              }}
+            >
+              Go to Login Now
+            </Button>
+            <button
+              type="button"
+              onClick={() => {
+                console.log("⏸️ Stay on registration success page");
+                setRegistrationSuccess(false);
+                setCountdown(0);
+              }}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Stay here
+            </button>
+          </div>
         </div>
       )}
     </Card>

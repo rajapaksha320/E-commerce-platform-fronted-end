@@ -1,19 +1,64 @@
-
-// src/components/authComponents/ResetPasswordForm.jsx
-
-import React, { useState } from "react";
+// components/auth/ResetPasswordForm.jsx
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { X, Mail, Key } from "lucide-react";
 import Card from "../ui/AuthUis/Card";
 import { Button } from "../ui/AuthUis/Button";
 import { Input } from "../ui/AuthUis/Input";
+import {
+  forgotPassword,
+  clearError,
+  clearSuccess,
+  setResetEmail,
+  selectLoading,
+  selectError,
+  selectSuccess,
+  selectMessage,
+} from "../../store/slices/authSlice";
 
-const ResetPasswordForm = ({ switchView, onClose }) => {
+const ResetPasswordForm = ({ switchView, onClose, initialEmail = "", setEmailInUrl }) => {
+  const dispatch = useDispatch();
+  
+  const isLoading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+  const success = useSelector(selectSuccess);
+  const message = useSelector(selectMessage);
+
   const [requestData, setRequestData] = useState({
-    email: "",
+    email: initialEmail || "",
   });
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
+
+  // Set initial email from URL parameter
+  useEffect(() => {
+    if (initialEmail && !requestData.email) {
+      setRequestData(prev => ({
+        ...prev,
+        email: initialEmail
+      }));
+    }
+  }, [initialEmail]);
+
+  // Handle successful reset email sent
+  useEffect(() => {
+    if (success && message === "Reset email sent , check your inbox") {
+      setRequestSent(true);
+      dispatch(setResetEmail(requestData.email));
+      // Set email in URL for the next steps
+      if (setEmailInUrl) {
+        setEmailInUrl(requestData.email);
+      }
+    }
+  }, [success, message, dispatch, requestData.email, setEmailInUrl]);
+
+  // Clear Redux state on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+      dispatch(clearSuccess());
+    };
+  }, [dispatch]);
 
   const handleRequestChange = (e) => {
     const { name, value } = e.target;
@@ -27,6 +72,11 @@ const ResetPasswordForm = ({ switchView, onClose }) => {
         ...prev,
         [name]: "",
       }));
+    }
+    
+    // Clear Redux error when user types
+    if (error) {
+      dispatch(clearError());
     }
   };
 
@@ -47,23 +97,28 @@ const ResetPasswordForm = ({ switchView, onClose }) => {
     e.preventDefault();
 
     if (validateRequest()) {
-      setIsLoading(true);
-
-      // Simulate sending reset email
-      setTimeout(() => {
-        setIsLoading(false);
-        setRequestSent(true);
-      }, 1500);
+      try {
+        await dispatch(forgotPassword(requestData.email)).unwrap();
+      } catch (err) {
+        // Error is handled by Redux state
+        console.error('Forgot password failed:', err);
+      }
     }
   };
 
   const goToOTPVerification = () => {
-    switchView("otp-verification");
+    // Pass email to OTP verification via URL parameter
+    switchView("otp-verification", requestData.email);
   };
 
   const handleRequestAnother = () => {
     setRequestData({ email: "" });
     setRequestSent(false);
+    dispatch(clearSuccess());
+    // Clear email from URL
+    if (setEmailInUrl) {
+      setEmailInUrl("");
+    }
   };
 
   return (
@@ -90,6 +145,13 @@ const ResetPasswordForm = ({ switchView, onClose }) => {
 
       {!requestSent ? (
         <>
+          {/* Display Redux error */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
           <form onSubmit={handleRequestSubmit}>
             <Input
               type="email"
@@ -108,8 +170,9 @@ const ResetPasswordForm = ({ switchView, onClose }) => {
               size="lg"
               className="w-full mb-6"
               isLoading={isLoading}
+              disabled={isLoading}
             >
-              Send Verification Code
+              {isLoading ? 'Sending...' : 'Send Verification Code'}
             </Button>
           </form>
 

@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
-
-// src/components/homePageComponents/navBar/NavBar.jsx
+// components/homePageComponents/navBar/NavBar.jsx
 import React, { useState, useRef, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Search,
   ShoppingCart,
@@ -24,12 +24,28 @@ import AuthModal from "../../authComponents/AuthModal";
 import SearchDropdown from "./SearchDropdown";
 import { useNavigate } from "react-router-dom";
 
+// 🏢 PROFESSIONAL: Redux selectors
+import { 
+  logout,
+  selectIsAuthenticated,
+  selectUser,
+  selectUserRole
+} from "../../../store/slices/authSlice";
+
 const NavBar = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  
+  // 🏢 PROFESSIONAL: Redux state
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const user = useSelector(selectUser);
+  const userRole = useSelector(selectUserRole);
+
+  // Local state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authView, setAuthView] = useState("login");
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
 
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,7 +55,6 @@ const NavBar = () => {
   // Cart state (you can move this to global state management)
   const [cartItemsCount, setCartItemsCount] = useState(3);
 
-  const navigate = useNavigate();
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -80,12 +95,11 @@ const NavBar = () => {
     };
   }, [isProfileMenuOpen]);
 
-  // Handle search input changes
+  // Search handlers
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
 
-    // Show dropdown when typing or focused
     if (value.length > 0 || isSearchFocused) {
       setIsSearchDropdownOpen(true);
     } else {
@@ -93,15 +107,12 @@ const NavBar = () => {
     }
   };
 
-  // Handle search focus
   const handleSearchFocus = () => {
     setIsSearchFocused(true);
     setIsSearchDropdownOpen(true);
   };
 
-  // Handle search blur
   const handleSearchBlur = () => {
-    // Delay to allow clicking on dropdown items
     setTimeout(() => {
       setIsSearchFocused(false);
       if (!searchQuery) {
@@ -110,7 +121,6 @@ const NavBar = () => {
     }, 200);
   };
 
-  // Handle search submission
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -118,21 +128,19 @@ const NavBar = () => {
     }
   };
 
-  // Navigate to main search results
   const handleViewAllResults = (query) => {
     setIsSearchDropdownOpen(false);
     setIsSearchFocused(false);
     navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
-  // Handle product selection from dropdown
   const handleProductSelect = (product) => {
     setIsSearchDropdownOpen(false);
     setIsSearchFocused(false);
     navigate(`/product/${product.id}`);
   };
 
-  // Handle shopping cart navigation
+  // Navigation handlers
   const handleShoppingCartClick = () => {
     navigate("/shopping-cart");
   };
@@ -142,21 +150,21 @@ const NavBar = () => {
     setIsAuthModalOpen(true);
   };
 
-  const handleLogin = (email) => {
-    setUser({
-      email: email,
-      name: email.split("@")[0],
-      avatar: null,
-    });
+  const handleLogin = () => {
     setIsAuthModalOpen(false);
+  };
+
+  const handleViewChange = (newView) => {
+    setAuthView(newView);
   };
 
   const handleSellWithUs = () => {
     navigate("/seller-registration");
   };
 
+  // 🏢 PROFESSIONAL: Logout handler
   const handleLogout = () => {
-    setUser(null);
+    dispatch(logout());
     setIsProfileMenuOpen(false);
   };
 
@@ -169,9 +177,27 @@ const NavBar = () => {
     setIsMenuOpen(false);
   };
 
-  const getInitials = (email) => {
+  // 🏢 PROFESSIONAL: Helper function to get user display info
+  const getUserInfo = () => {
+    if (!user) return null;
+    
+    return {
+      name: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 
+            user.email ? user.email.split("@")[0] : 'User',
+      email: user.email || '',
+      avatar: user.avatar || null
+    };
+  };
+
+  // 🏢 PROFESSIONAL: Generate user initials
+  const getInitials = (name, email) => {
+    if (name && name !== email?.split("@")[0]) {
+      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
     return email ? email.charAt(0).toUpperCase() : "U";
   };
+
+  const userInfo = getUserInfo();
 
   return (
     <>
@@ -266,9 +292,9 @@ const NavBar = () => {
                     )}
                   </Button>
 
-                  {/* User Profile - Tablet and Desktop */}
+                  {/* 🏢 PROFESSIONAL: User Profile - Tablet and Desktop */}
                   <div className="hidden md:block relative ml-1 xl:ml-2 profile-menu-container">
-                    {!user ? (
+                    {!isAuthenticated ? (
                       <div className="flex space-x-2 xl:space-x-3">
                         <Button
                           variant="ghost"
@@ -297,40 +323,50 @@ const NavBar = () => {
                           }
                           className="flex items-center space-x-2 xl:space-x-3 p-1.5 xl:p-2 rounded-xl hover:bg-gray-50 transition-all duration-200 border border-gray-200 hover:border-gray-300 bg-white shadow-sm"
                         >
-                          {user.avatar ? (
+                          {userInfo?.avatar ? (
                             <img
-                              src={user.avatar}
+                              src={userInfo.avatar}
                               alt="Profile"
                               className="w-7 h-7 xl:w-9 xl:h-9 rounded-full ring-2 ring-blue-100"
                             />
                           ) : (
                             <div className="w-7 h-7 xl:w-9 xl:h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-xs xl:text-sm shadow-inner">
-                              {getInitials(user.email)}
+                              {getInitials(userInfo?.name, userInfo?.email)}
                             </div>
                           )}
                           <div className="text-left hidden lg:block">
                             <span className="text-xs xl:text-sm font-semibold text-gray-900 block max-w-20 xl:max-w-24 truncate">
-                              {user.name}
+                              {userInfo?.name}
                             </span>
+                            {userRole && (
+                              <span className="text-[10px] xl:text-xs text-gray-500 capitalize">
+                                {userRole}
+                              </span>
+                            )}
                           </div>
                           <ChevronDown className="h-3 w-3 xl:h-4 xl:w-4 text-gray-400 hidden lg:block" />
                         </Button>
 
-                        {/* Enhanced Profile Dropdown */}
+                        {/* 🏢 PROFESSIONAL: Enhanced Profile Dropdown */}
                         {isProfileMenuOpen && (
-                          <div className="absolute  right-0 mt-2 w-56 xl:w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50 backdrop-blur-sm">
+                          <div className="absolute right-0 mt-2 w-56 xl:w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50 backdrop-blur-sm">
                             <div className="px-4 xl:px-6 py-3 xl:py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-2xl">
                               <div className="flex items-center space-x-3">
                                 <div className="w-10 h-10 xl:w-12 xl:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg text-sm xl:text-base">
-                                  {getInitials(user.email)}
+                                  {getInitials(userInfo?.name, userInfo?.email)}
                                 </div>
                                 <div>
                                   <p className="text-xs xl:text-sm font-semibold text-gray-900">
-                                    {user.name}
+                                    {userInfo?.name}
                                   </p>
                                   <p className="text-[10px] xl:text-xs text-gray-600 truncate">
-                                    {user.email}
+                                    {userInfo?.email}
                                   </p>
+                                  {userRole && (
+                                    <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] rounded-full capitalize font-medium">
+                                      {userRole}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -391,6 +427,24 @@ const NavBar = () => {
                                 <Settings className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
                                 Settings
                               </Button>
+
+                              {/* 🏢 PROFESSIONAL: Seller-specific menu item */}
+                              {userRole === 'seller' && (
+                                <>
+                                  <div className="border-t border-gray-100 my-2"></div>
+                                  <Button
+                                    variant="ghost"
+                                    onClick={() => {
+                                      navigate("/seller-dashboard");
+                                      setIsProfileMenuOpen(false);
+                                    }}
+                                    className="flex items-center w-full px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-orange-700 hover:bg-orange-50 hover:text-orange-600 transition-all duration-200 justify-start"
+                                  >
+                                    <Package className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
+                                    Seller Dashboard
+                                  </Button>
+                                </>
+                              )}
                             </div>
 
                             <div className="border-t border-gray-100 pt-2">
@@ -496,23 +550,28 @@ const NavBar = () => {
           </div>
         </div>
 
-        {/* Enhanced Mobile Menu */}
+        {/* 🏢 PROFESSIONAL: Enhanced Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden border-t border-gray-200 bg-white shadow-lg">
             <div className="px-3 sm:px-4 pt-4 pb-6 space-y-4 max-h-[calc(100vh-120px)] overflow-y-auto">
               {/* User Section - Mobile */}
-              {user && (
+              {isAuthenticated && userInfo && (
                 <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100 mb-4">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
-                    {getInitials(user.email)}
+                    {getInitials(userInfo.name, userInfo.email)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">
-                      {user.name}
+                      {userInfo.name}
                     </p>
                     <p className="text-xs text-gray-600 truncate">
-                      {user.email}
+                      {userInfo.email}
                     </p>
+                    {userRole && (
+                      <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full capitalize font-medium">
+                        {userRole}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -597,7 +656,8 @@ const NavBar = () => {
                   </Button>
                 </div>
 
-                {!user ? (
+                {/* 🏢 PROFESSIONAL: Auth section */}
+                {!isAuthenticated ? (
                   <div className="space-y-3 pt-2">
                     <Button
                       variant="outline"
@@ -657,6 +717,21 @@ const NavBar = () => {
                         <Settings className="h-5 w-5 mr-3" />
                         <span className="text-base">Settings</span>
                       </Button>
+
+                      {/* Seller Dashboard for mobile */}
+                      {userRole === 'seller' && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            navigate("/seller-dashboard");
+                            setIsMenuOpen(false);
+                          }}
+                          className="flex items-center w-full px-4 py-3 text-orange-700 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200 active:bg-orange-100 justify-start"
+                        >
+                          <Package className="h-5 w-5 mr-3" />
+                          <span className="text-base">Seller Dashboard</span>
+                        </Button>
+                      )}
                     </div>
                     <Button
                       variant="outline"
@@ -683,6 +758,7 @@ const NavBar = () => {
         onClose={() => setIsAuthModalOpen(false)}
         initialView={authView}
         onLogin={handleLogin}
+        onViewChange={handleViewChange}
       />
     </>
   );

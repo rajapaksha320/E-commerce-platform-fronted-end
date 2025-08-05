@@ -1,20 +1,101 @@
-
-// src/components/authComponents/LoginForm.jsx
-
-import React, { useState } from "react";
+// components/auth/LoginForm.jsx
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { X, Mail, Lock } from "lucide-react";
 import Card from "../ui/AuthUis/Card";
 import { Button } from "../ui/AuthUis/Button";
 import { Input } from "../ui/AuthUis/Input";
+import { 
+  loginUser, 
+  clearError, 
+  clearSuccess,
+  selectLoading,
+  selectError,
+  selectUserRole,
+  selectIsAuthenticated 
+} from "../../store/slices/authSlice";
 
-const LoginForm = ({ switchView, onClose, onLogin }) => {
+const LoginForm = ({ switchView, onClose, onLogin, intendedDestination }) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  
+  const isLoading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+  const userRole = useSelector(selectUserRole);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     rememberMe: false,
   });
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
+
+  // Handle successful login navigation
+  useEffect(() => {
+    if (isAuthenticated && userRole) {
+      // Close modal
+      onClose();
+      
+      // Call onLogin callback if provided
+      if (onLogin) {
+        onLogin(formData.email);
+      }
+
+      // Navigate to intended destination or fallback based on role
+      setTimeout(() => {
+        if (intendedDestination && intendedDestination !== '/') {
+          // Check if the intended destination is allowed for this user role
+          const isDestinationAllowed = checkDestinationAccess(intendedDestination, userRole);
+          
+          if (isDestinationAllowed) {
+            navigate(intendedDestination);
+          } else {
+            // If intended destination is not allowed, navigate to role-appropriate page
+            navigateByRole(userRole);
+          }
+        } else {
+          // No intended destination, navigate based on role
+          navigateByRole(userRole);
+        }
+      }, 100);
+    }
+  }, [isAuthenticated, userRole, navigate, onClose, onLogin, formData.email, intendedDestination]);
+
+  // Helper function to check if destination is allowed for user role
+  const checkDestinationAccess = (destination, role) => {
+    const sellerRoutes = ['/seller-dashboard', '/create-listing'];
+    const buyerRoutes = ['/profile', '/orders', '/wish-list', '/checkout', '/track-parcel', '/leave-review'];
+    
+    if (role === 'seller') {
+      // Sellers can access seller routes, but not buyer-specific routes
+      return !buyerRoutes.some(route => destination.startsWith(route));
+    } else if (role === 'buyer') {
+      // Buyers can access buyer routes, but not seller-specific routes
+      return !sellerRoutes.some(route => destination.startsWith(route));
+    }
+    
+    return true; // Default allow
+  };
+
+  // Helper function to navigate based on user role
+  const navigateByRole = (role) => {
+    if (role === 'seller') {
+      navigate('/seller-dashboard');
+    } else {
+      // For buyers, stay on current page or go to homepage if no intended destination
+      navigate('/');
+    }
+  };
+
+  // Clear errors when component unmounts
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+      dispatch(clearSuccess());
+    };
+  }, [dispatch]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -23,11 +104,16 @@ const LoginForm = ({ switchView, onClose, onLogin }) => {
       [name]: type === "checkbox" ? checked : value,
     }));
 
-    if (errors[name]) {
-      setErrors((prev) => ({
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => ({
         ...prev,
         [name]: "",
       }));
+    }
+    
+    // Clear Redux error when user types
+    if (error) {
+      dispatch(clearError());
     }
   };
 
@@ -46,21 +132,28 @@ const LoginForm = ({ switchView, onClose, onLogin }) => {
       newErrors.password = "Password must be at least 6 characters";
     }
 
-    setErrors(newErrors);
+    setValidationErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Form submitted with data:', formData);
+    
     if (validate()) {
-      setIsLoading(true);
-
-      // Simulate login
-      setTimeout(() => {
-        setIsLoading(false);
-        onLogin(formData.email);
-        onClose();
-      }, 1500);
+      console.log('Validation passed, dispatching login action');
+      try {
+        await dispatch(loginUser({
+          email: formData.email,
+          password: formData.password,
+        })).unwrap();
+        console.log('Login action completed successfully');
+      } catch (err) {
+        // Error is handled by Redux state
+        console.error('Login failed:', err);
+      }
+    } else {
+      console.log('Validation failed');
     }
   };
 
@@ -71,12 +164,24 @@ const LoginForm = ({ switchView, onClose, onLogin }) => {
           <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-1">
             Welcome back
           </h2>
-          <p className="text-gray-600">Please enter your details to continue</p>
+          <p className="text-gray-600">
+            {intendedDestination && intendedDestination !== '/' 
+              ? `Please sign in to continue to ${getPageName(intendedDestination)}`
+              : 'Please enter your details to continue'
+            }
+          </p>
         </div>
         <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
           <X className="w-6 h-6" />
         </button>
       </div>
+
+      {/* Display Redux error */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <Input
@@ -86,7 +191,7 @@ const LoginForm = ({ switchView, onClose, onLogin }) => {
           value={formData.email}
           onChange={handleChange}
           placeholder="name@example.com"
-          error={errors.email}
+          error={validationErrors.email}
           required
           icon={<Mail className="w-5 h-5" />}
         />
@@ -98,7 +203,7 @@ const LoginForm = ({ switchView, onClose, onLogin }) => {
           value={formData.password}
           onChange={handleChange}
           placeholder="••••••••"
-          error={errors.password}
+          error={validationErrors.password}
           required
           icon={<Lock className="w-5 h-5" />}
         />
@@ -152,49 +257,10 @@ const LoginForm = ({ switchView, onClose, onLogin }) => {
           size="lg"
           className="w-full mb-4"
           isLoading={isLoading}
+          disabled={isLoading}
         >
-          Sign in
+          {isLoading ? 'Signing in...' : 'Sign in'}
         </Button>
-
-        {/* <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">
-              Or continue with
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <Button
-            variant="outline"
-            className="flex items-center justify-center"
-          >
-            <svg
-              className="w-5 h-5 mr-2"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"></path>
-            </svg>
-            Google
-          </Button>
-          <Button
-            variant="outline"
-            className="flex items-center justify-center"
-          >
-            <svg
-              className="w-5 h-5 mr-2"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M13.397 20.997v-8.196h2.765l.411-3.209h-3.176V7.548c0-.926.258-1.56 1.587-1.56h1.684V3.127A22.336 22.336 0 0 0 14.201 3c-2.444 0-4.122 1.492-4.122 4.231v2.355H7.332v3.209h2.753v8.202h3.312z"></path>
-            </svg>
-            Facebook
-          </Button>
-        </div> */}
       </form>
 
       <p className="text-center text-sm text-gray-600">
@@ -209,6 +275,21 @@ const LoginForm = ({ switchView, onClose, onLogin }) => {
       </p>
     </Card>
   );
+};
+
+// Helper function to get user-friendly page names
+const getPageName = (path) => {
+  const pageNames = {
+    '/profile': 'your profile',
+    '/orders': 'your orders',
+    '/wish-list': 'your wishlist',
+    '/checkout': 'checkout',
+    '/track-parcel': 'order tracking',
+    '/leave-review': 'leave a review',
+    '/seller-dashboard': 'seller dashboard',
+    '/create-listing': 'create listing'
+  };
+  return pageNames[path] || 'the requested page';
 };
 
 export default LoginForm;

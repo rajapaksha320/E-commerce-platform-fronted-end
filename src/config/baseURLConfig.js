@@ -1,4 +1,2 @@
-// export defailt base url
-export default {
-  baseURL: 'http://localhost:3000'
-};
+// baseURLConfig.js
+export default 'http://localhost:3000';
