@@ -8,17 +8,7 @@ import {
   Phone,
   Mail,
   Globe,
-  Shield,
   Save,
-  Eye,
-  EyeOff,
-  Plus,
-  X,
-  Verified,
-  Star,
-  Package,
-  Truck,
-  RotateCcw,
 } from "lucide-react";
 import {
   Button,
@@ -28,12 +18,10 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
-  Badge,
   Avatar,
 } from "../../../ui/sellerUis/Uis";
 
 const ProfileManagement = () => {
-  const [showPassword, setShowPassword] = useState(false);
   const [activeSection, setActiveSection] = useState("basic");
 
   // Shop profile state
@@ -53,59 +41,17 @@ const ProfileManagement = () => {
     badge: "Top Seller",
   });
 
-  // Policies state
-  const [policies, setPolicies] = useState([
-    {
-      id: 1,
-      title: "Returns",
-      description: "30-day return policy",
-      icon: RotateCcw,
-    },
-    {
-      id: 2,
-      title: "Shipping",
-      description: "Free shipping over $50",
-      icon: Truck,
-    },
-    {
-      id: 3,
-      title: "Quality",
-      description: "100% authentic products",
-      icon: Shield,
-    },
-  ]);
-
-  // Account settings state
-  const [accountSettings, setAccountSettings] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-    emailNotifications: true,
-    orderNotifications: true,
-    marketingEmails: false,
-    twoFactorAuth: false,
-  });
-
   const sections = [
     { id: "basic", name: "Basic Information", icon: User },
     { id: "contact", name: "Contact Details", icon: Phone },
     { id: "media", name: "Shop Media", icon: Camera },
-    { id: "policies", name: "Shop Policies", icon: Shield },
-    { id: "account", name: "Account Settings", icon: User },
   ];
 
-  const handleInputChange = (section, field, value) => {
-    if (section === "shop") {
-      setShopProfile((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
-    } else if (section === "account") {
-      setAccountSettings((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
-    }
+  const handleInputChange = (field, value) => {
+    setShopProfile((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   const handleImageUpload = (type) => {
@@ -128,35 +74,9 @@ const ProfileManagement = () => {
     input.click();
   };
 
-  const addPolicy = () => {
-    const newPolicy = {
-      id: Date.now(),
-      title: "New Policy",
-      description: "Policy description",
-      icon: Package,
-    };
-    setPolicies([...policies, newPolicy]);
-  };
-
-  const updatePolicy = (id, field, value) => {
-    setPolicies(
-      policies.map((policy) =>
-        policy.id === id ? { ...policy, [field]: value } : policy
-      )
-    );
-  };
-
-  const removePolicy = (id) => {
-    setPolicies(policies.filter((policy) => policy.id !== id));
-  };
-
   const handleSave = () => {
     // Handle save logic here
-    console.log("Saving profile...", {
-      shopProfile,
-      policies,
-      accountSettings,
-    });
+    console.log("Saving profile...", shopProfile);
     alert("Profile updated successfully!");
   };
 
@@ -174,7 +94,7 @@ const ProfileManagement = () => {
             <Input
               value={shopProfile.name}
               onChange={(e) =>
-                handleInputChange("shop", "name", e.target.value)
+                handleInputChange("name", e.target.value)
               }
               placeholder="Enter your shop name"
             />
@@ -187,7 +107,7 @@ const ProfileManagement = () => {
             <Input
               value={shopProfile.tagline}
               onChange={(e) =>
-                handleInputChange("shop", "tagline", e.target.value)
+                handleInputChange("tagline", e.target.value)
               }
               placeholder="A short description of your shop"
             />
@@ -200,7 +120,7 @@ const ProfileManagement = () => {
             <textarea
               value={shopProfile.description}
               onChange={(e) =>
-                handleInputChange("shop", "description", e.target.value)
+                handleInputChange("description", e.target.value)
               }
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -215,7 +135,7 @@ const ProfileManagement = () => {
             <Select
               value={shopProfile.badge}
               onChange={(e) =>
-                handleInputChange("shop", "badge", e.target.value)
+                handleInputChange("badge", e.target.value)
               }
             >
               <option value="">No Badge</option>
@@ -245,7 +165,7 @@ const ProfileManagement = () => {
             <Input
               value={shopProfile.location}
               onChange={(e) =>
-                handleInputChange("shop", "location", e.target.value)
+                handleInputChange("location", e.target.value)
               }
               placeholder="City, State/Country"
             />
@@ -259,7 +179,7 @@ const ProfileManagement = () => {
             <Input
               value={shopProfile.phone}
               onChange={(e) =>
-                handleInputChange("shop", "phone", e.target.value)
+                handleInputChange("phone", e.target.value)
               }
               placeholder="+1 (555) 123-4567"
             />
@@ -274,7 +194,7 @@ const ProfileManagement = () => {
               type="email"
               value={shopProfile.email}
               onChange={(e) =>
-                handleInputChange("shop", "email", e.target.value)
+                handleInputChange("email", e.target.value)
               }
               placeholder="contact@yourshop.com"
             />
@@ -288,7 +208,7 @@ const ProfileManagement = () => {
             <Input
               value={shopProfile.website}
               onChange={(e) =>
-                handleInputChange("shop", "website", e.target.value)
+                handleInputChange("website", e.target.value)
               }
               placeholder="https://yourshop.com"
             />
@@ -302,7 +222,7 @@ const ProfileManagement = () => {
             <Input
               value={shopProfile.businessHours}
               onChange={(e) =>
-                handleInputChange("shop", "businessHours", e.target.value)
+                handleInputChange("businessHours", e.target.value)
               }
               placeholder="Mon-Fri 9AM-6PM"
             />
@@ -375,246 +295,6 @@ const ProfileManagement = () => {
     </div>
   );
 
-  const renderShopPolicies = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Shop Policies</CardTitle>
-          <Button variant="outline" size="sm" onClick={addPolicy}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Policy
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {policies.map((policy) => (
-              <div
-                key={policy.id}
-                className="p-4 border border-gray-200 rounded-lg space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <policy.icon className="h-5 w-5 text-blue-600" />
-                    <Input
-                      value={policy.title}
-                      onChange={(e) =>
-                        updatePolicy(policy.id, "title", e.target.value)
-                      }
-                      className="font-medium"
-                    />
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removePolicy(policy.id)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <textarea
-                  value={policy.description}
-                  onChange={(e) =>
-                    updatePolicy(policy.id, "description", e.target.value)
-                  }
-                  rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  placeholder="Policy description..."
-                />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  const renderAccountSettings = () => (
-    <div className="space-y-6">
-      {/* Password Change */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Change Password</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Current Password
-            </label>
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                value={accountSettings.currentPassword}
-                onChange={(e) =>
-                  handleInputChange(
-                    "account",
-                    "currentPassword",
-                    e.target.value
-                  )
-                }
-                placeholder="Enter current password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2"
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-gray-400" />
-                ) : (
-                  <Eye className="h-4 w-4 text-gray-400" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              New Password
-            </label>
-            <Input
-              type="password"
-              value={accountSettings.newPassword}
-              onChange={(e) =>
-                handleInputChange("account", "newPassword", e.target.value)
-              }
-              placeholder="Enter new password"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Confirm New Password
-            </label>
-            <Input
-              type="password"
-              value={accountSettings.confirmPassword}
-              onChange={(e) =>
-                handleInputChange("account", "confirmPassword", e.target.value)
-              }
-              placeholder="Confirm new password"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notification Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Notification Preferences</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-gray-700">
-                Email Notifications
-              </label>
-              <p className="text-xs text-gray-500">
-                Receive general email notifications
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={accountSettings.emailNotifications}
-              onChange={(e) =>
-                handleInputChange(
-                  "account",
-                  "emailNotifications",
-                  e.target.checked
-                )
-              }
-              className="h-4 w-4 text-blue-600 rounded border-gray-300"
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-gray-700">
-                Order Notifications
-              </label>
-              <p className="text-xs text-gray-500">
-                Get notified about new orders and updates
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={accountSettings.orderNotifications}
-              onChange={(e) =>
-                handleInputChange(
-                  "account",
-                  "orderNotifications",
-                  e.target.checked
-                )
-              }
-              className="h-4 w-4 text-blue-600 rounded border-gray-300"
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-gray-700">
-                Marketing Emails
-              </label>
-              <p className="text-xs text-gray-500">
-                Receive promotional emails and updates
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={accountSettings.marketingEmails}
-              onChange={(e) =>
-                handleInputChange(
-                  "account",
-                  "marketingEmails",
-                  e.target.checked
-                )
-              }
-              className="h-4 w-4 text-blue-600 rounded border-gray-300"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Security Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Security Settings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-gray-700">
-                Two-Factor Authentication
-              </label>
-              <p className="text-xs text-gray-500">
-                Add an extra layer of security to your account
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={accountSettings.twoFactorAuth}
-                onChange={(e) =>
-                  handleInputChange(
-                    "account",
-                    "twoFactorAuth",
-                    e.target.checked
-                  )
-                }
-                className="h-4 w-4 text-blue-600 rounded border-gray-300"
-              />
-              {accountSettings.twoFactorAuth && (
-                <Badge variant="success" size="xs">
-                  <Verified className="h-3 w-3 mr-1" />
-                  Enabled
-                </Badge>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
   const renderContent = () => {
     switch (activeSection) {
       case "basic":
@@ -623,10 +303,6 @@ const ProfileManagement = () => {
         return renderContactDetails();
       case "media":
         return renderShopMedia();
-      case "policies":
-        return renderShopPolicies();
-      case "account":
-        return renderAccountSettings();
       default:
         return renderBasicInformation();
     }
@@ -641,7 +317,7 @@ const ProfileManagement = () => {
             Profile Management
           </h1>
           <p className="text-gray-600">
-            Manage your shop profile and account settings
+            Manage your shop profile and settings
           </p>
         </div>
         <Button variant="primary" onClick={handleSave}>
