@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+// components/seller/MultiStepSellerForm.jsx
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   User,
   Mail,
@@ -18,18 +21,28 @@ import {
 
 import { Button, Card, Input, Select, StepIndicator, StepNavigation } from "../../ui/sellerUis/SellerUis";
 import { countries } from "./countries";
+import {
+  sellerRegistration,
+  clearError,
+  clearSuccess,
+  selectLoading,
+  selectError,
+  selectSuccess,
+  selectUser,
+} from "../../../store/slices/authSlice";
 
 // Success Modal Component
 const SuccessModal = ({ isOpen, onClose, userData }) => {
+  const navigate = useNavigate();
+
   if (!isOpen) return null;
 
   const handleSellerHubNavigation = () => {
-    window.location.href = "/seller-dashboard";
+    navigate("/seller-dashboard");
   };
 
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4  bg-transparent bg-opacity-50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-transparent bg-opacity-50 backdrop-blur-sm">
       <div className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
         {/* Close button */}
         <button
@@ -126,14 +139,11 @@ const SuccessModal = ({ isOpen, onClose, userData }) => {
   );
 };
 
+// Helper functions remain the same
 const formatPhoneNumber = (value) => {
-  // Remove all non-digits
   const digits = value.replace(/\D/g, "");
-
-  // Limit to 10 digits for US format
   const limitedDigits = digits.substring(0, 10);
 
-  // Format as XXX-XXX-XXXX
   if (limitedDigits.length >= 6) {
     return `${limitedDigits.substring(0, 3)}-${limitedDigits.substring(
       3,
@@ -146,9 +156,7 @@ const formatPhoneNumber = (value) => {
   }
 };
 
-// Phone number validation function
 const validatePhoneNumber = (phone) => {
-  // Remove all non-digits
   const digits = phone.replace(/\D/g, "");
 
   if (digits.length === 0) {
@@ -163,7 +171,6 @@ const validatePhoneNumber = (phone) => {
     return "Phone number must be exactly 10 digits";
   }
 
-  // Check if it's a valid US phone number pattern
   if (!/^\d{10}$/.test(digits)) {
     return "Please enter a valid phone number";
   }
@@ -171,7 +178,7 @@ const validatePhoneNumber = (phone) => {
   return "";
 };
 
-// Country Select Component
+// Country Select Component (remains the same)
 const CountrySelect = ({ value, onChange, error, required = false }) => {
   return (
     <Select
@@ -192,7 +199,7 @@ const CountrySelect = ({ value, onChange, error, required = false }) => {
   );
 };
 
-// Phone Input Component with validation and formatting
+// Phone Input Component (remains the same)
 const PhoneInput = ({
   countryCode,
   phone,
@@ -207,7 +214,6 @@ const PhoneInput = ({
     const rawValue = e.target.value;
     const formattedValue = formatPhoneNumber(rawValue);
 
-    // Create a new event object with the formatted value
     const formattedEvent = {
       target: {
         name: e.target.name,
@@ -253,7 +259,7 @@ const PhoneInput = ({
               }`}
               value={phone}
               onChange={handlePhoneChange}
-              maxLength={12} // XXX-XXX-XXXX format
+              maxLength={12}
             />
           </div>
         </div>
@@ -277,8 +283,15 @@ const PhoneInput = ({
 
 // Main Multi-Step Form
 const MultiStepSellerForm = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  
+  const isLoading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+  const success = useSelector(selectSuccess);
+  const user = useSelector(selectUser);
+
   const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -286,6 +299,8 @@ const MultiStepSellerForm = () => {
     firstName: "",
     lastName: "",
     email: "",
+    password: "",
+    confirmPassword: "",
 
     // Business Information
     businessName: "",
@@ -304,6 +319,21 @@ const MultiStepSellerForm = () => {
   });
 
   const [errors, setErrors] = useState({});
+
+  // Handle successful registration
+  useEffect(() => {
+    if (success && user?.userRole === 'seller') {
+      setShowSuccessModal(true);
+    }
+  }, [success, user]);
+
+  // Clear Redux state on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+      dispatch(clearSuccess());
+    };
+  }, [dispatch]);
 
   const steps = [
     {
@@ -337,6 +367,11 @@ const MultiStepSellerForm = () => {
         [name]: "",
       }));
     }
+
+    // Clear Redux error
+    if (error) {
+      dispatch(clearError());
+    }
   };
 
   const validateStep = (step) => {
@@ -349,6 +384,16 @@ const MultiStepSellerForm = () => {
         if (!formData.email) newErrors.email = "Email is required";
         else if (!/\S+@\S+\.\S+/.test(formData.email)) {
           newErrors.email = "Please enter a valid email address";
+        }
+        if (!formData.password) newErrors.password = "Password is required";
+        else if (formData.password.length < 8) {
+          newErrors.password = "Password must be at least 8 characters";
+        } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(formData.password)) {
+          newErrors.password = "Password must include uppercase, lowercase, numbers and special characters";
+        }
+        if (!formData.confirmPassword) newErrors.confirmPassword = "Please confirm your password";
+        else if (formData.confirmPassword !== formData.password) {
+          newErrors.confirmPassword = "Passwords do not match";
         }
         break;
 
@@ -369,7 +414,6 @@ const MultiStepSellerForm = () => {
         if (!formData.countryCode)
           newErrors.countryCode = "Country is required";
 
-        // Phone validation with formatting check
         const phoneError = validatePhoneNumber(formData.phone);
         if (phoneError) {
           newErrors.phone = phoneError;
@@ -394,19 +438,18 @@ const MultiStepSellerForm = () => {
 
   const handleSubmit = async () => {
     if (validateStep(currentStep)) {
-      setIsSubmitting(true);
-
-      // Simulate form submission
-      setTimeout(() => {
-        setIsSubmitting(false);
-        setShowSuccessModal(true);
-      }, 2000);
+      try {
+        await dispatch(sellerRegistration(formData)).unwrap();
+      } catch (err) {
+        // Error is handled by Redux state
+        console.error('Seller registration failed:', err);
+      }
     }
   };
 
   const handleCloseSuccessModal = () => {
     setShowSuccessModal(false);
-    window.location.href = "/";
+    navigate("/seller-dashboard");
   };
 
   const renderStepContent = () => {
@@ -425,6 +468,13 @@ const MultiStepSellerForm = () => {
                 Let's start with your basic information
               </p>
             </div>
+
+            {/* Display Redux error */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
@@ -460,6 +510,30 @@ const MultiStepSellerForm = () => {
               icon={<Mail className="w-5 h-5" />}
               error={errors.email}
             />
+
+            <Input
+              label="Password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              placeholder="••••••••"
+              required
+              icon={<Shield className="w-5 h-5" />}
+              error={errors.password}
+            />
+
+            <Input
+              label="Confirm Password"
+              name="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={handleInputChange}
+              placeholder="••••••••"
+              required
+              icon={<Shield className="w-5 h-5" />}
+              error={errors.confirmPassword}
+            />
           </div>
         );
 
@@ -475,6 +549,13 @@ const MultiStepSellerForm = () => {
               </h3>
               <p className="text-gray-600">Tell us about your business</p>
             </div>
+
+            {/* Display Redux error */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
@@ -540,6 +621,13 @@ const MultiStepSellerForm = () => {
                 Your business address and contact details
               </p>
             </div>
+
+            {/* Display Redux error */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
 
             <Input
               label="Street Address"
@@ -667,7 +755,7 @@ const MultiStepSellerForm = () => {
               onNext={handleNext}
               onPrev={handlePrev}
               onSubmit={handleSubmit}
-              isSubmitting={isSubmitting}
+              isSubmitting={isLoading}
               canProceed={true}
             />
           </Card>
