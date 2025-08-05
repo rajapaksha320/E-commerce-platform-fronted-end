@@ -70,7 +70,7 @@ const LoginRequiredUI = ({ onShowLogin, routeName, intendedDestination }) => {
           {/* Continue Browsing */}
           <button
             onClick={() => window.history.back()}
-            className="text-blue-600 hover:text-blue-700 font-medium text-sm underline transition-colors duration-200"
+            className="text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors duration-200"
           >
             ← Continue browsing without login
           </button>
