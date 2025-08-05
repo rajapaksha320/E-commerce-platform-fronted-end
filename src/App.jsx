@@ -9,6 +9,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from "./components/layout/Layout";
 import SellerLayout from "./components/sellerComponents/layout/SellerLayout";
 import ScrollToTop from "./components/common/ScrollToTop";
+import NotFoundPage from "./pages/notFoundPage/NotFoundPage";
 
 // Import components for routes
 import SellerRegisterForm from "./components/sellerComponents/sellerRegistrationComponents/sellerRegisterForm";
@@ -190,29 +191,7 @@ function App() {
           <Route 
             path="*" 
             element={
-              <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                <div className="text-center p-8">
-                  <div className="text-6xl text-gray-400 mb-4">404</div>
-                  <h1 className="text-2xl font-bold text-gray-800 mb-2">Page Not Found</h1>
-                  <p className="text-gray-600 mb-6">
-                    The page you're looking for doesn't exist or has been moved.
-                  </p>
-                  <div className="space-x-4">
-                    <a 
-                      href="/" 
-                      className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Go Home
-                    </a>
-                    <button 
-                      onClick={() => window.history.back()} 
-                      className="inline-block px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      Go Back
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <NotFoundPage />
             } 
           />
         </Routes>
