@@ -17,6 +17,8 @@ import {
   ExternalLink,
   Sparkles,
   Home,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import { Button, Card, Input, Select, StepIndicator, StepNavigation } from "../../ui/sellerUis/SellerUis";
@@ -30,6 +32,114 @@ import {
   selectSuccess,
   selectUser,
 } from "../../../store/slices/authSlice";
+
+// Enhanced Password Input Component
+const PasswordInput = ({ 
+  label, 
+  name, 
+  value, 
+  onChange, 
+  placeholder, 
+  required = false, 
+  error,
+  showStrength = false 
+}) => {
+  const [showPassword, setShowPassword] = useState(false);
+
+  const getPasswordStrength = () => {
+    if (!value) return { strength: 0, label: "", color: "bg-gray-200" };
+
+    let strength = 0;
+    if (value.length >= 8) strength += 1;
+    if (/[A-Z]/.test(value)) strength += 1;
+    if (/[a-z]/.test(value)) strength += 1;
+    if (/\d/.test(value)) strength += 1;
+    if (/[^A-Za-z0-9]/.test(value)) strength += 1;
+
+    const strengthMap = {
+      1: { label: "Weak", color: "bg-red-500" },
+      2: { label: "Fair", color: "bg-orange-500" },
+      3: { label: "Good", color: "bg-yellow-500" },
+      4: { label: "Strong", color: "bg-green-500" },
+      5: { label: "Very Strong", color: "bg-green-600" },
+    };
+
+    return {
+      strength,
+      ...strengthMap[strength],
+    };
+  };
+
+  const passwordStrength = getPasswordStrength();
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-semibold text-gray-700">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <div className="relative">
+        <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <input
+          type={showPassword ? "text" : "password"}
+          name={name}
+          placeholder={placeholder}
+          className={`w-full pl-10 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 placeholder:text-gray-400 ${
+            error
+              ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+              : ""
+          }`}
+          value={value}
+          onChange={onChange}
+          required={required}
+        />
+        <button
+          type="button"
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+          onClick={() => setShowPassword(!showPassword)}
+        >
+          {showPassword ? (
+            <EyeOff className="w-5 h-5" />
+          ) : (
+            <Eye className="w-5 h-5" />
+          )}
+        </button>
+      </div>
+
+      {/* Password Strength Indicator */}
+      {showStrength && value && (
+        <div className="mt-2">
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-xs text-gray-600">
+              Password strength:
+            </div>
+            <div className="text-xs font-medium">
+              {passwordStrength.label}
+            </div>
+          </div>
+          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className={`h-full ${passwordStrength.color} transition-all duration-300`}
+              style={{
+                width: `${(passwordStrength.strength / 5) * 100}%`,
+              }}
+            ></div>
+          </div>
+          <div className="mt-1 text-xs text-gray-500">
+            Include: uppercase, lowercase, numbers, and special characters (8+ chars)
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <p className="text-sm text-red-600 flex items-center">
+          <span className="mr-1">⚠️</span>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
 
 // Success Modal Component
 const SuccessModal = ({ isOpen, onClose, userData }) => {
@@ -511,28 +621,26 @@ const MultiStepSellerForm = () => {
               error={errors.email}
             />
 
-            <Input
+            <PasswordInput
               label="Password"
               name="password"
-              type="password"
               value={formData.password}
               onChange={handleInputChange}
               placeholder="••••••••"
               required
-              icon={<Shield className="w-5 h-5" />}
               error={errors.password}
+              showStrength={true}
             />
 
-            <Input
+            <PasswordInput
               label="Confirm Password"
               name="confirmPassword"
-              type="password"
               value={formData.confirmPassword}
               onChange={handleInputChange}
               placeholder="••••••••"
               required
-              icon={<Shield className="w-5 h-5" />}
               error={errors.confirmPassword}
+              showStrength={false}
             />
           </div>
         );
