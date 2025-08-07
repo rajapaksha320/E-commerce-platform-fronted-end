@@ -59,13 +59,13 @@ const SellerLayout = ({ children }) => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   
   // Get shop info from user data or use defaults
-  const shopName = user?.businessInfo?.businessName || "My shop";
-  const shopRating = "257 ⭐";
+  // const shopName = user?.businessInfo?.businessName || "My shop";
+  // const shopRating = "257 ⭐";
 
   const [activeTab, setActiveTab] = useState("overview");
   const [activeSubTab, setActiveSubTab] = useState(null);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+  // const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
 
   // Check authentication on mount
   useEffect(() => {
@@ -80,7 +80,7 @@ const SellerLayout = ({ children }) => {
     { id: "orders", name: "Orders", href: "/seller/orders", badge: "12" },
     { id: "listings", name: "Listings", href: "/seller/listings" },
     { id: "customer", name: "Customer", href: "/seller/customer", badge: "3" },
-    { id: "payments", name: "Payments", href: "/seller/payments" },
+    // { id: "payments", name: "Payments", href: "/seller/payments" },
     { id: "profile", name: "Profile", href: "/seller/profile" },
   ];
 
@@ -109,13 +109,13 @@ const sidebarNavigation = {
       { id: "feedback", name: "Feedback management" },
       { id: "reviews", name: "Reviews and ratings" },
     ],
-    payments: [
-      { id: "payouts", name: "Payouts" },
-      { id: "transactions", name: "Transaction history" },
-      { id: "fees", name: "Fees and charges" },
-      { id: "tax-documents", name: "Tax documents" },
-      { id: "payment-methods", name: "Payment methods" },
-    ],
+    // payments: [
+    //   { id: "payouts", name: "Payouts" },
+    //   { id: "transactions", name: "Transaction history" },
+    //   { id: "fees", name: "Fees and charges" },
+    //   { id: "tax-documents", name: "Tax documents" },
+    //   { id: "payment-methods", name: "Payment methods" },
+    // ],
   };
 
   // PLACEHOLDER FILTER CONFIGURATIONS - Add your filters here later
@@ -583,141 +583,141 @@ const sidebarNavigation = {
         },
       ],
     },
-    payments: {
-      payouts: [
-        {
-          type: "select",
-          label: "Payout Status",
-          options: [
-            { value: "all", label: "All Payouts" },
-            { value: "pending", label: "Pending" },
-            { value: "completed", label: "Completed" },
-            { value: "failed", label: "Failed" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "30days", label: "Last 30 days" },
-            { value: "90days", label: "Last 90 days" },
-            { value: "year", label: "This year" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search payout",
-          placeholder: "Payout ID...",
-        },
-      ],
-      transactions: [
-        {
-          type: "select",
-          label: "Transaction Type",
-          options: [
-            { value: "all", label: "All Transactions" },
-            { value: "sale", label: "Sales" },
-            { value: "refund", label: "Refunds" },
-            { value: "fee", label: "Fees" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "30days", label: "Last 30 days" },
-            { value: "90days", label: "Last 90 days" },
-            { value: "year", label: "This year" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search transaction",
-          placeholder: "Transaction ID...",
-        },
-      ],
-      fees: [
-        {
-          type: "select",
-          label: "Fee Type",
-          options: [
-            { value: "all", label: "All Fees" },
-            { value: "listing", label: "Listing Fees" },
-            { value: "final-value", label: "Final Value Fees" },
-            { value: "payment", label: "Payment Processing" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "30days", label: "Last 30 days" },
-            { value: "90days", label: "Last 90 days" },
-            { value: "year", label: "This year" },
-          ],
-        },
-      ],
-      "tax-documents": [
-        {
-          type: "select",
-          label: "Document Type",
-          options: [
-            { value: "all", label: "All Documents" },
-            { value: "1099", label: "1099 Forms" },
-            { value: "tax-summary", label: "Tax Summary" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Year",
-          options: [
-            { value: "2024", label: "2024" },
-            { value: "2023", label: "2023" },
-            { value: "2022", label: "2022" },
-          ],
-        },
-      ],
-      "payment-methods": [
-        {
-          type: "select",
-          label: "Method Type",
-          options: [
-            { value: "all", label: "All Methods" },
-            { value: "bank", label: "Bank Account" },
-            { value: "paypal", label: "PayPal" },
-            { value: "card", label: "Credit Card" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Status",
-          options: [
-            { value: "all", label: "All Status" },
-            { value: "active", label: "Active" },
-            { value: "inactive", label: "Inactive" },
-          ],
-        },
-      ],
-    },
+    // payments: {
+    //   payouts: [
+    //     {
+    //       type: "select",
+    //       label: "Payout Status",
+    //       options: [
+    //         { value: "all", label: "All Payouts" },
+    //         { value: "pending", label: "Pending" },
+    //         { value: "completed", label: "Completed" },
+    //         { value: "failed", label: "Failed" },
+    //       ],
+    //     },
+    //     {
+    //       type: "select",
+    //       label: "Time Period",
+    //       options: [
+    //         { value: "30days", label: "Last 30 days" },
+    //         { value: "90days", label: "Last 90 days" },
+    //         { value: "year", label: "This year" },
+    //       ],
+    //     },
+    //     {
+    //       type: "search",
+    //       label: "Search payout",
+    //       placeholder: "Payout ID...",
+    //     },
+    //   ],
+    //   transactions: [
+    //     {
+    //       type: "select",
+    //       label: "Transaction Type",
+    //       options: [
+    //         { value: "all", label: "All Transactions" },
+    //         { value: "sale", label: "Sales" },
+    //         { value: "refund", label: "Refunds" },
+    //         { value: "fee", label: "Fees" },
+    //       ],
+    //     },
+    //     {
+    //       type: "select",
+    //       label: "Time Period",
+    //       options: [
+    //         { value: "30days", label: "Last 30 days" },
+    //         { value: "90days", label: "Last 90 days" },
+    //         { value: "year", label: "This year" },
+    //       ],
+    //     },
+    //     {
+    //       type: "search",
+    //       label: "Search transaction",
+    //       placeholder: "Transaction ID...",
+    //     },
+    //   ],
+    //   fees: [
+    //     {
+    //       type: "select",
+    //       label: "Fee Type",
+    //       options: [
+    //         { value: "all", label: "All Fees" },
+    //         { value: "listing", label: "Listing Fees" },
+    //         { value: "final-value", label: "Final Value Fees" },
+    //         { value: "payment", label: "Payment Processing" },
+    //       ],
+    //     },
+    //     {
+    //       type: "select",
+    //       label: "Time Period",
+    //       options: [
+    //         { value: "30days", label: "Last 30 days" },
+    //         { value: "90days", label: "Last 90 days" },
+    //         { value: "year", label: "This year" },
+    //       ],
+    //     },
+    //   ],
+    //   "tax-documents": [
+    //     {
+    //       type: "select",
+    //       label: "Document Type",
+    //       options: [
+    //         { value: "all", label: "All Documents" },
+    //         { value: "1099", label: "1099 Forms" },
+    //         { value: "tax-summary", label: "Tax Summary" },
+    //       ],
+    //     },
+    //     {
+    //       type: "select",
+    //       label: "Year",
+    //       options: [
+    //         { value: "2024", label: "2024" },
+    //         { value: "2023", label: "2023" },
+    //         { value: "2022", label: "2022" },
+    //       ],
+    //     },
+    //   ],
+    //   "payment-methods": [
+    //     {
+    //       type: "select",
+    //       label: "Method Type",
+    //       options: [
+    //         { value: "all", label: "All Methods" },
+    //         { value: "bank", label: "Bank Account" },
+    //         { value: "paypal", label: "PayPal" },
+    //         { value: "card", label: "Credit Card" },
+    //       ],
+    //     },
+    //     {
+    //       type: "select",
+    //       label: "Status",
+    //       options: [
+    //         { value: "all", label: "All Status" },
+    //         { value: "active", label: "Active" },
+    //         { value: "inactive", label: "Inactive" },
+    //       ],
+    //     },
+    //   ],
+    // },
   };
 
   // PLACEHOLDER NOTIFICATIONS - Add real notifications later
-  const notifications = [
-    {
-      id: 1,
-      title: "New order received",
-      message: "Order #12345 from John Doe",
-      time: "2 min ago",
-      unread: true,
-    },
-    {
-      id: 2,
-      title: "Low stock alert",
-      message: "iPhone 15 Pro has only 3 items left",
-      time: "1 hour ago",
-      unread: true,
-    },
-  ];
+  // const notifications = [
+  //   {
+  //     id: 1,
+  //     title: "New order received",
+  //     message: "Order #12345 from John Doe",
+  //     time: "2 min ago",
+  //     unread: true,
+  //   },
+  //   {
+  //     id: 2,
+  //     title: "Low stock alert",
+  //     message: "iPhone 15 Pro has only 3 items left",
+  //     time: "1 hour ago",
+  //     unread: true,
+  //   },
+  // ];
 
   // Navigation handlers
   const handleNavigation = (tabId) => {
@@ -986,28 +986,28 @@ const sidebarNavigation = {
                 </span>
               </div>
               {/* Shop Name Display */}
-              <div className="ml-4 text-sm text-gray-500">
+              {/* <div className="ml-4 text-sm text-gray-500">
                 <span className="font-medium">{shopName}</span>
                 {shopRating && (
                   <span className="ml-1">({shopRating})</span>
                 )}
-              </div>
+              </div> */}
             </div>
 
             {/* Right side */}
             <div className="flex items-center space-x-4">
               {/* User welcome message */}
-              <div className="text-sm text-gray-600">
+              {/* <div className="text-sm text-gray-600">
                 Welcome, <span className="font-medium">{user?.firstName || user?.email?.split('@')[0] || 'Seller'}</span>
-              </div>
+              </div> */}
 
               {/* Messages */}
-              <Button variant="secondary" size="sm">
+              {/* <Button variant="secondary" size="sm">
                 Messages (0)
-              </Button>
+              </Button> */}
 
               {/* Notifications Dropdown */}
-              <Dropdown
+              {/* <Dropdown
                 trigger={
                   <IconButton className="relative">
                     <Bell className="h-5 w-5" />
@@ -1050,7 +1050,7 @@ const sidebarNavigation = {
                     </div>
                   ))}
                 </div>
-              </Dropdown>
+              </Dropdown> */}
 
               {/* Profile Dropdown */}
               {isAuthenticated && user ? (
