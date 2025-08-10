@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+/* eslint-disable no-unused-vars */
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Eye,
@@ -28,6 +29,15 @@ import {
   Settings,
 } from "lucide-react";
 
+// Import Redux hooks
+import {
+  useListings,
+  useListingDetails,
+  usePagination,
+  useSearch,
+  useSelectedListings,
+} from "../../../../hooks/useSellerData";
+
 // Import UI components
 import {
   Button,
@@ -53,13 +63,72 @@ import {
   TableCell,
   Alert,
   SearchInput,
+  LoadingSpinner,
 } from "../../../ui/sellerUis/Uis";
+
+import ListingDetails from "./ListingDetails";
 
 const ListingManagement = ({ activeSection = "all-listings" }) => {
   const navigate = useNavigate();
+  
+  // Redux hooks
+  const {
+    listings,
+    statusCounts,
+    statistics,
+    isLoading,
+    error,
+    success,
+    message,
+    createNewListing,
+    updateExistingListing,
+    deleteExistingListing,
+    fetchByStatus,
+    applyFilters,
+    resetFilters,
+    bulkUpdate,
+    bulkDelete,
+    refreshListings,
+    clearMessages,
+  } = useListings();
+
+  const {
+    goToPage,
+    changePageSize,
+    nextPage,
+    previousPage,
+    hasNextPage,
+    hasPreviousPage,
+    page,
+    pageSize,
+    total,
+    totalPages,
+  } = usePagination();
+
+  const {
+    searchListings,
+    advancedSearch,
+    clearSearch,
+    currentSearch,
+    filters,
+    isSearching,
+  } = useSearch();
+
+  const {
+    selectedIds,
+    selectedCount,
+    selectListing,
+    deselectListing,
+    toggleListing,
+    selectAll,
+    clearSelection,
+    performBulkUpdate,
+    performBulkDelete,
+  } = useSelectedListings();
+
+  // Local state
   const [sortField, setSortField] = useState("createdDate");
   const [sortDirection, setSortDirection] = useState("desc");
-  const [selectedListings, setSelectedListings] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBulkActionModal, setShowBulkActionModal] = useState(false);
   const [listingToDelete, setListingToDelete] = useState(null);
@@ -67,433 +136,75 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterPriceRange, setFilterPriceRange] = useState("");
-  const [listings, setListings] = useState([]);
+  const [selectedListing, setSelectedListing] = useState(null);
+  const [showListingDetails, setShowListingDetails] = useState(false);
 
-  // Complete listings dataset
-  const allListingsData = [
-    {
-      id: "1",
-      title: "iPhone 15 Pro Max 256GB - Natural Titanium",
-      description:
-        "Brand new iPhone 15 Pro Max with 256GB storage in Natural Titanium color. Comes with original box and all accessories.",
-      sku: "IPH15PM-256-NT",
-      category: "Electronics",
-      subcategory: "Smartphones",
-      brand: "Apple",
-      price: 1199.0,
-      originalPrice: 1299.0,
-      quantity: 25,
-      sold: 15,
-      status: "active",
-      condition: "new",
-      visibility: "public",
-      createdDate: "2024-06-01",
-      lastModified: "2024-06-15",
-      views: 1250,
-      favorites: 89,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop",
-          name: "main.jpg",
-        },
-        {
-          id: "2",
-          url: "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=400&h=400&fit=crop",
-          name: "side.jpg",
-        },
-      ],
-      colors: [
-        { id: "1", name: "Natural Titanium", hex: "#C0C0C0" },
-        { id: "2", name: "Blue Titanium", hex: "#1E40AF" },
-        { id: "3", name: "White Titanium", hex: "#FFFFFF" },
-        { id: "4", name: "Black Titanium", hex: "#000000" },
-      ],
-      sizes: ["256GB"],
-      tags: ["iphone", "apple", "smartphone", "5g", "titanium"],
-      features: ["5G Compatible", "48MP Camera", "Titanium Build", "USB-C"],
-      rating: 4.8,
-      reviews: 45,
-      weight: "221",
-      dimensions: { length: "6.3", width: "3.1", height: "0.3" },
-      shippingWeight: "350",
-      shippingClass: "express",
-      returnPolicy: "30",
-      warranty: "1 Year Apple Limited Warranty",
-      metaTitle: "iPhone 15 Pro Max 256GB Natural Titanium - Best Price",
-      metaDescription:
-        "Get the latest iPhone 15 Pro Max with 256GB storage. Free shipping, authentic warranty.",
-      shipping: {
-        weight: 0.5,
-        dimensions: "6.3 x 3.1 x 0.3 inches",
-        freeShipping: true,
-        expedited: true,
-      },
-      seo: {
-        metaTitle: "iPhone 15 Pro Max 256GB Natural Titanium - Best Price",
-        metaDescription:
-          "Get the latest iPhone 15 Pro Max with 256GB storage. Free shipping, authentic warranty.",
-        keywords: ["iphone 15 pro max", "256gb", "natural titanium"],
-      },
-    },
-    {
-      id: "2",
-      title: "MacBook Air M3 13-inch - Midnight",
-      description:
-        "Latest MacBook Air with M3 chip, 13-inch Liquid Retina display, 8GB RAM, 256GB SSD in Midnight color.",
-      sku: "MBA-M3-13-MD",
-      category: "Electronics",
-      subcategory: "Laptops",
-      brand: "Apple",
-      price: 1099.0,
-      originalPrice: 1199.0,
-      quantity: 12,
-      sold: 8,
-      status: "active",
-      condition: "new",
-      visibility: "public",
-      createdDate: "2024-05-28",
-      lastModified: "2024-06-14",
-      views: 890,
-      favorites: 67,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop",
-          name: "macbook-main.jpg",
-        },
-      ],
-      colors: [
-        { id: "1", name: "Midnight", hex: "#191970" },
-        { id: "2", name: "Starlight", hex: "#F5F5DC" },
-        { id: "3", name: "Silver", hex: "#C0C0C0" },
-        { id: "4", name: "Space Gray", hex: "#696969" },
-      ],
-      sizes: ["13-inch"],
-      tags: ["macbook", "apple", "laptop", "m3", "ultrabook"],
-      features: ["M3 Chip", "13-inch Display", "8GB RAM", "256GB SSD"],
-      rating: 4.9,
-      reviews: 32,
-      weight: "1200",
-      dimensions: { length: "11.97", width: "8.46", height: "0.44" },
-      shippingWeight: "1350",
-      shippingClass: "standard",
-      returnPolicy: "30",
-      warranty: "1 Year Apple Limited Warranty",
-      metaTitle: "MacBook Air M3 13-inch Midnight - Latest Apple Laptop",
-      metaDescription:
-        "Latest MacBook Air with M3 chip and 13-inch display. Perfect for professionals and students.",
-    },
-    {
-      id: "3",
-      title: "Samsung Galaxy S24 Ultra 512GB - Titanium Black",
-      description:
-        "Samsung's flagship smartphone with S Pen, 200MP camera, and AI features. 512GB storage model.",
-      sku: "SGS24U-512-TB",
-      category: "Electronics",
-      subcategory: "Smartphones",
-      brand: "Samsung",
-      price: 1299.99,
-      originalPrice: 1399.99,
-      quantity: 0,
-      sold: 20,
-      status: "out-of-stock",
-      condition: "new",
-      visibility: "public",
-      createdDate: "2024-05-25",
-      lastModified: "2024-06-12",
-      views: 2100,
-      favorites: 156,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=400&fit=crop",
-          name: "galaxy-main.jpg",
-        },
-      ],
-      colors: [
-        { id: "1", name: "Titanium Black", hex: "#2F2F2F" },
-        { id: "2", name: "Titanium Gray", hex: "#808080" },
-        { id: "3", name: "Titanium Violet", hex: "#8A2BE2" },
-        { id: "4", name: "Titanium Yellow", hex: "#FFD700" },
-      ],
-      sizes: ["512GB"],
-      tags: ["samsung", "galaxy", "s24", "ultra", "android", "s-pen"],
-      features: ["S Pen", "200MP Camera", "AI Features", "512GB Storage"],
-      rating: 4.7,
-      reviews: 78,
-      weight: "232",
-      dimensions: { length: "6.4", width: "3.1", height: "0.34" },
-      shippingWeight: "380",
-      shippingClass: "express",
-      returnPolicy: "30",
-      warranty: "1 Year Samsung Warranty",
-      metaTitle:
-        "Samsung Galaxy S24 Ultra 512GB Titanium Black - Flagship Smartphone",
-      metaDescription:
-        "Samsung's most advanced smartphone with S Pen, 200MP camera, and AI features.",
-    },
-    {
-      id: "4",
-      title: 'iPad Pro 12.9" M4 WiFi 256GB - Space Black',
-      description:
-        "Most advanced iPad Pro with M4 chip, 12.9-inch Liquid Retina XDR display, perfect for professionals.",
-      sku: "IPADPM4-256-SB",
-      category: "Electronics",
-      subcategory: "Tablets",
-      brand: "Apple",
-      price: 1099.0,
-      originalPrice: 1199.0,
-      quantity: 18,
-      sold: 12,
-      status: "active",
-      condition: "new",
-      visibility: "public",
-      createdDate: "2024-05-20",
-      lastModified: "2024-06-10",
-      views: 1450,
-      favorites: 98,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=400&h=400&fit=crop",
-          name: "ipad-main.jpg",
-        },
-      ],
-      colors: [
-        { id: "1", name: "Space Black", hex: "#2F2F2F" },
-        { id: "2", name: "Silver", hex: "#C0C0C0" },
-      ],
-      sizes: ["12.9-inch"],
-      tags: ["ipad", "pro", "m4", "tablet", "apple", "professional"],
-      features: ["M4 Chip", "12.9-inch Display", "WiFi 6E", "256GB Storage"],
-      rating: 4.8,
-      reviews: 56,
-      weight: "682",
-      dimensions: { length: "11.04", width: "8.48", height: "0.25" },
-      shippingWeight: "850",
-      shippingClass: "standard",
-      returnPolicy: "30",
-      warranty: "1 Year Apple Limited Warranty",
-      metaTitle: "iPad Pro 12.9 M4 WiFi 256GB Space Black - Pro Tablet",
-      metaDescription:
-        "Most advanced iPad Pro with M4 chip and 12.9-inch display. Perfect for creative professionals.",
-    },
-    {
-      id: "5",
-      title: "AirPods Pro 2nd Generation USB-C",
-      description:
-        "Active Noise Cancellation, Adaptive Transparency, and Personalized Spatial Audio with USB-C charging case.",
-      sku: "APP2-USB-C",
-      category: "Electronics",
-      subcategory: "Audio",
-      brand: "Apple",
-      price: 199.0,
-      originalPrice: 249.0,
-      quantity: 45,
-      sold: 89,
-      status: "active",
-      condition: "new",
-      visibility: "public",
-      createdDate: "2024-05-15",
-      lastModified: "2024-06-08",
-      views: 3200,
-      favorites: 245,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=400&h=400&fit=crop",
-          name: "airpods-main.jpg",
-        },
-      ],
-      colors: [{ id: "1", name: "White", hex: "#FFFFFF" }],
-      sizes: ["One Size"],
-      tags: ["airpods", "pro", "noise cancellation", "wireless", "earbuds"],
-      features: [
-        "Active Noise Cancellation",
-        "Spatial Audio",
-        "USB-C",
-        "MagSafe Compatible",
-      ],
-      rating: 4.9,
-      reviews: 234,
-      weight: "56",
-      dimensions: { length: "3.9", width: "3.0", height: "1.7" },
-      shippingWeight: "150",
-      shippingClass: "standard",
-      returnPolicy: "30",
-      warranty: "1 Year Apple Limited Warranty",
-      metaTitle: "AirPods Pro 2nd Generation USB-C - Premium Wireless Earbuds",
-      metaDescription:
-        "Premium wireless earbuds with Active Noise Cancellation and Spatial Audio. USB-C charging case.",
-    },
-    {
-      id: "6",
-      title: "Sony WH-1000XM5 Wireless Headphones",
-      description:
-        "Industry-leading noise canceling with Dual Noise Sensor technology. 30-hour battery life.",
-      sku: "SONY-WH1000XM5",
-      category: "Electronics",
-      subcategory: "Audio",
-      brand: "Sony",
-      price: 329.0,
-      originalPrice: 399.0,
-      quantity: 8,
-      sold: 25,
-      status: "paused",
-      condition: "new",
-      visibility: "private",
-      createdDate: "2024-05-10",
-      lastModified: "2024-06-05",
-      views: 780,
-      favorites: 45,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=400&h=400&fit=crop",
-          name: "sony-headphones.jpg",
-        },
-      ],
-      colors: [
-        { id: "1", name: "Black", hex: "#000000" },
-        { id: "2", name: "Silver", hex: "#C0C0C0" },
-      ],
-      sizes: ["One Size"],
-      tags: ["sony", "headphones", "noise cancelling", "wireless", "premium"],
-      features: [
-        "30hr Battery",
-        "Quick Charge",
-        "Touch Controls",
-        "AI Noise Cancelling",
-      ],
-      rating: 4.6,
-      reviews: 89,
-      weight: "250",
-      dimensions: { length: "10.2", width: "8.7", height: "3.2" },
-      shippingWeight: "450",
-      shippingClass: "standard",
-      returnPolicy: "30",
-      warranty: "1 Year Sony Warranty",
-      metaTitle: "Sony WH-1000XM5 Wireless Headphones - Premium Audio",
-      metaDescription:
-        "Industry-leading noise canceling headphones with 30-hour battery life and premium sound quality.",
-    },
-    {
-      id: "7",
-      title: "Nintendo Switch OLED Model - White",
-      description:
-        "Enhanced Nintendo Switch with vibrant 7-inch OLED screen, wide adjustable stand, and dock with wired LAN port.",
-      sku: "NSW-OLED-WHT",
-      category: "Gaming",
-      subcategory: "Consoles",
-      brand: "Nintendo",
-      price: 299.0,
-      originalPrice: 349.99,
-      quantity: 0,
-      sold: 45,
-      status: "draft",
-      condition: "new",
-      visibility: "private",
-      createdDate: "2024-05-05",
-      lastModified: "2024-05-05",
-      views: 0,
-      favorites: 0,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop",
-          name: "switch-oled.jpg",
-        },
-      ],
-      colors: [
-        { id: "1", name: "White", hex: "#FFFFFF" },
-        { id: "2", name: "Neon Blue/Red", hex: "#FF0000" },
-      ],
-      sizes: ["Standard"],
-      tags: ["nintendo", "switch", "oled", "gaming", "console", "portable"],
-      features: [
-        "7-inch OLED Screen",
-        "Enhanced Audio",
-        "Wide Stand",
-        "64GB Storage",
-      ],
-      rating: 0,
-      reviews: 0,
-      weight: "420",
-      dimensions: { length: "9.5", width: "4.0", height: "0.55" },
-      shippingWeight: "650",
-      shippingClass: "standard",
-      returnPolicy: "30",
-      warranty: "1 Year Nintendo Warranty",
-      metaTitle: "Nintendo Switch OLED Model White - Enhanced Gaming Console",
-      metaDescription:
-        "Enhanced Nintendo Switch with vibrant OLED display and improved features for portable gaming.",
-    },
+  // Categories for filtering
+  const categories = ["Electronics", "Fashion", "Home & Garden", "Sports & Outdoors", "Automotive"];
+  const priceRanges = [
+    { value: "0-100", label: "$0 - $100" },
+    { value: "100-500", label: "$100 - $500" },
+    { value: "500-1000", label: "$500 - $1,000" },
+    { value: "1000-5000", label: "$1,000+" },
   ];
 
-  // Initialize listings state
-  React.useEffect(() => {
-    setListings(allListingsData);
-  }, []);
+  // Load listings based on active section
+  useEffect(() => {
+    const loadListings = async () => {
+      try {
+        switch (activeSection) {
+          case "active-listings":
+            await fetchByStatus("active");
+            break;
+          case "inactive-listings":
+            await fetchByStatus("paused");
+            break;
+          case "out-of-stock":
+            await fetchByStatus("out-of-stock");
+            break;
+          case "draft-listings":
+            await fetchByStatus("draft");
+            break;
+          case "sold-listings":
+            // Apply filter for listings with sales
+            await applyFilters({ minSold: 1 });
+            break;
+          default:
+            // Load all listings
+            break;
+        }
+      } catch (error) {
+        console.error("Error loading listings:", error);
+      }
+    };
 
-  // Filter listings based on active section and search
-  const filteredListings = useMemo(() => {
-    let filtered = listings;
+    loadListings();
+  }, [activeSection, fetchByStatus, applyFilters]);
 
-    // Filter by section
-    switch (activeSection) {
-      case "all-listings":
-        break;
-      case "active-listings":
-        filtered = filtered.filter((listing) => listing.status === "active");
-        break;
-      case "inactive-listings":
-        filtered = filtered.filter((listing) => listing.status === "paused");
-        break;
-      case "out-of-stock":
-        filtered = filtered.filter(
-          (listing) => listing.status === "out-of-stock"
-        );
-        break;
-      case "draft-listings":
-        filtered = filtered.filter((listing) => listing.status === "draft");
-        break;
-      case "sold-listings":
-        filtered = filtered.filter((listing) => listing.sold > 0);
-        break;
-      default:
-        break;
+  // Handle search with debouncing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery !== currentSearch) {
+        if (searchQuery.trim()) {
+          searchListings(searchQuery, { category: filterCategory, priceRange: filterPriceRange });
+        } else {
+          clearSearch();
+        }
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, filterCategory, filterPriceRange, searchListings, clearSearch, currentSearch]);
+
+  // Clear messages when component unmounts or success/error changes
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        clearMessages();
+      }, 3000);
+      return () => clearTimeout(timer);
     }
-
-    // Filter by search query
-    if (searchQuery && typeof searchQuery === "string") {
-      filtered = filtered.filter(
-        (listing) =>
-          listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          listing.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          listing.tags.some((tag) =>
-            tag.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-      );
-    }
-
-    // Filter by category
-    if (filterCategory) {
-      filtered = filtered.filter(
-        (listing) => listing.category === filterCategory
-      );
-    }
-
-    // Filter by price range
-    if (filterPriceRange) {
-      const [min, max] = filterPriceRange.split("-").map(Number);
-      filtered = filtered.filter(
-        (listing) => listing.price >= min && listing.price <= max
-      );
-    }
-
-    return filtered;
-  }, [activeSection, listings, searchQuery, filterCategory, filterPriceRange]);
+  }, [success, error, clearMessages]);
 
   // Get section configuration
   const getSectionConfig = () => {
@@ -611,13 +322,14 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
     }
   };
 
-  // Action handlers with navigation
+  // Action handlers
   const handleCreateListing = () => {
     navigate("/create-listing");
   };
 
   const handleViewListing = (listing) => {
-    navigate(`/product/${listing.id}`);
+    setSelectedListing(listing);
+    setShowListingDetails(true);
   };
 
   const handleEditListing = (listing) => {
@@ -630,26 +342,51 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
   };
 
   const handleDuplicateListing = (listing) => {
-    const duplicatedListing = {
-      ...listing,
-      id: undefined, // Will be generated as new
-      title: `${listing.title} (Copy)`,
-      sku: `${listing.sku}-COPY`,
-      status: "draft",
-      sold: 0,
-      views: 0,
-      reviews: 0,
-      rating: 0,
-      createdDate: undefined,
-      lastModified: undefined,
-    };
-
     navigate("/create-listing", {
       state: {
-        product: duplicatedListing,
+        product: listing,
         isDuplicating: true,
       },
     });
+  };
+
+  const handleDeleteListing = (listing) => {
+    setListingToDelete(listing);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeletion = async () => {
+    if (listingToDelete) {
+      try {
+        await deleteExistingListing(listingToDelete._id || listingToDelete.id);
+        setShowDeleteModal(false);
+        setListingToDelete(null);
+        clearSelection();
+      } catch (error) {
+        console.error("Error deleting listing:", error);
+      }
+    }
+  };
+
+  const handleStatusChange = async (listing, newStatus) => {
+    try {
+      await updateExistingListing(listing._id || listing.id, { status: newStatus });
+    } catch (error) {
+      console.error("Error updating listing status:", error);
+    }
+  };
+
+  const handleBulkAction = async () => {
+    if (!bulkAction || selectedCount === 0) return;
+
+    try {
+      await performBulkUpdate({ status: bulkAction });
+      setShowBulkActionModal(false);
+      setBulkAction("");
+      clearSelection();
+    } catch (error) {
+      console.error("Error performing bulk action:", error);
+    }
   };
 
   const handleSort = (field) => {
@@ -661,57 +398,30 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
     }
   };
 
-  const handleSelectListing = (listingId) => {
-    setSelectedListings((prev) =>
-      prev.includes(listingId)
-        ? prev.filter((id) => id !== listingId)
-        : [...prev, listingId]
-    );
-  };
-
   const handleSelectAll = () => {
-    setSelectedListings(
-      selectedListings.length === filteredListings.length
-        ? []
-        : filteredListings.map((listing) => listing.id)
-    );
+    if (selectedCount === listings.length && listings.length > 0) {
+      clearSelection();
+    } else {
+      selectAll(listings.map((listing) => listing._id || listing.id));
+    }
   };
 
-  const handleDeleteListing = (listing) => {
-    setListingToDelete(listing);
-    setShowDeleteModal(true);
+  const handleRefresh = async () => {
+    try {
+      await refreshListings();
+    } catch (error) {
+      console.error("Error refreshing listings:", error);
+    }
   };
 
-  const confirmDeletion = () => {
-    setListings((prevListings) =>
-      prevListings.filter((listing) => listing.id !== listingToDelete.id)
-    );
-    setShowDeleteModal(false);
-    setListingToDelete(null);
-  };
-
-  const handleStatusChange = (listing, newStatus) => {
-    setListings((prevListings) =>
-      prevListings.map((l) =>
-        l.id === listing.id ? { ...l, status: newStatus } : l
-      )
-    );
-  };
-
-  const handleBulkAction = () => {
-    if (!bulkAction || selectedListings.length === 0) return;
-
-    setListings((prevListings) =>
-      prevListings.map((listing) =>
-        selectedListings.includes(listing.id)
-          ? { ...listing, status: bulkAction }
-          : listing
-      )
-    );
-
-    setSelectedListings([]);
-    setShowBulkActionModal(false);
-    setBulkAction("");
+  const handleListingUpdate = async (updatedListing, action) => {
+    if (action === "delete") {
+      await deleteExistingListing(selectedListing._id || selectedListing.id);
+    } else if (updatedListing) {
+      await updateExistingListing(selectedListing._id || selectedListing.id, updatedListing);
+    }
+    setShowListingDetails(false);
+    setSelectedListing(null);
   };
 
   // Calculate performance metrics
@@ -728,17 +438,47 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
     };
   };
 
-  // Categories for filtering
-  const categories = [...new Set(listings.map((listing) => listing.category))];
-  const priceRanges = [
-    { value: "0-100", label: "$0 - $100" },
-    { value: "100-500", label: "$100 - $500" },
-    { value: "500-1000", label: "$500 - $1,000" },
-    { value: "1000-5000", label: "$1,000+" },
-  ];
+  // Sort listings
+  const sortedListings = React.useMemo(() => {
+    if (!listings.length) return [];
+    
+    return [...listings].sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+      
+      // Handle special cases
+      if (sortField === "price") {
+        aValue = parseFloat(aValue) || 0;
+        bValue = parseFloat(bValue) || 0;
+      }
+      
+      if (sortField === "createdDate" || sortField === "lastModified") {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      }
+      
+      if (sortDirection === "asc") {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+  }, [listings, sortField, sortDirection]);
 
   return (
     <div className="space-y-6">
+      {/* Success/Error Messages */}
+      {(success || error) && (
+        <Alert
+          variant={success ? "success" : "danger"}
+          title={success ? "Success" : "Error"}
+          onClose={clearMessages}
+          className="z-10 relative"
+        >
+          {message || error}
+        </Alert>
+      )}
+
       {/* Header with Search and Filters */}
       <Card>
         <CardHeader>
@@ -752,27 +492,52 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
             </div>
 
             <div className="flex items-center gap-3">
+              {isLoading && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <LoadingSpinner size="sm" />
+                  <span>Loading...</span>
+                </div>
+              )}
               <Button
                 variant="primary"
                 icon={<PlusCircle />}
                 onClick={handleCreateListing}
+                disabled={isLoading}
               >
                 Add Listing
               </Button>
-              <Button variant="secondary" icon={<Download />}>
+              <Button 
+                variant="secondary" 
+                icon={<Download />}
+                disabled={isLoading}
+              >
                 Export
+              </Button>
+              <Button 
+                variant="secondary" 
+                icon={<RefreshCw />}
+                onClick={handleRefresh}
+                disabled={isLoading}
+              >
+                Refresh
               </Button>
             </div>
           </div>
 
           {/* Search and Filters */}
           <div className="flex flex-col lg:flex-row gap-4 mt-4">
-            <div className="flex-1">
+            <div className="flex-1 relative">
               <SearchInput
                 placeholder="Search listings by title, SKU, or tags..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                disabled={isSearching || isLoading}
               />
+              {isSearching && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <LoadingSpinner size="sm" />
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3">
@@ -780,6 +545,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
                 placeholder="All Categories"
+                disabled={isLoading}
               >
                 <option value="">All Categories</option>
                 {categories.map((category) => (
@@ -793,6 +559,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                 value={filterPriceRange}
                 onChange={(e) => setFilterPriceRange(e.target.value)}
                 placeholder="All Prices"
+                disabled={isLoading}
               >
                 <option value="">All Prices</option>
                 {priceRanges.map((range) => (
@@ -802,7 +569,11 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                 ))}
               </Select>
 
-              <IconButton variant="secondary" title="More Filters">
+              <IconButton 
+                variant="secondary" 
+                title="More Filters"
+                disabled={isLoading}
+              >
                 <Filter className="h-4 w-4" />
               </IconButton>
             </div>
@@ -816,13 +587,13 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <h3 className="text-lg font-semibold">
-                {filteredListings.length}{" "}
-                {filteredListings.length === 1 ? "Listing" : "Listings"}
+                {total || listings.length}{" "}
+                {(total || listings.length) === 1 ? "Listing" : "Listings"}
               </h3>
-              {selectedListings.length > 0 && (
+              {selectedCount > 0 && (
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-gray-600">
-                    {selectedListings.length} selected
+                    {selectedCount} selected
                   </span>
                   <Button
                     size="sm"
@@ -835,25 +606,48 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
             </div>
 
             <div className="flex items-center gap-2">
-              <IconButton variant="ghost" title="Refresh">
-                <RefreshCw className="h-4 w-4" />
-              </IconButton>
-              <IconButton variant="ghost" title="Settings">
-                <Settings className="h-4 w-4" />
-              </IconButton>
+              <span className="text-sm text-gray-500">
+                Page {page} of {totalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <IconButton 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={previousPage}
+                  disabled={!hasPreviousPage || isLoading}
+                >
+                  ←
+                </IconButton>
+                <IconButton 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={nextPage}
+                  disabled={!hasNextPage || isLoading}
+                >
+                  →
+                </IconButton>
+              </div>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="p-0">
+        <CardContent className="p-0 relative">
+          {isLoading && (
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
+              <div className="flex items-center gap-3 text-gray-600">
+                <LoadingSpinner size="md" />
+                <span className="text-sm font-medium">Loading listings...</span>
+              </div>
+            </div>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>
                   <Checkbox
                     checked={
-                      selectedListings.length === filteredListings.length &&
-                      filteredListings.length > 0
+                      selectedCount === listings.length &&
+                      listings.length > 0
                     }
                     onChange={handleSelectAll}
                   />
@@ -954,15 +748,16 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
             </TableHeader>
 
             <TableBody>
-              {filteredListings.map((listing) => {
+              {sortedListings.map((listing) => {
                 const metrics = getPerformanceMetrics(listing);
+                const listingId = listing._id || listing.id;
 
                 return (
-                  <TableRow key={listing.id}>
+                  <TableRow key={listingId}>
                     <TableCell>
                       <Checkbox
-                        checked={selectedListings.includes(listing.id)}
-                        onChange={() => handleSelectListing(listing.id)}
+                        checked={selectedIds.includes(listingId)}
+                        onChange={() => toggleListing(listingId)}
                       />
                     </TableCell>
 
@@ -970,9 +765,12 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <img
-                            src={listing.images[0]?.url}
+                            src={listing.images?.[0]?.url || listing.images?.[0]}
                             alt={listing.title}
                             className="h-12 w-12 rounded-lg object-cover border border-gray-200"
+                            onError={(e) => {
+                              e.target.src = "/api/placeholder/48/48";
+                            }}
                           />
                           <div className="min-w-0 flex-1">
                             <div className="font-medium text-gray-900 truncate">
@@ -989,10 +787,10 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                     {config.showColumns.includes("category") && (
                       <TableCell>
                         <div className="text-sm text-gray-900">
-                          {listing.category}
+                          {listing.category?.main || listing.category}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {listing.subcategory}
+                          {listing.category?.sub || listing.subcategory}
                         </div>
                       </TableCell>
                     )}
@@ -1000,11 +798,11 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                     {config.showColumns.includes("price") && (
                       <TableCell>
                         <div className="text-sm font-medium text-gray-900">
-                          ${listing.price.toLocaleString()}
+                          ${parseFloat(listing.price || 0).toLocaleString()}
                         </div>
                         {listing.originalPrice > listing.price && (
                           <div className="text-xs text-gray-500 line-through">
-                            ${listing.originalPrice.toLocaleString()}
+                            ${parseFloat(listing.originalPrice).toLocaleString()}
                           </div>
                         )}
                       </TableCell>
@@ -1021,7 +819,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                               : "text-gray-900"
                           }`}
                         >
-                          {listing.quantity}
+                          {listing.quantity || 0}
                         </div>
                         {listing.quantity < 5 && listing.quantity > 0 && (
                           <div className="text-xs text-orange-500">
@@ -1034,7 +832,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                     {config.showColumns.includes("sold") && (
                       <TableCell>
                         <div className="text-sm font-medium text-gray-900">
-                          {listing.sold}
+                          {listing.sold || 0}
                         </div>
                       </TableCell>
                     )}
@@ -1045,7 +843,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                           variant={getStatusVariant(listing.status)}
                           icon={getStatusIcon(listing.status)}
                         >
-                          {listing.status
+                          {(listing.status || "draft")
                             .replace("-", " ")
                             .replace(/\b\w/g, (l) => l.toUpperCase())}
                         </Badge>
@@ -1058,13 +856,13 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                           <div className="flex items-center gap-2">
                             <Eye className="h-3 w-3 text-gray-400" />
                             <span className="text-xs text-gray-600">
-                              {listing.views}
+                              {listing.views || 0}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Heart className="h-3 w-3 text-gray-400" />
                             <span className="text-xs text-gray-600">
-                              {listing.favorites}
+                              {listing.favorites || 0}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1088,7 +886,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                     {config.showColumns.includes("lastModified") && (
                       <TableCell>
                         <div className="text-sm text-gray-900">
-                          {listing.lastModified}
+                          {listing.lastModified || listing.updatedAt}
                         </div>
                       </TableCell>
                     )}
@@ -1100,7 +898,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleViewListing(listing)}
-                            title="View Product Page"
+                            title="View Details"
                           >
                             <Eye className="h-4 w-4" />
                           </IconButton>
@@ -1168,7 +966,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
           </Table>
 
           {/* Empty State */}
-          {filteredListings.length === 0 && (
+          {!isLoading && sortedListings.length === 0 && (
             <div className="text-center py-12">
               <Package className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">
@@ -1212,9 +1010,12 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <img
-                    src={listingToDelete.images[0]?.url}
+                    src={listingToDelete.images?.[0]?.url || listingToDelete.images?.[0]}
                     alt={listingToDelete.title}
                     className="h-16 w-16 rounded-lg object-cover"
+                    onError={(e) => {
+                      e.target.src = "/api/placeholder/64/64";
+                    }}
                   />
                   <div>
                     <h4 className="font-medium text-gray-900">
@@ -1224,7 +1025,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                       SKU: {listingToDelete.sku}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {listingToDelete.sold} sold • ${listingToDelete.price}
+                      {listingToDelete.sold || 0} sold • ${listingToDelete.price || 0}
                     </p>
                   </div>
                 </div>
@@ -1236,8 +1037,13 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
           <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={confirmDeletion} icon={<Trash2 />}>
-            Delete Listing
+          <Button 
+            variant="danger" 
+            onClick={confirmDeletion} 
+            icon={<Trash2 />}
+            disabled={isLoading}
+          >
+            {isLoading ? "Deleting..." : "Delete Listing"}
           </Button>
         </ModalFooter>
       </Modal>
@@ -1252,7 +1058,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
         <ModalContent className="space-y-4">
           <div>
             <p className="text-sm text-gray-600 mb-4">
-              Apply action to {selectedListings.length} selected listings
+              Apply action to {selectedCount} selected listings
             </p>
 
             <FormField label="Action" required>
@@ -1275,11 +1081,27 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
           >
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleBulkAction}>
-            Apply Action
+          <Button 
+            variant="primary" 
+            onClick={handleBulkAction}
+            disabled={!bulkAction || isLoading}
+          >
+            {isLoading ? "Applying..." : "Apply Action"}
           </Button>
         </ModalFooter>
       </Modal>
+
+      {/* Listing Details Modal */}
+      {showListingDetails && selectedListing && (
+        <ListingDetails
+          listing={selectedListing}
+          onClose={() => {
+            setShowListingDetails(false);
+            setSelectedListing(null);
+          }}
+          onListingUpdate={handleListingUpdate}
+        />
+      )}
     </div>
   );
 };

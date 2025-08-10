@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState } from "react";
 import {
   Package,
@@ -33,6 +34,12 @@ import {
   Lock,
 } from "lucide-react";
 
+// Import Redux hooks
+import {
+  useListingDetails,
+  useListings,
+} from "../../../../hooks/useSellerData";
+
 // Import UI components
 import {
   Button,
@@ -54,6 +61,7 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
+  LoadingSpinner,
 } from "../../../ui/sellerUis/Uis";
 
 const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
@@ -64,11 +72,30 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
   const [newStatus, setNewStatus] = useState("");
   const [statusReason, setStatusReason] = useState("");
 
-  const handleCopy = (fieldName) => {
-    setCopiedFields((prev) => ({ ...prev, [fieldName]: true }));
-    setTimeout(() => {
-      setCopiedFields((prev) => ({ ...prev, [fieldName]: false }));
-    }, 2000);
+  // Redux hooks
+  const {
+    updateExistingListing,
+    deleteExistingListing,
+    isLoading,
+    error,
+    success,
+    clearMessages,
+  } = useListings();
+
+  const {
+    updateListing: updateListingDetails,
+    performOptimisticUpdate,
+  } = useListingDetails(listing._id || listing.id);
+
+  const handleCopy = (fieldName, value) => {
+    navigator.clipboard.writeText(value).then(() => {
+      setCopiedFields((prev) => ({ ...prev, [fieldName]: true }));
+      setTimeout(() => {
+        setCopiedFields((prev) => ({ ...prev, [fieldName]: false }));
+      }, 2000);
+    }).catch((err) => {
+      console.error('Failed to copy to clipboard:', err);
+    });
   };
 
   const getStatusIcon = (status) => {
@@ -113,7 +140,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
   const getPerformanceMetrics = () => {
     const conversionRate =
       listing?.views > 0 ? (listing.sold / listing.views) * 100 : 0;
-    const revenue = listing?.sold * listing?.price;
+    const revenue = (listing?.sold || 0) * (listing?.price || 0);
     const favoriteRate =
       listing?.views > 0 ? (listing.favorites / listing.views) * 100 : 0;
     const profitMargin =
@@ -135,35 +162,61 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
     setShowStatusModal(true);
   };
 
-  const confirmStatusChange = () => {
-    const updatedListing = {
-      ...listing,
-      status: newStatus,
-      lastModified: new Date().toISOString().split("T")[0],
-    };
+  const confirmStatusChange = async () => {
+    try {
+      // Optimistic update for immediate UI feedback
+      performOptimisticUpdate({ status: newStatus });
+      
+      // Update via Redux
+      const result = await updateExistingListing(listing._id || listing.id, {
+        status: newStatus,
+        statusChangeReason: statusReason,
+        lastModified: new Date().toISOString(),
+      });
 
-    onListingUpdate?.(updatedListing);
-    setShowStatusModal(false);
-    onClose();
+      if (result.type?.endsWith('fulfilled')) {
+        // Notify parent component
+        onListingUpdate?.(result.payload.listing || result.payload);
+        setShowStatusModal(false);
+        setStatusReason("");
+        setNewStatus("");
+      }
+    } catch (error) {
+      console.error("Error updating listing status:", error);
+      // Revert optimistic update if needed
+      performOptimisticUpdate({ status: listing.status });
+    }
   };
 
-  const handleDeleteListing = () => {
-    onListingUpdate?.(null, "delete");
-    setShowDeleteModal(false);
-    onClose();
+  const handleDeleteListing = async () => {
+    try {
+      const result = await deleteExistingListing(listing._id || listing.id);
+      
+      if (result.type?.endsWith('fulfilled')) {
+        onListingUpdate?.(null, "delete");
+        setShowDeleteModal(false);
+        onClose();
+      }
+    } catch (error) {
+      console.error("Error deleting listing:", error);
+    }
   };
 
   const handleDuplicateListing = () => {
     const duplicatedListing = {
       ...listing,
-      id: `LST-${Date.now()}`,
+      id: undefined,
+      _id: undefined,
       title: `${listing.title} (Copy)`,
+      sku: `${listing.sku}-COPY`,
       status: "draft",
       createdDate: new Date().toISOString().split("T")[0],
       lastModified: new Date().toISOString().split("T")[0],
       views: 0,
       favorites: 0,
       sold: 0,
+      rating: 0,
+      reviews: 0,
     };
 
     onListingUpdate?.(duplicatedListing, "duplicate");
@@ -179,7 +232,10 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
       label: "Edit Listing",
       icon: <Edit />,
       variant: "primary",
-      onClick: () => console.log("Edit listing"), // Would navigate to edit page
+      onClick: () => {
+        onListingUpdate?.(listing, "edit");
+        onClose();
+      },
     });
 
     // Duplicate action - always available
@@ -223,7 +279,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
         label: "View on Site",
         icon: <ExternalLink />,
         variant: "secondary",
-        onClick: () => window.open(`/listing/${listing.id}`, "_blank"),
+        onClick: () => window.open(`/listing/${listing._id || listing.id}`, "_blank"),
       });
     }
 
@@ -236,7 +292,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
       onClick: () =>
         navigator.share?.({
           title: listing?.title,
-          url: `${window.location.origin}/listing/${listing?.id}`,
+          url: `${window.location.origin}/listing/${listing?._id || listing?.id}`,
         }),
     });
 
@@ -257,6 +313,16 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
   const metrics = getPerformanceMetrics();
   const availableActions = getAvailableActions();
 
+  // Handle different image format possibilities
+  const getImageUrl = (image) => {
+    if (typeof image === 'string') return image;
+    if (image?.url) return image.url;
+    return '/api/placeholder/400/400';
+  };
+
+  const mainImage = listing.images?.[0];
+  const mainImageUrl = mainImage ? getImageUrl(mainImage) : '/api/placeholder/400/400';
+
   return (
     <>
       <Modal
@@ -267,13 +333,29 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
         hideCloseButton={false}
       >
         <ModalContent className="p-0">
+          {/* Success/Error Messages */}
+          {(error || success) && (
+            <div className="p-4 border-b border-gray-200">
+              <Alert
+                variant={success ? "success" : "danger"}
+                title={success ? "Success" : "Error"}
+                onClose={clearMessages}
+              >
+                {success || error}
+              </Alert>
+            </div>
+          )}
+
           {/* Header */}
           <div className="p-8 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
             <div className="flex items-start gap-6">
               <img
-                src={listing.images[0]}
+                src={mainImageUrl}
                 alt={listing.title}
                 className="w-24 h-24 rounded-xl object-cover border-2 border-gray-200 shadow-sm"
+                onError={(e) => {
+                  e.target.src = "/api/placeholder/96/96";
+                }}
               />
               <div className="flex-1">
                 <div className="flex items-start justify-between mb-4">
@@ -284,11 +366,11 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                     <div className="flex items-center gap-4 text-sm text-gray-600">
                       <span>SKU: {listing.sku}</span>
                       <span>•</span>
-                      <span>Created: {listing.createdDate}</span>
+                      <span>Created: {listing.createdDate || listing.createdAt?.split('T')[0]}</span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
-                        {getVisibilityIcon(listing.visibility)}
-                        {listing.visibility}
+                        {getVisibilityIcon(listing.visibility || 'public')}
+                        {listing.visibility || 'public'}
                       </span>
                     </div>
                   </div>
@@ -297,7 +379,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                     size="lg"
                     icon={getStatusIcon(listing.status)}
                   >
-                    {listing.status
+                    {(listing.status || 'draft')
                       .replace("-", " ")
                       .replace(/\b\w/g, (l) => l.toUpperCase())}
                   </Badge>
@@ -306,25 +388,25 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                 <div className="grid grid-cols-4 gap-6">
                   <div className="text-center">
                     <p className="text-2xl font-bold text-green-600">
-                      ${listing.price}
+                      ${listing.price || 0}
                     </p>
                     <p className="text-xs text-gray-500">Current Price</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-blue-600">
-                      {listing.quantity}
+                      {listing.quantity || 0}
                     </p>
                     <p className="text-xs text-gray-500">In Stock</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-purple-600">
-                      {listing.sold}
+                      {listing.sold || 0}
                     </p>
                     <p className="text-xs text-gray-500">Sold</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-orange-600">
-                      {listing.views}
+                      {listing.views || 0}
                     </p>
                     <p className="text-xs text-gray-500">Views</p>
                   </div>
@@ -387,7 +469,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                             Favorites
                           </p>
                           <p className="text-xl font-bold text-red-900">
-                            {listing.favorites}
+                            {listing.favorites || 0}
                           </p>
                         </div>
                         <Heart className="h-6 w-6 text-red-600" />
@@ -404,7 +486,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                           </p>
                           <div className="flex items-center gap-1">
                             <p className="text-xl font-bold text-purple-900">
-                              {listing.rating}
+                              {listing.rating || 0}
                             </p>
                             <Star className="h-4 w-4 text-yellow-400 fill-current" />
                           </div>
@@ -425,32 +507,29 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                       label="Product Title"
                       value={listing.title}
                       icon={<Tag />}
-                      onCopy={() => handleCopy("title")}
+                      onCopy={() => handleCopy("title", listing.title)}
                       copied={copiedFields.title}
                     />
                     <CopyField
                       label="SKU"
                       value={listing.sku}
                       icon={<Package />}
-                      onCopy={() => handleCopy("sku")}
+                      onCopy={() => handleCopy("sku", listing.sku)}
                       copied={copiedFields.sku}
                     />
                     <CopyField
                       label="Category"
-                      value={`${listing.category} > ${listing.subcategory}`}
+                      value={`${listing.category?.main || listing.category} ${listing.category?.sub || listing.subcategory ? `> ${listing.category?.sub || listing.subcategory}` : ''}`}
                       icon={<Tag />}
-                      onCopy={() => handleCopy("category")}
+                      onCopy={() => handleCopy("category", `${listing.category?.main || listing.category} > ${listing.category?.sub || listing.subcategory}`)}
                       copied={copiedFields.category}
                     />
                     <CopyField
-                      label="Condition"
-                      value={
-                        listing.condition.charAt(0).toUpperCase() +
-                        listing.condition.slice(1)
-                      }
+                      label="Brand"
+                      value={listing.brand || 'N/A'}
                       icon={<CheckCircle />}
-                      onCopy={() => handleCopy("condition")}
-                      copied={copiedFields.condition}
+                      onCopy={() => handleCopy("brand", listing.brand || 'N/A')}
+                      copied={copiedFields.brand}
                     />
                   </CardContent>
                 </Card>
@@ -467,27 +546,91 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                   </CardContent>
                 </Card>
 
+                {/* Variations */}
+                {listing.hasVariations && listing.variations?.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Package className="h-5 w-5" />
+                        Variations ({listing.variations.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {listing.variations.map((variation, index) => (
+                          <div key={variation.id || index} className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-gray-900">
+                                {variation.name || `Variation #${index + 1}`}
+                              </h4>
+                              {variation.isDefault && (
+                                <Badge variant="primary" size="sm">Default</Badge>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-500">Price:</span>
+                                <span className="ml-2 font-medium">${variation.price || 0}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Quantity:</span>
+                                <span className="ml-2 font-medium">{variation.quantity || 0}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">SKU:</span>
+                                <span className="ml-2 font-medium">{variation.sku || 'N/A'}</span>
+                              </div>
+                              {variation.color && (
+                                <div className="flex items-center">
+                                  <span className="text-gray-500">Color:</span>
+                                  <div className="ml-2 flex items-center gap-2">
+                                    <div
+                                      className="w-4 h-4 rounded border border-gray-300"
+                                      style={{ backgroundColor: variation.color.hex }}
+                                    />
+                                    <span className="text-sm">{variation.color.name}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Images */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Image className="h-5 w-5" />
-                      Images ({listing.images.length})
+                      Images ({listing.images?.length || 0})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      {listing.images.map((image, index) => (
-                        <div key={index} className="relative group">
-                          <img
-                            src={image}
-                            alt={`${listing.title} - Image ${index + 1}`}
-                            className="w-full aspect-square object-cover rounded-lg border border-gray-200"
-                          />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity rounded-lg" />
-                        </div>
-                      ))}
-                    </div>
+                    {listing.images?.length > 0 ? (
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        {listing.images.map((image, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={getImageUrl(image)}
+                              alt={`${listing.title} - Image ${index + 1}`}
+                              className="w-full aspect-square object-cover rounded-lg border border-gray-200"
+                              onError={(e) => {
+                                e.target.src = "/api/placeholder/200/200";
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity rounded-lg" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center text-gray-500 py-8">
+                        <Image className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                        <p>No images available</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -508,10 +651,10 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                         Current Price
                       </label>
                       <p className="text-2xl font-bold text-green-600">
-                        ${listing.price}
+                        ${listing.price || 0}
                       </p>
                     </div>
-                    {listing.originalPrice > listing.price && (
+                    {listing.originalPrice && listing.originalPrice > listing.price && (
                       <div>
                         <label className="text-sm font-medium text-gray-700">
                           Original Price
@@ -519,6 +662,9 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                         <p className="text-lg text-gray-500 line-through">
                           ${listing.originalPrice}
                         </p>
+                        <div className="text-xs text-green-600 font-medium">
+                          {Math.round(((listing.originalPrice - listing.price) / listing.originalPrice) * 100)}% OFF
+                        </div>
                       </div>
                     )}
                     <div>
@@ -527,94 +673,106 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                       </label>
                       <p
                         className={`text-2xl font-bold ${
-                          listing.quantity === 0
+                          (listing.quantity || 0) === 0
                             ? "text-red-600"
-                            : listing.quantity < 5
+                            : (listing.quantity || 0) < 5
                             ? "text-orange-600"
                             : "text-green-600"
                         }`}
                       >
-                        {listing.quantity}
+                        {listing.quantity || 0}
                       </p>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Features */}
-                {listing.features && (
+                {/* Colors & Sizes (for non-variation products) */}
+                {!listing.hasVariations && (listing.colors?.length > 0 || listing.sizes?.length > 0) && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Key Features</CardTitle>
+                      <CardTitle>Colors & Sizes</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {listing.colors?.length > 0 && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-2 block">
+                            Available Colors
+                          </label>
+                          <div className="flex flex-wrap gap-3">
+                            {listing.colors.map((color, index) => (
+                              <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                                <div
+                                  className="w-6 h-6 border border-gray-300 rounded"
+                                  style={{ backgroundColor: color.hex }}
+                                />
+                                <span className="text-sm font-medium">{color.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {listing.sizes?.length > 0 && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-2 block">
+                            Available Sizes
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {listing.sizes.map((size, index) => (
+                              <Badge key={index} variant="secondary">
+                                {size}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Physical Properties */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      Physical Properties
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {listing.weight && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">Weight</label>
+                        <p className="text-gray-900">{listing.weight} lbs</p>
+                      </div>
+                    )}
+                    {(listing.dimensions?.length || listing.dimensions?.width || listing.dimensions?.height) && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">Dimensions</label>
+                        <p className="text-gray-900">
+                          {listing.dimensions.length || 0}" × {listing.dimensions.width || 0}" × {listing.dimensions.height || 0}"
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Tags */}
+                {listing.tags?.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Tags</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {listing.features.map((feature, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                            <span className="text-gray-700">{feature}</span>
-                          </div>
+                      <div className="flex flex-wrap gap-2">
+                        {listing.tags.map((tag, index) => (
+                          <Badge key={index} variant="secondary">
+                            {tag}
+                          </Badge>
                         ))}
                       </div>
                     </CardContent>
                   </Card>
                 )}
-
-                {/* Shipping */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Truck className="h-5 w-5" />
-                      Shipping Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">
-                        Weight
-                      </label>
-                      <p className="text-gray-900">
-                        {listing.shipping.weight} lbs
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">
-                        Dimensions
-                      </label>
-                      <p className="text-gray-900">
-                        {listing.shipping.dimensions}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">
-                        Shipping Options
-                      </label>
-                      <div className="space-y-1">
-                        {listing.shipping.freeShipping && (
-                          <Badge variant="success">Free Shipping</Badge>
-                        )}
-                        {listing.shipping.expedited && (
-                          <Badge variant="primary">Expedited Available</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Tags */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Tags</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {listing.tags.map((tag, index) => (
-                        <Badge key={index} variant="secondary">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
               </TabsContent>
 
               {/* Performance Tab */}
@@ -631,14 +789,14 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                     <div className="text-center p-4 bg-blue-50 rounded-lg">
                       <Eye className="h-8 w-8 text-blue-600 mx-auto mb-2" />
                       <p className="text-2xl font-bold text-blue-900">
-                        {listing.views}
+                        {listing.views || 0}
                       </p>
                       <p className="text-sm text-blue-700">Total Views</p>
                     </div>
                     <div className="text-center p-4 bg-red-50 rounded-lg">
                       <Heart className="h-8 w-8 text-red-600 mx-auto mb-2" />
                       <p className="text-2xl font-bold text-red-900">
-                        {listing.favorites}
+                        {listing.favorites || 0}
                       </p>
                       <p className="text-sm text-red-700">Favorites</p>
                     </div>
@@ -652,14 +810,14 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                     <div className="text-center p-4 bg-purple-50 rounded-lg">
                       <DollarSign className="h-8 w-8 text-purple-600 mx-auto mb-2" />
                       <p className="text-2xl font-bold text-purple-900">
-                        ${metrics.revenue}
+                        ${metrics.revenue.toLocaleString()}
                       </p>
                       <p className="text-sm text-purple-700">Total Revenue</p>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Sales History */}
+                {/* Sales Summary */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Sales Summary</CardTitle>
@@ -671,7 +829,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                           Units Sold
                         </label>
                         <p className="text-3xl font-bold text-gray-900">
-                          {listing.sold}
+                          {listing.sold || 0}
                         </p>
                       </div>
                       <div>
@@ -688,14 +846,14 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                         </label>
                         <div className="flex items-center gap-2">
                           <p className="text-3xl font-bold text-yellow-600">
-                            {listing.rating}
+                            {listing.rating || 0}
                           </p>
                           <div className="flex">
                             {[...Array(5)].map((_, i) => (
                               <Star
                                 key={i}
                                 className={`h-5 w-5 ${
-                                  i < Math.floor(listing.rating)
+                                  i < Math.floor(listing.rating || 0)
                                     ? "text-yellow-400 fill-current"
                                     : "text-gray-300"
                                 }`}
@@ -703,7 +861,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                             ))}
                           </div>
                           <span className="text-sm text-gray-500">
-                            ({listing.reviews} reviews)
+                            ({listing.reviews || 0} reviews)
                           </span>
                         </div>
                       </div>
@@ -714,40 +872,32 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
 
               {/* SEO Tab */}
               <TabsContent value="seo" className="space-y-6">
-                {listing.seo && (
+                {(listing.metaTitle || listing.metaDescription) && (
                   <Card>
                     <CardHeader>
                       <CardTitle>SEO Settings</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-700">
-                          Meta Title
-                        </label>
-                        <p className="text-gray-900 bg-gray-50 p-3 rounded border">
-                          {listing.seo.metaTitle}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-700">
-                          Meta Description
-                        </label>
-                        <p className="text-gray-900 bg-gray-50 p-3 rounded border">
-                          {listing.seo.metaDescription}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-700">
-                          Keywords
-                        </label>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {listing.seo.keywords.map((keyword, index) => (
-                            <Badge key={index} variant="outline">
-                              {keyword}
-                            </Badge>
-                          ))}
+                      {listing.metaTitle && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">
+                            Meta Title
+                          </label>
+                          <p className="text-gray-900 bg-gray-50 p-3 rounded border">
+                            {listing.metaTitle}
+                          </p>
                         </div>
-                      </div>
+                      )}
+                      {listing.metaDescription && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">
+                            Meta Description
+                          </label>
+                          <p className="text-gray-900 bg-gray-50 p-3 rounded border">
+                            {listing.metaDescription}
+                          </p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
@@ -760,9 +910,9 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                   <CardContent>
                     <CopyField
                       label="Public URL"
-                      value={`${window.location.origin}/listing/${listing.id}`}
+                      value={`${window.location.origin}/listing/${listing._id || listing.id}`}
                       icon={<ExternalLink />}
-                      onCopy={() => handleCopy("url")}
+                      onCopy={() => handleCopy("url", `${window.location.origin}/listing/${listing._id || listing.id}`)}
                       copied={copiedFields.url}
                     />
                   </CardContent>
@@ -782,8 +932,10 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                 icon={action.icon}
                 onClick={action.onClick}
                 size="sm"
+                disabled={isLoading}
               >
                 {action.label}
+                {isLoading && action.key === 'delete' && <LoadingSpinner size="sm" className="ml-2" />}
               </Button>
             ))}
           </div>
@@ -827,8 +979,10 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
             variant={newStatus === "active" ? "success" : "primary"}
             onClick={confirmStatusChange}
             icon={newStatus === "active" ? <Play /> : <Settings />}
+            disabled={isLoading}
           >
-            {newStatus === "active" ? "Activate Listing" : "Update Status"}
+            {isLoading ? "Updating..." : (newStatus === "active" ? "Activate Listing" : "Update Status")}
+            {isLoading && <LoadingSpinner size="sm" className="ml-2" />}
           </Button>
         </ModalFooter>
       </Modal>
@@ -853,16 +1007,18 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <img
-                  src={listing.images[0]}
+                  src={mainImageUrl}
                   alt={listing.title}
                   className="h-16 w-16 rounded-lg object-cover"
+                  onError={(e) => {
+                    e.target.src = "/api/placeholder/64/64";
+                  }}
                 />
                 <div>
                   <h4 className="font-medium text-gray-900">{listing.title}</h4>
                   <p className="text-sm text-gray-500">SKU: {listing.sku}</p>
                   <p className="text-sm text-gray-500">
-                    {listing.sold} sold • ${listing.price} • {listing.views}{" "}
-                    views
+                    {listing.sold || 0} sold • ${listing.price || 0} • {listing.views || 0} views
                   </p>
                 </div>
               </div>
@@ -877,8 +1033,10 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
             variant="danger"
             onClick={handleDeleteListing}
             icon={<Trash2 />}
+            disabled={isLoading}
           >
-            Delete Listing
+            {isLoading ? "Deleting..." : "Delete Listing"}
+            {isLoading && <LoadingSpinner size="sm" className="ml-2" />}
           </Button>
         </ModalFooter>
       </Modal>

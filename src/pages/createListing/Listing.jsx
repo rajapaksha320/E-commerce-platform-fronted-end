@@ -22,6 +22,13 @@ import {
   ChevronUp,
 } from "lucide-react";
 
+// Import Redux hooks
+import {
+  useListings,
+  useImageUpload,
+  useListingDetails,
+} from "../../hooks/useSellerData";
+
 import {
   Button,
   Card,
@@ -40,6 +47,8 @@ import {
   ImageUpload,
   TagInput,
   SuccessModal,
+  LoadingSpinner,
+  Alert,
 } from "../../components/ui/sellerUis/Uis";
 
 import { MultiColorPicker } from "../../components/ui/ColorPicker/Uis";
@@ -48,6 +57,25 @@ const Listing = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+
+  // Redux hooks
+  const {
+    createNewListing,
+    updateExistingListing,
+    isLoading: listingsLoading,
+    error: listingsError,
+    success: listingsSuccess,
+    message: listingsMessage,
+    clearMessages: clearListingsMessages,
+  } = useListings();
+
+  const {
+    uploadSingleImage,
+    uploadImages,
+    isUploading,
+    pendingUploads,
+    error: uploadError,
+  } = useImageUpload();
 
   // Check if we're editing (product data passed via state)
   const editingProduct = location.state?.product;
@@ -171,6 +199,34 @@ const Listing = () => {
     },
   };
 
+  // Clear messages when component unmounts
+  useEffect(() => {
+    return () => {
+      clearListingsMessages();
+    };
+  }, [clearListingsMessages]);
+
+  // Handle success/error messages
+  useEffect(() => {
+    if (listingsSuccess && !isSaving) {
+      setShowSuccessModal(true);
+    }
+  }, [listingsSuccess, isSaving]);
+
+  // remove error and success messages after showing within a few seconds
+  useEffect(() => {
+    if (listingsMessage || uploadError) {
+      const timer = setTimeout(() => {
+        clearListingsMessages();
+        if (uploadError) {
+          setShowSuccessModal(false);
+        }
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [listingsMessage, uploadError, clearListingsMessages]);
+  
+
   // Create new variation template
   const createNewVariation = () => ({
     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -202,8 +258,8 @@ const Listing = () => {
           ? `${editingProduct.title} (Copy)`
           : editingProduct.title || "",
         brand: editingProduct.brand || "",
-        category: editingProduct.category?.toLowerCase() || "",
-        subCategory: editingProduct.subcategory || "",
+        category: editingProduct.category?.main?.toLowerCase() || editingProduct.category?.toLowerCase() || "",
+        subCategory: editingProduct.category?.sub || editingProduct.subcategory || "",
         description: editingProduct.description || "",
         price: editingProduct.price?.toString() || "",
         originalPrice: editingProduct.originalPrice?.toString() || "",
@@ -220,13 +276,16 @@ const Listing = () => {
           width: editingProduct.dimensions?.width || "",
           height: editingProduct.dimensions?.height || "",
         },
-        images: editingProduct.images || [],
+        images: editingProduct.images?.map(img => 
+          typeof img === 'string' ? { url: img, name: 'image.jpg' } : img
+        ) || [],
         variations: hasExistingVariations ? editingProduct.variations.map(variation => ({
           ...variation,
           id: isDuplicating ? Date.now().toString() + Math.random().toString(36).substr(2, 9) : variation.id,
           sku: isDuplicating ? `${variation.sku}-COPY` : variation.sku,
-          // Remove lowStockAlert if it exists in old data
-          lowStockAlert: undefined,
+          images: variation.images?.map(img => 
+            typeof img === 'string' ? { url: img, name: 'image.jpg' } : img
+          ) || [],
         })) : [],
         tags: editingProduct.tags || [],
         metaTitle: editingProduct.metaTitle || "",
@@ -295,6 +354,55 @@ const Listing = () => {
   const handleColorsChange = (colors) => {
     console.log("Colors updated:", colors);
     handleInputChange("colors", colors);
+  };
+
+  // Image upload handlers
+  const handleImagesChange = async (images) => {
+    const uploadedImages = [];
+    
+    for (const image of images) {
+      if (image.file) {
+        try {
+          const uploadedUrl = await uploadSingleImage(image.file);
+          uploadedImages.push({
+            url: uploadedUrl,
+            name: image.file.name,
+          });
+        } catch (error) {
+          console.error("Error uploading image:", error);
+          // Add original image if upload fails
+          uploadedImages.push(image);
+        }
+      } else {
+        // Existing image
+        uploadedImages.push(image);
+      }
+    }
+    
+    handleInputChange("images", uploadedImages);
+  };
+
+  const handleVariationImagesChange = async (variationId, images) => {
+    const uploadedImages = [];
+    
+    for (const image of images) {
+      if (image.file) {
+        try {
+          const uploadedUrl = await uploadSingleImage(image.file);
+          uploadedImages.push({
+            url: uploadedUrl,
+            name: image.file.name,
+          });
+        } catch (error) {
+          console.error("Error uploading variation image:", error);
+          uploadedImages.push(image);
+        }
+      } else {
+        uploadedImages.push(image);
+      }
+    }
+    
+    updateVariation(variationId, "images", uploadedImages);
   };
 
   // Variation management functions
@@ -502,6 +610,59 @@ const Listing = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const formatListingData = (formData) => {
+    const baseData = {
+      title: formData.title,
+      brand: formData.brand,
+      category: {
+        main: formData.category,
+        sub: formData.subCategory,
+      },
+      description: formData.description,
+      tags: formData.tags,
+      metaTitle: formData.metaTitle,
+      metaDescription: formData.metaDescription,
+      shippingWeight: formData.shippingWeight,
+      shippingClass: formData.shippingClass,
+      returnPolicy: formData.returnPolicy,
+      warranty: formData.warranty,
+      status: formData.status,
+      visibility: formData.visibility,
+      hasVariations,
+      weight: formData.weight,
+      dimensions: formData.dimensions,
+    };
+
+    if (hasVariations) {
+      baseData.variations = formData.variations.map(variation => ({
+        ...variation,
+        price: parseFloat(variation.price),
+        originalPrice: variation.originalPrice ? parseFloat(variation.originalPrice) : null,
+        quantity: parseInt(variation.quantity),
+      }));
+      
+      // Use default variation or first variation for main product data
+      const defaultVariation = formData.variations.find(v => v.isDefault) || formData.variations[0];
+      if (defaultVariation) {
+        baseData.price = parseFloat(defaultVariation.price);
+        baseData.originalPrice = defaultVariation.originalPrice ? parseFloat(defaultVariation.originalPrice) : null;
+        baseData.sku = defaultVariation.sku;
+        baseData.quantity = parseInt(defaultVariation.quantity);
+        baseData.images = defaultVariation.images.length > 0 ? defaultVariation.images : formData.images;
+      }
+    } else {
+      baseData.price = parseFloat(formData.price);
+      baseData.originalPrice = formData.originalPrice ? parseFloat(formData.originalPrice) : null;
+      baseData.sku = formData.sku;
+      baseData.quantity = parseInt(formData.quantity);
+      baseData.images = formData.images;
+      baseData.colors = formData.colors;
+      baseData.sizes = formData.sizes;
+    }
+
+    return baseData;
+  };
+
   const handleSave = async (saveType = "draft") => {
     if (!validateForm()) {
       // Scroll to first error
@@ -516,38 +677,33 @@ const Listing = () => {
     }
 
     setIsSaving(true);
+    clearListingsMessages();
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      const listingData = {
+      const listingData = formatListingData({
         ...formData,
-        hasVariations,
-        status: saveType === "publish" ? "active" : "draft",
-        updatedAt: new Date().toISOString(),
-      };
+        status: saveType === "publish" ? "active" : formData.status,
+      });
 
+      let result;
       if (isEditing && !isDuplicating) {
-        listingData.id = editingProduct.id;
-        console.log("Updating listing:", listingData);
+        result = await updateExistingListing(editingProduct._id || editingProduct.id, listingData);
       } else {
-        listingData.id = Date.now().toString();
-        listingData.createdAt = new Date().toISOString();
-        console.log("Creating new listing:", listingData);
+        result = await createNewListing(listingData);
       }
 
-      setSavedListingData(listingData);
-
-      // Show different modals based on save type
-      if (saveType === "publish") {
-        setShowSummaryModal(true);
-      } else {
-        setShowSuccessModal(true);
+      if (result.type?.endsWith('fulfilled')) {
+        setSavedListingData(result.payload);
+        
+        // Show different modals based on save type
+        if (saveType === "publish") {
+          setShowSummaryModal(true);
+        } else {
+          setShowSuccessModal(true);
+        }
       }
     } catch (error) {
       console.error("Error saving listing:", error);
-      alert("Failed to save listing. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -614,9 +770,23 @@ const Listing = () => {
   };
 
   const previewData = getPreviewData();
+  const isProcessing = isSaving || listingsLoading || isUploading;
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Success/Error Messages */}
+      {(listingsError || uploadError) && (
+        <div className="fixed top-4 right-4 z-50 max-w-md">
+          <Alert
+            variant="danger"
+            title="Error"
+            onClose={clearListingsMessages}
+          >
+            {listingsError || uploadError}
+          </Alert>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -647,7 +817,7 @@ const Listing = () => {
               <Button
                 variant="secondary"
                 onClick={handlePreview}
-                disabled={!formData.title}
+                disabled={!formData.title || isProcessing}
               >
                 <Eye className="h-4 w-4 mr-2" />
                 Preview
@@ -656,16 +826,21 @@ const Listing = () => {
               <Button
                 variant="secondary"
                 onClick={() => handleSave("draft")}
-                disabled={isSaving}
+                disabled={isProcessing}
               >
                 <Save className="h-4 w-4 mr-2" />
-                {isSaving ? "Saving..." : "Save Draft"}
+                {isProcessing ? "Saving..." : "Save Draft"}
+                {isProcessing && <LoadingSpinner size="sm" className="ml-2" />}
               </Button>
 
-              <Button onClick={() => handleSave("publish")} disabled={isSaving}>
+              <Button 
+                onClick={() => handleSave("publish")} 
+                disabled={isProcessing}
+              >
                 {isEditing && !isDuplicating
                   ? "Update Listing"
                   : "Publish Listing"}
+                {isProcessing && <LoadingSpinner size="sm" className="ml-2" />}
               </Button>
             </div>
           </div>
@@ -1210,9 +1385,10 @@ const Listing = () => {
                                     <ImageUpload
                                       images={variation.images}
                                       onImagesChange={(images) =>
-                                        updateVariation(variation.id, "images", images)
+                                        handleVariationImagesChange(variation.id, images)
                                       }
                                       maxImages={5}
+                                      disabled={isUploading}
                                     />
                                     <p className="text-xs text-gray-500 mt-2">
                                       Upload up to 5 images for this variation. These will override the main product images.
@@ -1229,6 +1405,7 @@ const Listing = () => {
                           variant="outline"
                           onClick={addVariation}
                           className="w-full border-dashed border-2 border-gray-300 py-6"
+                          disabled={isProcessing}
                         >
                           <Plus className="h-5 w-5 mr-2" />
                           Add New Variation
@@ -1404,15 +1581,15 @@ const Listing = () => {
                       <ImageUpload
                         data-field="images"
                         images={formData.images}
-                        onImagesChange={(images) =>
-                          handleInputChange("images", images)
-                        }
+                        onImagesChange={handleImagesChange}
                         maxImages={10}
+                        disabled={isUploading}
                       />
                       <p className="text-xs text-gray-500 mt-2">
                         Upload up to 10 high-quality images. 
                         {!hasVariations && " First image will be the main product image."}
                         {hasVariations && " Each variation can have its own images that override these."}
+                        {isUploading && " Please wait while images are being uploaded..."}
                       </p>
                     </FormField>
                   </CardContent>
@@ -1745,17 +1922,19 @@ const Listing = () => {
                       <Button
                         variant="secondary"
                         onClick={() => handleSave("draft")}
-                        disabled={isSaving}
+                        disabled={isProcessing}
                         className="flex-1"
                       >
                         Save Draft
+                        {isProcessing && <LoadingSpinner size="sm" className="ml-2" />}
                       </Button>
                       <Button
                         onClick={() => handleSave("publish")}
-                        disabled={isSaving}
+                        disabled={isProcessing}
                         className="flex-1"
                       >
                         {isEditing && !isDuplicating ? "Update" : "Publish"}
+                        {isProcessing && <LoadingSpinner size="sm" className="ml-2" />}
                       </Button>
                     </div>
                   </div>
@@ -1839,13 +2018,13 @@ const Listing = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Category:</span>
                     <span className="font-medium">
-                      {categories[savedListingData.category]?.name || savedListingData.category}
+                      {categories[savedListingData.category?.main]?.name || savedListingData.category}
                     </span>
                   </div>
                   {hasVariations ? (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Variations:</span>
-                      <span className="font-medium">{savedListingData.variations.length} variations</span>
+                      <span className="font-medium">{savedListingData.variations?.length || 0} variations</span>
                     </div>
                   ) : (
                     <div className="flex justify-between">
