@@ -59,13 +59,13 @@ const SellerLayout = ({ children }) => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   
   // Get shop info from user data or use defaults
-  const shopName = user?.businessInfo?.businessName || "My shop";
-  const shopRating = "257 ⭐";
+  // const shopName = user?.businessInfo?.businessName || "My shop";
+  // const shopRating = "257 ⭐";
 
   const [activeTab, setActiveTab] = useState("overview");
   const [activeSubTab, setActiveSubTab] = useState(null);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+  // const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
 
   // Check authentication on mount
   useEffect(() => {
@@ -80,8 +80,8 @@ const SellerLayout = ({ children }) => {
     { id: "orders", name: "Orders", href: "/seller/orders", badge: "12" },
     { id: "listings", name: "Listings", href: "/seller/listings" },
     { id: "customer", name: "Customer", href: "/seller/customer", badge: "3" },
-    { id: "payments", name: "Payments", href: "/seller/payments" },
-    { id: "profile", name: "Profile", href: "/seller/profile" },
+    // { id: "payments", name: "Payments", href: "/seller/payments" },
+    { id: "store", name: "Store", href: "/seller/profile" },
   ];
 
 const sidebarNavigation = {
@@ -702,27 +702,27 @@ const sidebarNavigation = {
   };
 
   // PLACEHOLDER NOTIFICATIONS - Add real notifications later
-  const notifications = [
-    {
-      id: 1,
-      title: "New order received",
-      message: "Order #12345 from John Doe",
-      time: "2 min ago",
-      unread: true,
-    },
-    {
-      id: 2,
-      title: "Low stock alert",
-      message: "iPhone 15 Pro has only 3 items left",
-      time: "1 hour ago",
-      unread: true,
-    },
-  ];
+  // const notifications = [
+  //   {
+  //     id: 1,
+  //     title: "New order received",
+  //     message: "Order #12345 from John Doe",
+  //     time: "2 min ago",
+  //     unread: true,
+  //   },
+  //   {
+  //     id: 2,
+  //     title: "Low stock alert",
+  //     message: "iPhone 15 Pro has only 3 items left",
+  //     time: "1 hour ago",
+  //     unread: true,
+  //   },
+  // ];
 
   // Navigation handlers
   const handleNavigation = (tabId) => {
     setActiveTab(tabId);
-    if (tabId === "overview" || tabId === "profile") {
+    if (tabId === "overview" || tabId === "store") {
       setActiveSubTab(null);
     } else {
       const firstSubItem = sidebarNavigation[tabId]?.[0];
@@ -735,7 +735,7 @@ const sidebarNavigation = {
   };
 
   const handleProfileNavigation = () => {
-    setActiveTab("profile");
+    setActiveTab("store");
     setActiveSubTab(null);
     setProfileDropdownOpen(false);
   };
@@ -754,7 +754,7 @@ const sidebarNavigation = {
 
   const showSidebar =
     activeTab !== "overview" &&
-    activeTab !== "profile" &&
+    activeTab !== "store" &&
     sidebarNavigation[activeTab];
 
   // Filter Bar Component
@@ -986,28 +986,28 @@ const sidebarNavigation = {
                 </span>
               </div>
               {/* Shop Name Display */}
-              <div className="ml-4 text-sm text-gray-500">
+              {/* <div className="ml-4 text-sm text-gray-500">
                 <span className="font-medium">{shopName}</span>
                 {shopRating && (
                   <span className="ml-1">({shopRating})</span>
                 )}
-              </div>
+              </div> */}
             </div>
 
             {/* Right side */}
             <div className="flex items-center space-x-4">
               {/* User welcome message */}
-              <div className="text-sm text-gray-600">
+              {/* <div className="text-sm text-gray-600">
                 Welcome, <span className="font-medium">{user?.firstName || user?.email?.split('@')[0] || 'Seller'}</span>
-              </div>
+              </div> */}
 
               {/* Messages */}
-              <Button variant="secondary" size="sm">
+              {/* <Button variant="secondary" size="sm">
                 Messages (0)
-              </Button>
+              </Button> */}
 
               {/* Notifications Dropdown */}
-              <Dropdown
+              {/* <Dropdown
                 trigger={
                   <IconButton className="relative">
                     <Bell className="h-5 w-5" />
@@ -1050,7 +1050,7 @@ const sidebarNavigation = {
                     </div>
                   ))}
                 </div>
-              </Dropdown>
+              </Dropdown> */}
 
               {/* Profile Dropdown */}
               {isAuthenticated && user ? (
@@ -1205,7 +1205,7 @@ const sidebarNavigation = {
               )}
 
               {/* Profile Management */}
-              {activeTab === "profile" && (
+              {activeTab === "store" && (
                 <div className="py-8">
                   <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                     <ProfileManagement user={user} />
@@ -1214,7 +1214,7 @@ const sidebarNavigation = {
               )}
 
               {/* Other tabs content */}
-              {activeTab !== "overview" && activeTab !== "profile" && (
+              {activeTab !== "overview" && activeTab !== "store" && (
                 <div className="space-y-0">
                   {/* Filter Bar */}
                   {activeSubTab && getCurrentFilters().length > 0 && (

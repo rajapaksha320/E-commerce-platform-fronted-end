@@ -128,23 +128,6 @@ const ProfileManagement = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Shop Badge
-            </label>
-            <Select
-              value={shopProfile.badge}
-              onChange={(e) =>
-                handleInputChange("badge", e.target.value)
-              }
-            >
-              <option value="">No Badge</option>
-              <option value="Top Seller">Top Seller</option>
-              <option value="Verified">Verified</option>
-              <option value="Premium">Premium</option>
-              <option value="New Seller">New Seller</option>
-            </Select>
-          </div>
         </CardContent>
       </Card>
     </div>
@@ -211,20 +194,6 @@ const ProfileManagement = () => {
                 handleInputChange("website", e.target.value)
               }
               placeholder="https://yourshop.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Clock className="inline h-4 w-4 mr-1" />
-              Business Hours
-            </label>
-            <Input
-              value={shopProfile.businessHours}
-              onChange={(e) =>
-                handleInputChange("businessHours", e.target.value)
-              }
-              placeholder="Mon-Fri 9AM-6PM"
             />
           </div>
         </CardContent>
@@ -314,7 +283,7 @@ const ProfileManagement = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Profile Management
+            Store Management
           </h1>
           <p className="text-gray-600">
             Manage your shop profile and settings
