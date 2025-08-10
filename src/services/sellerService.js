@@ -3,7 +3,7 @@ import axiosInstance from './axiosInstance';
 
 const sellerService = {
   // Listing Management APIs
-  
+
   /**
    * Create a new listing
    * @param {Object} listingData - The listing data
@@ -11,16 +11,18 @@ const sellerService = {
   createListing: async (listingData) => {
     return await axiosInstance.post('/api/v1/listing/create', listingData);
   },
-  
+
   /**
    * Update an existing listing
    * @param {string} listingId - The listing ID (_id)
    * @param {Object} updateData - The data to update
    */
   updateListing: async (listingId, updateData) => {
+    // Using the correct endpoint as per your API documentation
     return await axiosInstance.post(`/api/v1/store/update-store-profile/${listingId}`, updateData);
   },
-  
+
+
   /**
    * Get all listings with pagination
    * @param {number} page - Page number
@@ -31,7 +33,7 @@ const sellerService = {
       params: { page, pageSize }
     });
   },
-  
+
   /**
    * Get a single listing by ID
    * @param {string} listingId - The listing ID (_id)
@@ -39,7 +41,7 @@ const sellerService = {
   getListingById: async (listingId) => {
     return await axiosInstance.get(`/api/v1/listing/one-listing/${listingId}`);
   },
-  
+
   /**
    * Get listings filtered by status
    * @param {string} status - Status filter (active, inactive, draft, outOfStock, sold)
@@ -51,7 +53,7 @@ const sellerService = {
       params: { status, page, pageSize }
     });
   },
-  
+
   /**
    * Delete a listing
    * @param {string} listingId - The listing ID (_id)
@@ -59,7 +61,7 @@ const sellerService = {
   deleteListing: async (listingId) => {
     return await axiosInstance.get(`/api/v1/listing/listing-delete/${listingId}`);
   },
-  
+
   /**
    * Filter listings with multiple criteria
    * @param {Object} filters - Filter object
@@ -71,18 +73,18 @@ const sellerService = {
    */
   filterListings: async (filters) => {
     const params = {};
-    
+
     if (filters.category) params.category = filters.category;
     if (filters.priceRange) params.priceRange = filters.priceRange;
     if (filters.search) params.search = filters.search;
     params.page = filters.page || 1;
     params.pageSize = filters.pageSize || 10;
-    
+
     return await axiosInstance.get('/api/v1/listing/listing-filter', { params });
   },
-  
+
   // Store/Shop Management APIs
-  
+
   /**
    * Create a store profile
    * @param {Object} storeData - Store profile data
@@ -101,10 +103,10 @@ const sellerService = {
       bannerImage: storeData.bannerImage,
       status: storeData.status || 'active',
     };
-    
+
     return await axiosInstance.post('/api/v1/store/create-store-profile', payload);
   },
-  
+
   /**
    * Update store profile
    * @param {string} storeId - Store ID (_id)
@@ -132,17 +134,17 @@ const sellerService = {
         status: updateData.status,
       }
     };
-    
+
     // Remove undefined fields
     Object.keys(payload.updateData).forEach(key => {
       if (payload.updateData[key] === undefined) {
         delete payload.updateData[key];
       }
     });
-    
+
     return await axiosInstance.post(`/api/v1/store/update-store-profile/${storeId}`, payload);
   },
-  
+
   /**
    * Get store profiles for the seller
    */
@@ -150,9 +152,9 @@ const sellerService = {
     const payload = { role: 'seller' };
     return await axiosInstance.post('/api/v1/auth/seller-store-profile-info', payload);
   },
-  
+
   // Image Upload API
-  
+
   /**
    * Upload an image
    * @param {File} imageFile - The image file to upload
@@ -160,16 +162,16 @@ const sellerService = {
   uploadImage: async (imageFile) => {
     const formData = new FormData();
     formData.append('image', imageFile);
-    
+
     return await axiosInstance.post('/api/v1/store/store-images', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
   },
-  
+
   // Batch Operations
-  
+
   /**
    * Upload multiple images
    * @param {File[]} imageFiles - Array of image files
@@ -178,16 +180,16 @@ const sellerService = {
     const uploadPromises = imageFiles.map(file => {
       const formData = new FormData();
       formData.append('image', file);
-      
+
       return axiosInstance.post('/api/v1/store/store-images', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
     });
-    
+
     const results = await Promise.allSettled(uploadPromises);
-    
+
     return results.map((result, index) => ({
       status: result.status,
       data: result.status === 'fulfilled' ? result.value.data : null,
@@ -195,7 +197,7 @@ const sellerService = {
       file: imageFiles[index].name,
     }));
   },
-  
+
   /**
    * Get listing statistics for dashboard
    */
@@ -219,7 +221,7 @@ const sellerService = {
           params: { status: 'sold', page: 1, pageSize: 1 }
         }),
       ]);
-      
+
       return {
         data: {
           active: active.data.pagination.total,
@@ -242,9 +244,9 @@ const sellerService = {
       };
     }
   },
-  
+
   // Search Operations
-  
+
   /**
    * Search listings by keyword
    * @param {string} searchTerm - Search keyword
@@ -260,7 +262,7 @@ const sellerService = {
       }
     });
   },
-  
+
   /**
    * Advanced search with multiple filters
    * @param {Object} searchParams - Advanced search parameters
@@ -280,12 +282,12 @@ const sellerService = {
       page = 1,
       pageSize = 10,
     } = searchParams;
-    
+
     const params = {
       page,
       pageSize,
     };
-    
+
     if (keyword) params.search = keyword;
     if (category) params.category = category;
     if (subCategory) params.subCategory = subCategory;
@@ -297,29 +299,29 @@ const sellerService = {
     if (tags && tags.length > 0) params.tags = tags.join(',');
     if (sortBy) params.sortBy = sortBy;
     if (sortOrder) params.sortOrder = sortOrder;
-    
+
     return await axiosInstance.get('/api/v1/listing/listing-filter', { params });
   },
-  
+
   // Utility Functions
-  
+
   /**
    * Validate listing data before submission
    * @param {Object} listingData - Listing data to validate
    */
   validateListingData: (listingData) => {
     const errors = {};
-    
+
     // Required fields validation
     if (!listingData.title) errors.title = 'Title is required';
     if (!listingData.category?.main) errors.category = 'Category is required';
     if (!listingData.description) errors.description = 'Description is required';
-    
+
     // Variations validation
     if (listingData.hasVariations && (!listingData.variations || listingData.variations.length === 0)) {
       errors.variations = 'At least one variation is required';
     }
-    
+
     if (listingData.variations) {
       listingData.variations.forEach((variation, index) => {
         if (!variation.price || variation.price <= 0) {
@@ -333,18 +335,18 @@ const sellerService = {
         }
       });
     }
-    
+
     // Images validation
     if (!listingData.images || listingData.images.length === 0) {
       errors.images = 'At least one image is required';
     }
-    
+
     return {
       isValid: Object.keys(errors).length === 0,
       errors,
     };
   },
-  
+
   /**
    * Format listing data for API submission
    * @param {Object} rawData - Raw listing data from form
@@ -381,7 +383,7 @@ const sellerService = {
       updatedAt: new Date().toISOString(),
     };
   },
-  
+
   /**
    * Format store data for API submission
    * @param {Object} rawData - Raw store data from form
@@ -391,7 +393,7 @@ const sellerService = {
       // Format for update
       return rawData;
     }
-    
+
     // Format for create
     return {
       storeName: rawData.storeName,
