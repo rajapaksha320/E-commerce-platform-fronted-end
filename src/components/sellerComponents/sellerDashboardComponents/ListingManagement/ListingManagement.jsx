@@ -136,6 +136,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterPriceRange, setFilterPriceRange] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
   const [selectedListing, setSelectedListing] = useState(null);
   const [showListingDetails, setShowListingDetails] = useState(false);
 
@@ -147,6 +148,15 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
     { value: "500-1000", label: "$500 - $1,000" },
     { value: "1000-5000", label: "$1,000+" },
   ];
+
+  // Sync local filter state with Redux filters
+  useEffect(() => {
+    if (filters) {
+      setFilterCategory(filters.category || "");
+      setFilterPriceRange(filters.priceRange || "");
+      setFilterStatus(filters.status || "");
+    }
+  }, [filters]);
 
   // Load listings based on active section
   useEffect(() => {
@@ -186,7 +196,13 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
     const timeoutId = setTimeout(() => {
       if (searchQuery !== currentSearch) {
         if (searchQuery.trim()) {
-          searchListings(searchQuery, { category: filterCategory, priceRange: filterPriceRange });
+          // Combine search with current filters
+          const searchFilters = {
+            ...(filterCategory && { category: filterCategory }),
+            ...(filterPriceRange && { priceRange: filterPriceRange }),
+            ...(filterStatus && { status: filterStatus })
+          };
+          searchListings(searchQuery, searchFilters);
         } else {
           clearSearch();
         }
@@ -205,6 +221,47 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
       return () => clearTimeout(timer);
     }
   }, [success, error, clearMessages]);
+
+  // Handle filter changes
+  const handleFilterChange = async (filterType, value) => {
+    try {
+      let filterParams = {};
+      
+      if (filterType === 'category') {
+        setFilterCategory(value);
+        filterParams.category = value || undefined;
+      } else if (filterType === 'priceRange') {
+        setFilterPriceRange(value);
+        if (value) {
+          const [min, max] = value.split('-').map(Number);
+          filterParams.minPrice = min;
+          filterParams.maxPrice = max === 5000 ? undefined : max; // Handle "1000+" case
+        }
+      } else if (filterType === 'status') {
+        setFilterStatus(value);
+        filterParams.status = value || undefined;
+      }
+
+      // Apply filters through Redux
+      await applyFilters(filterParams);
+    } catch (error) {
+      console.error("Error applying filters:", error);
+    }
+  };
+
+  // Handle reset filters
+  const handleResetFilters = async () => {
+    try {
+      setSearchQuery("");
+      setFilterCategory("");
+      setFilterPriceRange("");
+      setFilterStatus("");
+      await resetFilters();
+      await clearSearch();
+    } catch (error) {
+      console.error("Error resetting filters:", error);
+    }
+  };
 
   // Get section configuration
   const getSectionConfig = () => {
@@ -525,8 +582,37 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
           </div>
 
           {/* Search and Filters */}
-          <div className="flex flex-col lg:flex-row gap-4 mt-4">
-            <div className="flex-1 relative">
+          <div className="flex flex-col gap-4 mt-4">
+            {/* Active Filters Indicator */}
+            {(searchQuery || filterCategory || filterPriceRange || filterStatus) && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Filter className="h-4 w-4" />
+                <span>Active filters:</span>
+                {searchQuery && (
+                  <Badge variant="secondary" className="text-xs">
+                    Search: "{searchQuery}"
+                  </Badge>
+                )}
+                {filterStatus && (
+                  <Badge variant="secondary" className="text-xs">
+                    Status: {filterStatus}
+                  </Badge>
+                )}
+                {filterCategory && (
+                  <Badge variant="secondary" className="text-xs">
+                    Category: {filterCategory}
+                  </Badge>
+                )}
+                {filterPriceRange && (
+                  <Badge variant="secondary" className="text-xs">
+                    Price: {priceRanges.find(r => r.value === filterPriceRange)?.label}
+                  </Badge>
+                )}
+              </div>
+            )}
+            
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1 relative">
               <SearchInput
                 placeholder="Search listings by title, SKU, or tags..."
                 value={searchQuery}
@@ -542,8 +628,21 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
 
             <div className="flex gap-3">
               <Select
+                value={filterStatus}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                placeholder="All Status"
+                disabled={isLoading}
+              >
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="paused">Paused</option>
+                <option value="draft">Draft</option>
+                <option value="out-of-stock">Out of Stock</option>
+              </Select>
+
+              <Select
                 value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
+                onChange={(e) => handleFilterChange('category', e.target.value)}
                 placeholder="All Categories"
                 disabled={isLoading}
               >
@@ -557,7 +656,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
 
               <Select
                 value={filterPriceRange}
-                onChange={(e) => setFilterPriceRange(e.target.value)}
+                onChange={(e) => handleFilterChange('priceRange', e.target.value)}
                 placeholder="All Prices"
                 disabled={isLoading}
               >
@@ -576,6 +675,17 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
               >
                 <Filter className="h-4 w-4" />
               </IconButton>
+              
+              <Button
+                variant="secondary"
+                icon={<RefreshCw />}
+                onClick={handleResetFilters}
+                disabled={isLoading || (!searchQuery && !filterCategory && !filterPriceRange && !filterStatus)}
+                title="Reset all filters and search"
+              >
+                Reset Filters
+              </Button>
+            </div>
             </div>
           </div>
         </CardHeader>
@@ -973,11 +1083,11 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                 No listings found
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {searchQuery || filterCategory || filterPriceRange
+                {searchQuery || filterCategory || filterPriceRange || filterStatus
                   ? "Try adjusting your filters or search terms."
                   : `No ${config.title.toLowerCase()} available.`}
               </p>
-              {!searchQuery && !filterCategory && !filterPriceRange && (
+              {!searchQuery && !filterCategory && !filterPriceRange && !filterStatus && (
                 <Button
                   variant="primary"
                   icon={<PlusCircle />}

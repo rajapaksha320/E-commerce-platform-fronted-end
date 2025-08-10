@@ -736,7 +736,7 @@ const Listing = () => {
     { id: "pricing", name: hasVariations ? "Variations" : "Pricing", icon: hasVariations ? Grid3X3 : DollarSign },
     { id: "details", name: "Details", icon: Package },
     { id: "media", name: "Images", icon: ImageIcon },
-    { id: "seo", name: "SEO & Tags", icon: Settings },
+    { id: "seo", name: "Tags", icon: Settings },
     { id: "shipping", name: "Shipping", icon: ShoppingCart },
   ];
 
@@ -1599,7 +1599,7 @@ const Listing = () => {
               {/* SEO & Marketing */}
               <TabsContent value="seo">
                 <div className="space-y-6">
-                  <Card>
+                  {/* <Card>
                     <CardHeader>
                       <CardTitle>SEO Settings</CardTitle>
                     </CardHeader>
@@ -1634,7 +1634,7 @@ const Listing = () => {
                         </p>
                       </FormField>
                     </CardContent>
-                  </Card>
+                  </Card> */}
 
                   <Card>
                     <CardHeader>
