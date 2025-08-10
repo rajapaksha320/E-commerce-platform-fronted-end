@@ -302,180 +302,180 @@ const sidebarNavigation = {
         },
       ],
     },
-    listings: {
-      "all-listings": [
-        {
-          type: "select",
-          label: "Status",
-          options: [
-            { value: "all", label: "All Status" },
-            { value: "active", label: "Active" },
-            { value: "paused", label: "Paused" },
-            { value: "out-of-stock", label: "Out of Stock" },
-            { value: "draft", label: "Draft" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Category",
-          options: [
-            { value: "all", label: "All Categories" },
-            { value: "electronics", label: "Electronics" },
-            { value: "gaming", label: "Gaming" },
-            { value: "fashion", label: "Fashion" },
-            { value: "home", label: "Home & Garden" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Price Range",
-          options: [
-            { value: "all", label: "All Prices" },
-            { value: "0-100", label: "$0 - $100" },
-            { value: "100-500", label: "$100 - $500" },
-            { value: "500-1000", label: "$500 - $1,000" },
-            { value: "1000-5000", label: "$1,000+" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search listings",
-          placeholder: "Product name, SKU, or tags...",
-        },
-      ],
-      "active-listings": [
-        {
-          type: "select",
-          label: "Category",
-          options: [
-            { value: "all", label: "All Categories" },
-            { value: "electronics", label: "Electronics" },
-            { value: "gaming", label: "Gaming" },
-            { value: "fashion", label: "Fashion" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Performance",
-          options: [
-            { value: "all", label: "All Performance" },
-            { value: "high-views", label: "High Views" },
-            { value: "low-conversion", label: "Low Conversion" },
-            { value: "top-rated", label: "Top Rated" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search active listings",
-          placeholder: "Product name or SKU...",
-        },
-      ],
-      "inactive-listings": [
-        {
-          type: "select",
-          label: "Reason",
-          options: [
-            { value: "all", label: "All Reasons" },
-            { value: "paused", label: "Manually Paused" },
-            { value: "policy", label: "Policy Violation" },
-            { value: "temporary", label: "Temporary Hold" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "all", label: "All Time" },
-            { value: "7days", label: "Last 7 days" },
-            { value: "30days", label: "Last 30 days" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search inactive",
-          placeholder: "Product name...",
-        },
-      ],
-      "out-of-stock": [
-        {
-          type: "select",
-          label: "Category",
-          options: [
-            { value: "all", label: "All Categories" },
-            { value: "electronics", label: "Electronics" },
-            { value: "gaming", label: "Gaming" },
-            { value: "fashion", label: "Fashion" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Priority",
-          options: [
-            { value: "all", label: "All Items" },
-            { value: "high-demand", label: "High Demand" },
-            { value: "low-stock-alert", label: "Low Stock Alert" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search out of stock",
-          placeholder: "Product name...",
-        },
-      ],
-      "draft-listings": [
-        {
-          type: "select",
-          label: "Completion Status",
-          options: [
-            { value: "all", label: "All Drafts" },
-            { value: "incomplete", label: "Incomplete" },
-            { value: "ready", label: "Ready to Publish" },
-            { value: "needs-review", label: "Needs Review" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Last Modified",
-          options: [
-            { value: "all", label: "All Time" },
-            { value: "today", label: "Today" },
-            { value: "7days", label: "Last 7 days" },
-            { value: "30days", label: "Last 30 days" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search drafts",
-          placeholder: "Draft name...",
-        },
-      ],
-      "sold-listings": [
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "30days", label: "Last 30 days" },
-            { value: "90days", label: "Last 90 days" },
-            { value: "year", label: "This year" },
-            { value: "all", label: "All time" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Sales Performance",
-          options: [
-            { value: "all", label: "All Performance" },
-            { value: "best-sellers", label: "Best Sellers" },
-            { value: "low-performers", label: "Low Performers" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search sold items",
-          placeholder: "Product name...",
-        },
-      ],
-    },
+    // listings: {
+    //   "all-listings": [
+    //     {
+    //       type: "select",
+    //       label: "Status",
+    //       options: [
+    //         { value: "all", label: "All Status" },
+    //         { value: "active", label: "Active" },
+    //         { value: "paused", label: "Paused" },
+    //         { value: "out-of-stock", label: "Out of Stock" },
+    //         { value: "draft", label: "Draft" },
+    //       ],
+    //     },
+    //     {
+    //       type: "select",
+    //       label: "Category",
+    //       options: [
+    //         { value: "all", label: "All Categories" },
+    //         { value: "electronics", label: "Electronics" },
+    //         { value: "gaming", label: "Gaming" },
+    //         { value: "fashion", label: "Fashion" },
+    //         { value: "home", label: "Home & Garden" },
+    //       ],
+    //     },
+    //     {
+    //       type: "select",
+    //       label: "Price Range",
+    //       options: [
+    //         { value: "all", label: "All Prices" },
+    //         { value: "0-100", label: "$0 - $100" },
+    //         { value: "100-500", label: "$100 - $500" },
+    //         { value: "500-1000", label: "$500 - $1,000" },
+    //         { value: "1000-5000", label: "$1,000+" },
+    //       ],
+    //     },
+    //     {
+    //       type: "search",
+    //       label: "Search listings",
+    //       placeholder: "Product name, SKU, or tags...",
+    //     },
+    //   ],
+    //   "active-listings": [
+    //     {
+    //       type: "select",
+    //       label: "Category",
+    //       options: [
+    //         { value: "all", label: "All Categories" },
+    //         { value: "electronics", label: "Electronics" },
+    //         { value: "gaming", label: "Gaming" },
+    //         { value: "fashion", label: "Fashion" },
+    //       ],
+    //     },
+    //     {
+    //       type: "select",
+    //       label: "Performance",
+    //       options: [
+    //         { value: "all", label: "All Performance" },
+    //         { value: "high-views", label: "High Views" },
+    //         { value: "low-conversion", label: "Low Conversion" },
+    //         { value: "top-rated", label: "Top Rated" },
+    //       ],
+    //     },
+    //     {
+    //       type: "search",
+    //       label: "Search active listings",
+    //       placeholder: "Product name or SKU...",
+    //     },
+    //   ],
+    //   "inactive-listings": [
+    //     {
+    //       type: "select",
+    //       label: "Reason",
+    //       options: [
+    //         { value: "all", label: "All Reasons" },
+    //         { value: "paused", label: "Manually Paused" },
+    //         { value: "policy", label: "Policy Violation" },
+    //         { value: "temporary", label: "Temporary Hold" },
+    //       ],
+    //     },
+    //     {
+    //       type: "select",
+    //       label: "Time Period",
+    //       options: [
+    //         { value: "all", label: "All Time" },
+    //         { value: "7days", label: "Last 7 days" },
+    //         { value: "30days", label: "Last 30 days" },
+    //       ],
+    //     },
+    //     {
+    //       type: "search",
+    //       label: "Search inactive",
+    //       placeholder: "Product name...",
+    //     },
+    //   ],
+    //   "out-of-stock": [
+    //     {
+    //       type: "select",
+    //       label: "Category",
+    //       options: [
+    //         { value: "all", label: "All Categories" },
+    //         { value: "electronics", label: "Electronics" },
+    //         { value: "gaming", label: "Gaming" },
+    //         { value: "fashion", label: "Fashion" },
+    //       ],
+    //     },
+    //     {
+    //       type: "select",
+    //       label: "Priority",
+    //       options: [
+    //         { value: "all", label: "All Items" },
+    //         { value: "high-demand", label: "High Demand" },
+    //         { value: "low-stock-alert", label: "Low Stock Alert" },
+    //       ],
+    //     },
+    //     {
+    //       type: "search",
+    //       label: "Search out of stock",
+    //       placeholder: "Product name...",
+    //     },
+    //   ],
+    //   "draft-listings": [
+    //     {
+    //       type: "select",
+    //       label: "Completion Status",
+    //       options: [
+    //         { value: "all", label: "All Drafts" },
+    //         { value: "incomplete", label: "Incomplete" },
+    //         { value: "ready", label: "Ready to Publish" },
+    //         { value: "needs-review", label: "Needs Review" },
+    //       ],
+    //     },
+    //     {
+    //       type: "select",
+    //       label: "Last Modified",
+    //       options: [
+    //         { value: "all", label: "All Time" },
+    //         { value: "today", label: "Today" },
+    //         { value: "7days", label: "Last 7 days" },
+    //         { value: "30days", label: "Last 30 days" },
+    //       ],
+    //     },
+    //     {
+    //       type: "search",
+    //       label: "Search drafts",
+    //       placeholder: "Draft name...",
+    //     },
+    //   ],
+    //   "sold-listings": [
+    //     {
+    //       type: "select",
+    //       label: "Time Period",
+    //       options: [
+    //         { value: "30days", label: "Last 30 days" },
+    //         { value: "90days", label: "Last 90 days" },
+    //         { value: "year", label: "This year" },
+    //         { value: "all", label: "All time" },
+    //       ],
+    //     },
+    //     {
+    //       type: "select",
+    //       label: "Sales Performance",
+    //       options: [
+    //         { value: "all", label: "All Performance" },
+    //         { value: "best-sellers", label: "Best Sellers" },
+    //         { value: "low-performers", label: "Low Performers" },
+    //       ],
+    //     },
+    //     {
+    //       type: "search",
+    //       label: "Search sold items",
+    //       placeholder: "Product name...",
+    //     },
+    //   ],
+    // },
     customer: {
       messages: [
         {
