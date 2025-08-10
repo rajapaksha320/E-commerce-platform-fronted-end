@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+// Example: components/seller/sellerDashboardComponents/ProfileManagement/ProfileManagement.jsx
+import React, { useState, useEffect } from "react";
 import {
   User,
   Camera,
@@ -9,6 +10,7 @@ import {
   Mail,
   Globe,
   Save,
+  Loader,
 } from "lucide-react";
 import {
   Button,
@@ -19,66 +21,139 @@ import {
   CardTitle,
   CardContent,
   Avatar,
+  Alert,
 } from "../../../ui/sellerUis/Uis";
+import { useSellerStore } from "../../../../hooks/useSellerStore";
+import { toast } from "react-toastify"; // Assuming you use react-toastify
 
 const ProfileManagement = () => {
-  const [activeSection, setActiveSection] = useState("basic");
+  const {
+    storeProfile,
+    storeStats,
+    loading,
+    error,
+    success,
+    message,
+    hasStore,
+    storeId,
+    createStore,
+    fetchStoreProfile,
+    updateStore,
+    uploadLogo,
+    uploadBanner,
+    clearError,
+    clearSuccess,
+  } = useSellerStore();
 
-  // Shop profile state
-  const [shopProfile, setShopProfile] = useState({
-    name: "My Shop",
-    tagline: "Quality products at great prices",
-    description:
-      "We specialize in providing high-quality products with excellent customer service.",
-    logo: "/api/placeholder/150/150",
-    coverImage: "/api/placeholder/800/300",
-    location: "New York, NY",
-    businessHours: "Mon-Fri 9AM-6PM",
-    phone: "+1 (555) 123-4567",
-    email: "contact@myshop.com",
-    website: "https://myshop.com",
-    verified: false,
-    badge: "Top Seller",
+  const [activeSection, setActiveSection] = useState("basic");
+  const [formData, setFormData] = useState({
+    storeName: "",
+    storeTagLine: "",
+    storeDescription: "",
+    storeLocation: "",
+    storeContactNumber: "",
+    storeEmail: "",
+    storeWebsite: "",
+    storeBusinessHours: "",
+    storeLogo: "",
+    bannerImage: "",
   });
+
+  // Fetch store profile on mount
+  useEffect(() => {
+    fetchStoreProfile();
+  }, [fetchStoreProfile]);
+
+  // Update form when store profile loads
+  useEffect(() => {
+    if (storeProfile) {
+      setFormData({
+        storeName: storeProfile.basicInformation?.storeName || "",
+        storeTagLine: storeProfile.basicInformation?.storeTagLine || "",
+        storeDescription: storeProfile.basicInformation?.storeDescription || "",
+        storeLocation: storeProfile.contactDetails?.storeLocation || "",
+        storeContactNumber: storeProfile.contactDetails?.storeContactNumber || "",
+        storeEmail: storeProfile.contactDetails?.storeEmail || "",
+        storeWebsite: storeProfile.contactDetails?.storeWebsite || "",
+        storeBusinessHours: storeProfile.contactDetails?.storeBusinessHours || "",
+        storeLogo: storeProfile.shopMedia?.storeLogo || "",
+        bannerImage: storeProfile.shopMedia?.bannerImage || "",
+      });
+    }
+  }, [storeProfile]);
+
+  // Handle success and error messages
+  useEffect(() => {
+    if (success && message) {
+      toast.success(message);
+      clearSuccess();
+    }
+  }, [success, message, clearSuccess]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+      clearError();
+    }
+  }, [error, clearError]);
+
+  const handleInputChange = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleImageUpload = async (type) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        try {
+          let response;
+          if (type === "logo") {
+            response = await uploadLogo(file);
+          } else {
+            response = await uploadBanner(file);
+          }
+          
+          // The URL is already updated in the store through the reducer
+          // Just update local form data
+          if (response.payload?.url) {
+            setFormData((prev) => ({
+              ...prev,
+              [type === "logo" ? "storeLogo" : "bannerImage"]: response.payload.url,
+            }));
+          }
+        } catch (error) {
+          console.error("Error uploading image:", error);
+        }
+      }
+    };
+    input.click();
+  };
+
+  const handleSave = async () => {
+    try {
+      if (hasStore && storeId) {
+        // Update existing store
+        await updateStore(storeId, formData);
+      } else {
+        // Create new store
+        await createStore(formData);
+      }
+    } catch (error) {
+      console.error("Error saving store:", error);
+    }
+  };
 
   const sections = [
     { id: "basic", name: "Basic Information", icon: User },
     { id: "contact", name: "Contact Details", icon: Phone },
     { id: "media", name: "Shop Media", icon: Camera },
   ];
-
-  const handleInputChange = (field, value) => {
-    setShopProfile((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleImageUpload = (type) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setShopProfile((prev) => ({
-            ...prev,
-            [type]: e.target.result,
-          }));
-        };
-        reader.readAsDataURL(file);
-      }
-    };
-    input.click();
-  };
-
-  const handleSave = () => {
-    // Handle save logic here
-    console.log("Saving profile...", shopProfile);
-    alert("Profile updated successfully!");
-  };
 
   const renderBasicInformation = () => (
     <div className="space-y-6">
@@ -87,15 +162,35 @@ const ProfileManagement = () => {
           <CardTitle>Shop Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Display non-editable stats */}
+          {hasStore && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+              <div>
+                <p className="text-sm text-gray-600">Total Sales</p>
+                <p className="text-xl font-bold">{storeStats.totalSales}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Products</p>
+                <p className="text-xl font-bold">{storeStats.totalProducts}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Rating</p>
+                <p className="text-xl font-bold">⭐ {storeStats.rating}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Status</p>
+                <p className="text-xl font-bold capitalize">{storeProfile?.status}</p>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Shop Name *
             </label>
             <Input
-              value={shopProfile.name}
-              onChange={(e) =>
-                handleInputChange("name", e.target.value)
-              }
+              value={formData.storeName}
+              onChange={(e) => handleInputChange("storeName", e.target.value)}
               placeholder="Enter your shop name"
             />
           </div>
@@ -105,10 +200,8 @@ const ProfileManagement = () => {
               Tagline
             </label>
             <Input
-              value={shopProfile.tagline}
-              onChange={(e) =>
-                handleInputChange("tagline", e.target.value)
-              }
+              value={formData.storeTagLine}
+              onChange={(e) => handleInputChange("storeTagLine", e.target.value)}
               placeholder="A short description of your shop"
             />
           </div>
@@ -118,32 +211,12 @@ const ProfileManagement = () => {
               Shop Description
             </label>
             <textarea
-              value={shopProfile.description}
-              onChange={(e) =>
-                handleInputChange("description", e.target.value)
-              }
+              value={formData.storeDescription}
+              onChange={(e) => handleInputChange("storeDescription", e.target.value)}
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="Describe your shop, what you sell, and what makes you unique..."
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Shop Badge
-            </label>
-            <Select
-              value={shopProfile.badge}
-              onChange={(e) =>
-                handleInputChange("badge", e.target.value)
-              }
-            >
-              <option value="">No Badge</option>
-              <option value="Top Seller">Top Seller</option>
-              <option value="Verified">Verified</option>
-              <option value="Premium">Premium</option>
-              <option value="New Seller">New Seller</option>
-            </Select>
           </div>
         </CardContent>
       </Card>
@@ -163,10 +236,8 @@ const ProfileManagement = () => {
               Location
             </label>
             <Input
-              value={shopProfile.location}
-              onChange={(e) =>
-                handleInputChange("location", e.target.value)
-              }
+              value={formData.storeLocation}
+              onChange={(e) => handleInputChange("storeLocation", e.target.value)}
               placeholder="City, State/Country"
             />
           </div>
@@ -177,10 +248,8 @@ const ProfileManagement = () => {
               Phone Number
             </label>
             <Input
-              value={shopProfile.phone}
-              onChange={(e) =>
-                handleInputChange("phone", e.target.value)
-              }
+              value={formData.storeContactNumber}
+              onChange={(e) => handleInputChange("storeContactNumber", e.target.value)}
               placeholder="+1 (555) 123-4567"
             />
           </div>
@@ -192,10 +261,8 @@ const ProfileManagement = () => {
             </label>
             <Input
               type="email"
-              value={shopProfile.email}
-              onChange={(e) =>
-                handleInputChange("email", e.target.value)
-              }
+              value={formData.storeEmail}
+              onChange={(e) => handleInputChange("storeEmail", e.target.value)}
               placeholder="contact@yourshop.com"
             />
           </div>
@@ -206,10 +273,8 @@ const ProfileManagement = () => {
               Website URL
             </label>
             <Input
-              value={shopProfile.website}
-              onChange={(e) =>
-                handleInputChange("website", e.target.value)
-              }
+              value={formData.storeWebsite}
+              onChange={(e) => handleInputChange("storeWebsite", e.target.value)}
               placeholder="https://yourshop.com"
             />
           </div>
@@ -220,10 +285,8 @@ const ProfileManagement = () => {
               Business Hours
             </label>
             <Input
-              value={shopProfile.businessHours}
-              onChange={(e) =>
-                handleInputChange("businessHours", e.target.value)
-              }
+              value={formData.storeBusinessHours}
+              onChange={(e) => handleInputChange("storeBusinessHours", e.target.value)}
               placeholder="Mon-Fri 9AM-6PM"
             />
           </div>
@@ -245,12 +308,17 @@ const ProfileManagement = () => {
               Shop Logo
             </label>
             <div className="flex items-center space-x-4">
-              <Avatar size="lg" src={shopProfile.logo} fallback="Logo" />
+              <Avatar 
+                size="lg" 
+                src={formData.storeLogo} 
+                fallback="Logo" 
+              />
               <div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleImageUpload("logo")}
+                  disabled={loading}
                 >
                   <Upload className="h-4 w-4 mr-2" />
                   Upload Logo
@@ -270,15 +338,16 @@ const ProfileManagement = () => {
             <div className="space-y-4">
               <div className="relative h-32 bg-gray-100 rounded-lg overflow-hidden">
                 <img
-                  src={shopProfile.coverImage}
+                  src={formData.bannerImage || "/api/placeholder/800/300"}
                   alt="Cover"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
                 <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => handleImageUpload("coverImage")}
+                    onClick={() => handleImageUpload("banner")}
+                    disabled={loading}
                   >
                     <Camera className="h-4 w-4 mr-2" />
                     Change Cover
@@ -317,14 +386,34 @@ const ProfileManagement = () => {
             Shop Management
           </h1>
           <p className="text-gray-600">
-            Manage your shop  and settings
+            Manage your shop profile and settings
           </p>
         </div>
-        <Button variant="primary" onClick={handleSave}>
-          <Save className="h-4 w-4 mr-2" />
-          Save Changes
+        <Button 
+          variant="primary" 
+          onClick={handleSave}
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader className="h-4 w-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              {hasStore ? "Update Shop" : "Create Shop"}
+            </>
+          )}
         </Button>
       </div>
+
+      {/* Show error alert if exists */}
+      {error && (
+        <Alert variant="danger" title="Error">
+          {error}
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar Navigation */}
@@ -355,7 +444,15 @@ const ProfileManagement = () => {
         </div>
 
         {/* Main Content */}
-        <div className="lg:col-span-3">{renderContent()}</div>
+        <div className="lg:col-span-3">
+          {loading && !storeProfile ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            renderContent()
+          )}
+        </div>
       </div>
     </div>
   );
