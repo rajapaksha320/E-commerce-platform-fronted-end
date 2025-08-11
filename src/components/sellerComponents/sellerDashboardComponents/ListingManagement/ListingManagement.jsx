@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Eye,
@@ -106,15 +106,6 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
   } = usePagination();
 
   const {
-    searchListings,
-    advancedSearch,
-    clearSearch,
-    currentSearch,
-    filters,
-    isSearching,
-  } = useSearch();
-
-  const {
     selectedIds,
     selectedCount,
     selectListing,
@@ -139,6 +130,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
   const [filterStatus, setFilterStatus] = useState("");
   const [selectedListing, setSelectedListing] = useState(null);
   const [showListingDetails, setShowListingDetails] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Categories for filtering - matching the backend
   const categories = [
@@ -156,14 +148,27 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
     { value: "1000-5000", label: "$1,000+" },
   ];
 
+  // Debounced filter function
+  const debouncedApplyFilters = useCallback(
+    debounce(async (filterParams) => {
+      try {
+        setIsSearching(true);
+        console.log('Applying filters:', filterParams);
+        await applyFilters(filterParams);
+      } catch (error) {
+        console.error("Error applying filters:", error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500),
+    [applyFilters]
+  );
+
   // Load listings based on active section and backend status
   useEffect(() => {
     const loadListings = async () => {
       try {
         console.log('Loading listings for section:', activeSection, 'Backend status:', backendStatus);
-        
-        // Clear any existing filters first
-        await resetFilters();
         
         if (backendStatus) {
           // Use status-specific fetch for specific statuses
@@ -178,35 +183,61 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
     };
 
     loadListings();
-  }, [activeSection, backendStatus, fetchByStatus, refreshListings, resetFilters]);
+  }, [activeSection, backendStatus]);
 
   // Handle search with debouncing
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchQuery !== currentSearch) {
-        if (searchQuery.trim()) {
-          // Combine search with current filters and section status
-          const searchFilters = {
-            search: searchQuery,
-            ...(filterCategory && { category: filterCategory }),
-            ...(filterPriceRange && { priceRange: filterPriceRange }),
-            ...(filterStatus && { status: filterStatus }),
-            ...(backendStatus && !filterStatus && { status: backendStatus }), // Use section status if no explicit filter
-          };
-          searchListings(searchQuery, searchFilters);
-        } else {
-          // If search is cleared, reload based on section
-          if (backendStatus) {
-            fetchByStatus(backendStatus);
-          } else {
-            clearSearch();
-          }
-        }
+    const buildFilterParams = () => {
+      const params = {};
+      
+      // Add search if present
+      if (searchQuery.trim()) {
+        params.search = searchQuery.trim();
       }
-    }, 300);
+      
+      // Add category filter
+      if (filterCategory) {
+        params.category = filterCategory;
+      }
+      
+      // Add price range filter
+      if (filterPriceRange) {
+        params.priceRange = filterPriceRange;
+      }
+      
+      // Add status filter
+      if (filterStatus) {
+        params.status = filterStatus;
+      } else if (backendStatus) {
+        // Use section status if no explicit filter
+        params.status = backendStatus;
+      }
+      
+      // Add pagination
+      params.page = 1;
+      params.pageSize = 10;
+      
+      return params;
+    };
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, filterCategory, filterPriceRange, filterStatus, backendStatus, searchListings, clearSearch, currentSearch, fetchByStatus]);
+    // Only apply filters if there are actual filter parameters
+    const filterParams = buildFilterParams();
+    const hasFilters = Object.keys(filterParams).some(key => 
+      key !== 'page' && key !== 'pageSize' && filterParams[key]
+    );
+
+    if (hasFilters) {
+      console.log('Triggering search/filter with params:', filterParams);
+      debouncedApplyFilters(filterParams);
+    } else if (!searchQuery && !filterCategory && !filterPriceRange && !filterStatus) {
+      // If no filters, reload based on section
+      if (backendStatus) {
+        fetchByStatus(backendStatus);
+      } else {
+        refreshListings();
+      }
+    }
+  }, [searchQuery, filterCategory, filterPriceRange, filterStatus, backendStatus, debouncedApplyFilters, fetchByStatus, refreshListings]);
 
   // Clear messages when component unmounts or success/error changes
   useEffect(() => {
@@ -219,36 +250,28 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
   }, [success, error, clearMessages]);
 
   // Handle filter changes
-  const handleFilterChange = async (filterType, value) => {
-    try {
-      let filterParams = {
-        ...(searchQuery && { search: searchQuery }),
-        ...(backendStatus && { status: backendStatus }), // Always include section status as base
-      };
-      
-      if (filterType === 'category') {
-        setFilterCategory(value);
-        if (value) filterParams.category = value;
-      } else if (filterType === 'priceRange') {
-        setFilterPriceRange(value);
-        if (value) filterParams.priceRange = value;
-      } else if (filterType === 'status') {
-        setFilterStatus(value);
-        if (value) {
-          filterParams.status = value; // Override section status with explicit filter
-        }
-      }
-
-      // Apply filters through Redux
-      await applyFilters(filterParams);
-    } catch (error) {
-      console.error("Error applying filters:", error);
+  const handleFilterChange = useCallback((filterType, value) => {
+    console.log(`Filter change: ${filterType} = ${value}`);
+    
+    if (filterType === 'category') {
+      setFilterCategory(value);
+    } else if (filterType === 'priceRange') {
+      setFilterPriceRange(value);
+    } else if (filterType === 'status') {
+      setFilterStatus(value);
     }
-  };
+  }, []);
+
+  // Handle search change
+  const handleSearchChange = useCallback((value) => {
+    console.log('Search change:', value);
+    setSearchQuery(value);
+  }, []);
 
   // Handle reset filters
-  const handleResetFilters = async () => {
+  const handleResetFilters = useCallback(async () => {
     try {
+      console.log('Resetting filters');
       setSearchQuery("");
       setFilterCategory("");
       setFilterPriceRange("");
@@ -265,7 +288,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
     } catch (error) {
       console.error("Error resetting filters:", error);
     }
-  };
+  }, [resetFilters, backendStatus, fetchByStatus, refreshListings]);
 
   // Get section configuration
   const getSectionConfig = () => {
@@ -606,6 +629,9 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
     });
   }, [listings, sortField, sortDirection]);
 
+  const hasActiveFilters = searchQuery || filterCategory || filterPriceRange || filterStatus;
+  const currentIsLoading = isLoading || isSearching;
+
   return (
     <div className="space-y-6">
       {/* Success/Error Messages */}
@@ -638,7 +664,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
             </div>
 
             <div className="flex items-center gap-3">
-              {isLoading && (
+              {currentIsLoading && (
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <LoadingSpinner size="sm" />
                   <span>Loading...</span>
@@ -648,7 +674,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                 variant="primary"
                 icon={<PlusCircle />}
                 onClick={handleCreateListing}
-                disabled={isLoading}
+                disabled={currentIsLoading}
               >
                 Add Listing
               </Button>
@@ -656,7 +682,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                 variant="secondary" 
                 icon={<RefreshCw />}
                 onClick={handleRefresh}
-                disabled={isLoading}
+                disabled={currentIsLoading}
               >
                 Refresh
               </Button>
@@ -666,7 +692,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
           {/* Search and Filters */}
           <div className="flex flex-col gap-4 mt-4">
             {/* Active Filters Indicator */}
-            {(searchQuery || filterCategory || filterPriceRange || filterStatus) && (
+            {hasActiveFilters && (
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Filter className="h-4 w-4" />
                 <span>Active filters:</span>
@@ -698,8 +724,8 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                 <SearchInput
                   placeholder="Search listings by title, SKU, or tags..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  disabled={isSearching || isLoading}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  disabled={currentIsLoading}
                 />
                 {isSearching && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -714,7 +740,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                   <Select
                     value={filterStatus}
                     onChange={(e) => handleFilterChange('status', e.target.value)}
-                    disabled={isLoading}
+                    disabled={currentIsLoading}
                   >
                     <option value="">All Status</option>
                     <option value="active">Active</option>
@@ -728,7 +754,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                 <Select
                   value={filterCategory}
                   onChange={(e) => handleFilterChange('category', e.target.value)}
-                  disabled={isLoading}
+                  disabled={currentIsLoading}
                 >
                   <option value="">All Categories</option>
                   {categories.map((category) => (
@@ -741,7 +767,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                 <Select
                   value={filterPriceRange}
                   onChange={(e) => handleFilterChange('priceRange', e.target.value)}
-                  disabled={isLoading}
+                  disabled={currentIsLoading}
                 >
                   <option value="">All Prices</option>
                   {priceRanges.map((range) => (
@@ -755,7 +781,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                   variant="secondary"
                   icon={<RefreshCw />}
                   onClick={handleResetFilters}
-                  disabled={isLoading || (!searchQuery && !filterCategory && !filterPriceRange && !filterStatus)}
+                  disabled={currentIsLoading || !hasActiveFilters}
                   title="Reset all filters and search"
                 >
                   Reset Filters
@@ -799,7 +825,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                   variant="ghost" 
                   size="sm"
                   onClick={previousPage}
-                  disabled={!hasPreviousPage || isLoading}
+                  disabled={!hasPreviousPage || currentIsLoading}
                 >
                   ←
                 </IconButton>
@@ -807,7 +833,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                   variant="ghost" 
                   size="sm"
                   onClick={nextPage}
-                  disabled={!hasNextPage || isLoading}
+                  disabled={!hasNextPage || currentIsLoading}
                 >
                   →
                 </IconButton>
@@ -817,7 +843,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
         </CardHeader>
 
         <CardContent className="p-0 relative">
-          {isLoading && (
+          {currentIsLoading && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
               <div className="flex items-center gap-3 text-gray-600">
                 <LoadingSpinner size="md" />
@@ -1157,18 +1183,18 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
           </Table>
 
           {/* Empty State */}
-          {!isLoading && sortedListings.length === 0 && (
+          {!currentIsLoading && sortedListings.length === 0 && (
             <div className="text-center py-12">
               <Package className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">
                 No listings found
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {searchQuery || filterCategory || filterPriceRange || filterStatus
+                {hasActiveFilters
                   ? "Try adjusting your filters or search terms."
                   : `No ${config.title.toLowerCase()} available.`}
               </p>
-              {!searchQuery && !filterCategory && !filterPriceRange && !filterStatus && (
+              {!hasActiveFilters && (
                 <Button
                   variant="primary"
                   icon={<PlusCircle />}
@@ -1232,9 +1258,9 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
             variant="danger" 
             onClick={confirmDeletion} 
             icon={<Trash2 />}
-            disabled={isLoading}
+            disabled={currentIsLoading}
           >
-            {isLoading ? "Deleting..." : "Delete Listing"}
+            {currentIsLoading ? "Deleting..." : "Delete Listing"}
           </Button>
         </ModalFooter>
       </Modal>
@@ -1275,9 +1301,9 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
           <Button 
             variant="primary" 
             onClick={handleBulkAction}
-            disabled={!bulkAction || isLoading}
+            disabled={!bulkAction || currentIsLoading}
           >
-            {isLoading ? "Applying..." : "Apply Action"}
+            {currentIsLoading ? "Applying..." : "Apply Action"}
           </Button>
         </ModalFooter>
       </Modal>
@@ -1296,5 +1322,18 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
     </div>
   );
 };
+
+// Debounce utility function
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
 export default ListingManagement;

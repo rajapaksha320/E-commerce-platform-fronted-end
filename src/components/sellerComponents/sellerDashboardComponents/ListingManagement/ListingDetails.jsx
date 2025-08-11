@@ -389,14 +389,14 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
       <Modal
         isOpen={true}
         onClose={onClose}
-        size="4xl"
+        size="6xl"
         title=""
         hideCloseButton={false}
       >
-        <ModalContent className="p-0 max-h-[90vh] overflow-hidden">
+        <ModalContent className="p-0 h-[85vh] flex flex-col">
           {/* Success/Error Messages */}
           {(error || success) && (
-            <div className="p-4 border-b border-gray-200">
+            <div className="p-4 border-b border-gray-200 flex-shrink-0">
               <Alert
                 variant={success ? "success" : "danger"}
                 title={success ? "Success" : "Error"}
@@ -408,7 +408,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
           )}
 
           {/* Header */}
-          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
@@ -477,451 +477,453 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
             </div>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-12 gap-6 p-6">
-              {/* Left Column - Images */}
-              <div className="col-span-5">
-                <div className="space-y-4">
-                  {/* Main Image */}
-                  <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                    <img
-                      src={mainImages[selectedImageIndex]}
-                      alt={listing.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.src = "/api/placeholder/400/400";
-                      }}
-                    />
-                  </div>
-                  
-                  {/* Image Thumbnails */}
-                  {mainImages.length > 1 && (
-                    <div className="grid grid-cols-4 gap-2">
-                      {mainImages.map((image, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setSelectedImageIndex(index)}
-                          className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
-                            selectedImageIndex === index 
-                              ? 'border-blue-500' 
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <img
-                            src={image}
-                            alt={`${listing.title} - ${index + 1}`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.target.src = "/api/placeholder/100/100";
-                            }}
-                          />
-                        </button>
-                      ))}
+          {/* Content - Scrollable */}
+          <div className="flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto">
+              <div className="grid grid-cols-12 gap-6 p-6">
+                {/* Left Column - Images */}
+                <div className="col-span-5">
+                  <div className="space-y-4 sticky top-0">
+                    {/* Main Image */}
+                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                      <img
+                        src={mainImages[selectedImageIndex]}
+                        alt={listing.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = "/api/placeholder/400/400";
+                        }}
+                      />
                     </div>
-                  )}
+                    
+                    {/* Image Thumbnails */}
+                    {mainImages.length > 1 && (
+                      <div className="grid grid-cols-4 gap-2">
+                        {mainImages.map((image, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setSelectedImageIndex(index)}
+                            className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
+                              selectedImageIndex === index 
+                                ? 'border-blue-500' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <img
+                              src={image}
+                              alt={`${listing.title} - ${index + 1}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.src = "/api/placeholder/100/100";
+                              }}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Right Column - Details */}
-              <div className="col-span-7">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-4 mb-6">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="details">Details</TabsTrigger>
-                    <TabsTrigger value="performance">Performance</TabsTrigger>
-                    <TabsTrigger value="shipping">Shipping</TabsTrigger>
-                  </TabsList>
+                {/* Right Column - Details */}
+                <div className="col-span-7">
+                  <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList className="grid w-full grid-cols-4 mb-6">
+                      <TabsTrigger value="overview">Overview</TabsTrigger>
+                      <TabsTrigger value="details">Details</TabsTrigger>
+                      <TabsTrigger value="performance">Performance</TabsTrigger>
+                      <TabsTrigger value="shipping">Shipping</TabsTrigger>
+                    </TabsList>
 
-                  {/* Overview Tab */}
-                  <TabsContent value="overview" className="space-y-6">
-                    {/* Basic Information */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Info className="h-5 w-5" />
-                          Basic Information
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <CopyField
-                            label="Product Title"
-                            value={listing.title}
-                            icon={<Tag />}
-                            onCopy={() => handleCopy("title", listing.title)}
-                            copied={copiedFields.title}
-                          />
-                          <CopyField
-                            label="Brand"
-                            value={listing.brand || 'N/A'}
-                            icon={<Award />}
-                            onCopy={() => handleCopy("brand", listing.brand || 'N/A')}
-                            copied={copiedFields.brand}
-                          />
-                        </div>
-                        
-                        <CopyField
-                          label="Category"
-                          value={`${listing.category?.main || listing.category}${listing.category?.sub ? ` > ${listing.category.sub}` : ''}`}
-                          icon={<Grid />}
-                          onCopy={() => handleCopy("category", `${listing.category?.main || listing.category} > ${listing.category?.sub || ''}`)}
-                          copied={copiedFields.category}
-                        />
-
-                        <div>
-                          <label className="text-sm font-medium text-gray-700 mb-2 block">Description</label>
-                          <div className="bg-gray-50 rounded-lg p-4 border">
-                            <p className="text-gray-700 text-sm leading-relaxed">{listing.description}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Pricing Information */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <DollarSign className="h-5 w-5" />
-                          Pricing & Inventory
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-700">Current Price</label>
-                            <p className="text-2xl font-bold text-green-600">
-                              ${parseFloat(pricingInfo.price || 0).toLocaleString()}
-                            </p>
-                          </div>
-                          {pricingInfo.originalPrice && pricingInfo.originalPrice > pricingInfo.price && (
-                            <div>
-                              <label className="text-sm font-medium text-gray-700">Original Price</label>
-                              <p className="text-lg text-gray-500 line-through">
-                                ${parseFloat(pricingInfo.originalPrice).toLocaleString()}
-                              </p>
-                              <div className="text-xs text-green-600 font-medium">
-                                {Math.round(((pricingInfo.originalPrice - pricingInfo.price) / pricingInfo.originalPrice) * 100)}% OFF
-                              </div>
-                            </div>
-                          )}
-                          <div>
-                            <label className="text-sm font-medium text-gray-700">Quantity in Stock</label>
-                            <p className={`text-2xl font-bold ${
-                              (pricingInfo.quantity || 0) === 0 ? "text-red-600" :
-                              (pricingInfo.quantity || 0) < 5 ? "text-orange-600" : "text-green-600"
-                            }`}>
-                              {pricingInfo.quantity || 0}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Tags */}
-                    {listing.productTags?.length > 0 && (
+                    {/* Overview Tab */}
+                    <TabsContent value="overview" className="space-y-6">
+                      {/* Basic Information */}
                       <Card>
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2">
-                            <Tag className="h-5 w-5" />
-                            Product Tags ({listing.productTags.length})
+                            <Info className="h-5 w-5" />
+                            Basic Information
                           </CardTitle>
                         </CardHeader>
-                        <CardContent>
-                          <div className="flex flex-wrap gap-2">
-                            {listing.productTags.map((tag, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
+                        <CardContent className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <CopyField
+                              label="Product Title"
+                              value={listing.title}
+                              icon={<Tag />}
+                              onCopy={() => handleCopy("title", listing.title)}
+                              copied={copiedFields.title}
+                            />
+                            <CopyField
+                              label="Brand"
+                              value={listing.brand || 'N/A'}
+                              icon={<Award />}
+                              onCopy={() => handleCopy("brand", listing.brand || 'N/A')}
+                              copied={copiedFields.brand}
+                            />
+                          </div>
+                          
+                          <CopyField
+                            label="Category"
+                            value={`${listing.category?.main || listing.category}${listing.category?.sub ? ` > ${listing.category.sub}` : ''}`}
+                            icon={<Grid />}
+                            onCopy={() => handleCopy("category", `${listing.category?.main || listing.category} > ${listing.category?.sub || ''}`)}
+                            copied={copiedFields.category}
+                          />
+
+                          <div>
+                            <label className="text-sm font-medium text-gray-700 mb-2 block">Description</label>
+                            <div className="bg-gray-50 rounded-lg p-4 border max-h-32 overflow-y-auto">
+                              <p className="text-gray-700 text-sm leading-relaxed">{listing.description}</p>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
-                    )}
-                  </TabsContent>
 
-                  {/* Details Tab */}
-                  <TabsContent value="details" className="space-y-6">
-                    {/* Variations */}
-                    {listing.hasVariations && listing.variations?.length > 0 && (
+                      {/* Pricing Information */}
                       <Card>
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2">
-                            <Grid className="h-5 w-5" />
-                            Variations ({listing.variations.length})
+                            <DollarSign className="h-5 w-5" />
+                            Pricing & Inventory
                           </CardTitle>
                         </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            {listing.variations.map((variation, index) => (
-                              <div key={variation.id || index} className="border border-gray-200 rounded-lg p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                  <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                                    {variation.name || `Variation #${index + 1}`}
-                                    {variation.isDefault && (
-                                      <Badge variant="primary" size="sm">Default</Badge>
-                                    )}
-                                  </h4>
+                        <CardContent className="space-y-4">
+                          <div className="grid grid-cols-3 gap-4">
+                            <div>
+                              <label className="text-sm font-medium text-gray-700">Current Price</label>
+                              <p className="text-2xl font-bold text-green-600">
+                                ${parseFloat(pricingInfo.price || 0).toLocaleString()}
+                              </p>
+                            </div>
+                            {pricingInfo.originalPrice && pricingInfo.originalPrice > pricingInfo.price && (
+                              <div>
+                                <label className="text-sm font-medium text-gray-700">Original Price</label>
+                                <p className="text-lg text-gray-500 line-through">
+                                  ${parseFloat(pricingInfo.originalPrice).toLocaleString()}
+                                </p>
+                                <div className="text-xs text-green-600 font-medium">
+                                  {Math.round(((pricingInfo.originalPrice - pricingInfo.price) / pricingInfo.originalPrice) * 100)}% OFF
                                 </div>
-                                
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                  <div>
-                                    <span className="text-gray-500 font-medium">Price:</span>
-                                    <span className="ml-2 font-semibold text-green-600">
-                                      ${parseFloat(variation.price || 0).toLocaleString()}
-                                    </span>
+                              </div>
+                            )}
+                            <div>
+                              <label className="text-sm font-medium text-gray-700">Quantity in Stock</label>
+                              <p className={`text-2xl font-bold ${
+                                (pricingInfo.quantity || 0) === 0 ? "text-red-600" :
+                                (pricingInfo.quantity || 0) < 5 ? "text-orange-600" : "text-green-600"
+                              }`}>
+                                {pricingInfo.quantity || 0}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Tags */}
+                      {listing.productTags?.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Tag className="h-5 w-5" />
+                              Product Tags ({listing.productTags.length})
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex flex-wrap gap-2">
+                              {listing.productTags.map((tag, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </TabsContent>
+
+                    {/* Details Tab */}
+                    <TabsContent value="details" className="space-y-6">
+                      {/* Variations */}
+                      {listing.hasVariations && listing.variations?.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Grid className="h-5 w-5" />
+                              Variations ({listing.variations.length})
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4 max-h-96 overflow-y-auto">
+                              {listing.variations.map((variation, index) => (
+                                <div key={variation.id || index} className="border border-gray-200 rounded-lg p-4">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                                      {variation.name || `Variation #${index + 1}`}
+                                      {variation.isDefault && (
+                                        <Badge variant="primary" size="sm">Default</Badge>
+                                      )}
+                                    </h4>
                                   </div>
-                                  <div>
-                                    <span className="text-gray-500 font-medium">Quantity:</span>
-                                    <span className="ml-2 font-semibold">{variation.quantity || 0}</span>
-                                  </div>
-                                  {variation.sku && (
+                                  
+                                  <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
-                                      <span className="text-gray-500 font-medium">SKU:</span>
-                                      <span className="ml-2 font-mono text-xs">{variation.sku}</span>
+                                      <span className="text-gray-500 font-medium">Price:</span>
+                                      <span className="ml-2 font-semibold text-green-600">
+                                        ${parseFloat(variation.price || 0).toLocaleString()}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-500 font-medium">Quantity:</span>
+                                      <span className="ml-2 font-semibold">{variation.quantity || 0}</span>
+                                    </div>
+                                    {variation.sku && (
+                                      <div>
+                                        <span className="text-gray-500 font-medium">SKU:</span>
+                                        <span className="ml-2 font-mono text-xs">{variation.sku}</span>
+                                      </div>
+                                    )}
+                                    {variation.color?.length > 0 && (
+                                      <div className="flex items-center">
+                                        <span className="text-gray-500 font-medium">Color:</span>
+                                        <div className="ml-2 flex items-center gap-2">
+                                          <div
+                                            className="w-5 h-5 rounded border border-gray-300 shadow-sm"
+                                            style={{ backgroundColor: variation.color[0] }}
+                                          />
+                                          <span className="text-sm font-medium">{variation.color[0]}</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {variation.sizes?.length > 0 && (
+                                    <div className="mt-3">
+                                      <span className="text-gray-500 font-medium text-sm">Sizes:</span>
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {variation.sizes.map((size, sizeIndex) => (
+                                          <Badge key={sizeIndex} variant="outline" size="xs">
+                                            {size}
+                                          </Badge>
+                                        ))}
+                                      </div>
                                     </div>
                                   )}
-                                  {variation.color?.length > 0 && (
-                                    <div className="flex items-center">
-                                      <span className="text-gray-500 font-medium">Color:</span>
-                                      <div className="ml-2 flex items-center gap-2">
-                                        <div
-                                          className="w-5 h-5 rounded border border-gray-300 shadow-sm"
-                                          style={{ backgroundColor: variation.color[0] }}
-                                        />
-                                        <span className="text-sm font-medium">{variation.color[0]}</span>
+
+                                  {variation.images?.length > 0 && (
+                                    <div className="mt-3">
+                                      <span className="text-gray-500 font-medium text-sm">Images:</span>
+                                      <div className="flex gap-2 mt-2">
+                                        {variation.images.slice(0, 4).map((image, imgIndex) => (
+                                          <img
+                                            key={imgIndex}
+                                            src={extractImageUrl(image)}
+                                            alt={`${variation.name} - ${imgIndex + 1}`}
+                                            className="w-12 h-12 rounded border border-gray-200 object-cover"
+                                            onError={(e) => {
+                                              e.target.src = "/api/placeholder/48/48";
+                                            }}
+                                          />
+                                        ))}
+                                        {variation.images.length > 4 && (
+                                          <div className="w-12 h-12 rounded border border-gray-200 bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+                                            +{variation.images.length - 4}
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   )}
                                 </div>
-
-                                {variation.sizes?.length > 0 && (
-                                  <div className="mt-3">
-                                    <span className="text-gray-500 font-medium text-sm">Sizes:</span>
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                      {variation.sizes.map((size, sizeIndex) => (
-                                        <Badge key={sizeIndex} variant="outline" size="xs">
-                                          {size}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {variation.images?.length > 0 && (
-                                  <div className="mt-3">
-                                    <span className="text-gray-500 font-medium text-sm">Images:</span>
-                                    <div className="flex gap-2 mt-2">
-                                      {variation.images.slice(0, 4).map((image, imgIndex) => (
-                                        <img
-                                          key={imgIndex}
-                                          src={extractImageUrl(image)}
-                                          alt={`${variation.name} - ${imgIndex + 1}`}
-                                          className="w-12 h-12 rounded border border-gray-200 object-cover"
-                                          onError={(e) => {
-                                            e.target.src = "/api/placeholder/48/48";
-                                          }}
-                                        />
-                                      ))}
-                                      {variation.images.length > 4 && (
-                                        <div className="w-12 h-12 rounded border border-gray-200 bg-gray-100 flex items-center justify-center text-xs text-gray-500">
-                                          +{variation.images.length - 4}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Physical Properties */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Package className="h-5 w-5" />
-                          Physical Properties
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-2 gap-6">
-                        {listing.weight && (
-                          <div>
-                            <label className="text-sm font-medium text-gray-700">Weight</label>
-                            <p className="text-gray-900 font-semibold">{listing.weight} lbs</p>
-                          </div>
-                        )}
-                        {(listing.dimensions?.length || listing.dimensions?.width || listing.dimensions?.height) && (
-                          <div>
-                            <label className="text-sm font-medium text-gray-700">Dimensions</label>
-                            <p className="text-gray-900 font-semibold">
-                              {listing.dimensions.length || 0}" × {listing.dimensions.width || 0}" × {listing.dimensions.height || 0}"
-                            </p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  {/* Performance Tab */}
-                  <TabsContent value="performance" className="space-y-6">
-                    {/* Performance Metrics */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <BarChart3 className="h-5 w-5" />
-                          Performance Metrics
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-2 gap-6">
-                        <div className="text-center p-4 bg-blue-50 rounded-lg">
-                          <Eye className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                          <p className="text-2xl font-bold text-blue-900">
-                            {listing.views || 0}
-                          </p>
-                          <p className="text-sm text-blue-700">Total Views</p>
-                        </div>
-                        <div className="text-center p-4 bg-red-50 rounded-lg">
-                          <Heart className="h-8 w-8 text-red-600 mx-auto mb-2" />
-                          <p className="text-2xl font-bold text-red-900">
-                            {listing.favorites || 0}
-                          </p>
-                          <p className="text-sm text-red-700">Favorites</p>
-                        </div>
-                        <div className="text-center p-4 bg-green-50 rounded-lg">
-                          <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                          <p className="text-2xl font-bold text-green-900">
-                            {metrics.conversionRate}%
-                          </p>
-                          <p className="text-sm text-green-700">Conversion Rate</p>
-                        </div>
-                        <div className="text-center p-4 bg-purple-50 rounded-lg">
-                          <DollarSign className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-                          <p className="text-2xl font-bold text-purple-900">
-                            ${metrics.revenue.toLocaleString()}
-                          </p>
-                          <p className="text-sm text-purple-700">Total Revenue</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Sales Summary */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Sales Summary</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-3 gap-6">
-                          <div>
-                            <label className="text-sm font-medium text-gray-700">Units Sold</label>
-                            <p className="text-3xl font-bold text-gray-900">
-                              {listing.sold || 0}
-                            </p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-700">Total Revenue</label>
-                            <p className="text-3xl font-bold text-green-600">
-                              ${metrics.revenue.toLocaleString()}
-                            </p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-700">Average Rating</label>
-                            <div className="flex items-center gap-2">
-                              <p className="text-3xl font-bold text-yellow-600">
-                                {listing.rating || 0}
-                              </p>
-                              <div className="flex">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`h-5 w-5 ${
-                                      i < Math.floor(listing.rating || 0)
-                                        ? "text-yellow-400 fill-current"
-                                        : "text-gray-300"
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                              <span className="text-sm text-gray-500">
-                                ({listing.reviews || 0} reviews)
-                              </span>
+                              ))}
                             </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
+                          </CardContent>
+                        </Card>
+                      )}
 
-                  {/* Shipping Tab */}
-                  <TabsContent value="shipping" className="space-y-6">
-                    {listing.shippingClass && (
+                      {/* Physical Properties */}
                       <Card>
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2">
-                            <Truck className="h-5 w-5" />
-                            Shipping & Policies
+                            <Package className="h-5 w-5" />
+                            Physical Properties
                           </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="grid grid-cols-2 gap-6">
+                        <CardContent className="grid grid-cols-2 gap-6">
+                          {listing.weight && (
                             <div>
-                              <label className="text-sm font-medium text-gray-700">Shipping Weight</label>
+                              <label className="text-sm font-medium text-gray-700">Weight</label>
+                              <p className="text-gray-900 font-semibold">{listing.weight} lbs</p>
+                            </div>
+                          )}
+                          {(listing.dimensions?.length || listing.dimensions?.width || listing.dimensions?.height) && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-700">Dimensions</label>
                               <p className="text-gray-900 font-semibold">
-                                {listing.shippingClass.shippingWeight || 'Not specified'} {listing.shippingClass.shippingWeight ? 'lbs' : ''}
+                                {listing.dimensions.length || 0}" × {listing.dimensions.width || 0}" × {listing.dimensions.height || 0}"
+                              </p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    {/* Performance Tab */}
+                    <TabsContent value="performance" className="space-y-6">
+                      {/* Performance Metrics */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <BarChart3 className="h-5 w-5" />
+                            Performance Metrics
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-2 gap-6">
+                          <div className="text-center p-4 bg-blue-50 rounded-lg">
+                            <Eye className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                            <p className="text-2xl font-bold text-blue-900">
+                              {listing.views || 0}
+                            </p>
+                            <p className="text-sm text-blue-700">Total Views</p>
+                          </div>
+                          <div className="text-center p-4 bg-red-50 rounded-lg">
+                            <Heart className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                            <p className="text-2xl font-bold text-red-900">
+                              {listing.favorites || 0}
+                            </p>
+                            <p className="text-sm text-red-700">Favorites</p>
+                          </div>
+                          <div className="text-center p-4 bg-green-50 rounded-lg">
+                            <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                            <p className="text-2xl font-bold text-green-900">
+                              {metrics.conversionRate}%
+                            </p>
+                            <p className="text-sm text-green-700">Conversion Rate</p>
+                          </div>
+                          <div className="text-center p-4 bg-purple-50 rounded-lg">
+                            <DollarSign className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                            <p className="text-2xl font-bold text-purple-900">
+                              ${metrics.revenue.toLocaleString()}
+                            </p>
+                            <p className="text-sm text-purple-700">Total Revenue</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Sales Summary */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Sales Summary</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-3 gap-6">
+                            <div>
+                              <label className="text-sm font-medium text-gray-700">Units Sold</label>
+                              <p className="text-3xl font-bold text-gray-900">
+                                {listing.sold || 0}
                               </p>
                             </div>
                             <div>
-                              <label className="text-sm font-medium text-gray-700">Shipping Class</label>
-                              <p className="text-gray-900 font-semibold capitalize">
-                                {listing.shippingClass.shippingClass || 'Standard'}
+                              <label className="text-sm font-medium text-gray-700">Total Revenue</label>
+                              <p className="text-3xl font-bold text-green-600">
+                                ${metrics.revenue.toLocaleString()}
                               </p>
                             </div>
                             <div>
-                              <label className="text-sm font-medium text-gray-700">Return Policy</label>
-                              <p className="text-gray-900 font-semibold">
-                                {listing.shippingClass.returnPolicy || '30'} Days
-                              </p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-700">Warranty</label>
-                              <p className="text-gray-900 font-semibold">
-                                {listing.shippingClass.warranty || 'Not specified'}
-                              </p>
+                              <label className="text-sm font-medium text-gray-700">Average Rating</label>
+                              <div className="flex items-center gap-2">
+                                <p className="text-3xl font-bold text-yellow-600">
+                                  {listing.rating || 0}
+                                </p>
+                                <div className="flex">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={`h-5 w-5 ${
+                                        i < Math.floor(listing.rating || 0)
+                                          ? "text-yellow-400 fill-current"
+                                          : "text-gray-300"
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                <span className="text-sm text-gray-500">
+                                  ({listing.reviews || 0} reviews)
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </CardContent>
                       </Card>
-                    )}
+                    </TabsContent>
 
-                    {/* Listing URL */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <ExternalLink className="h-5 w-5" />
-                          Listing URL
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CopyField
-                          label="Public URL"
-                          value={`${window.location.origin}/listing/${listing._id || listing.id}`}
-                          icon={<ExternalLink />}
-                          onCopy={() => handleCopy("url", `${window.location.origin}/listing/${listing._id || listing.id}`)}
-                          copied={copiedFields.url}
-                        />
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
+                    {/* Shipping Tab */}
+                    <TabsContent value="shipping" className="space-y-6">
+                      {listing.shippingClass && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Truck className="h-5 w-5" />
+                              Shipping & Policies
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-6">
+                              <div>
+                                <label className="text-sm font-medium text-gray-700">Shipping Weight</label>
+                                <p className="text-gray-900 font-semibold">
+                                  {listing.shippingClass.shippingWeight || 'Not specified'} {listing.shippingClass.shippingWeight ? 'lbs' : ''}
+                                </p>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-gray-700">Shipping Class</label>
+                                <p className="text-gray-900 font-semibold capitalize">
+                                  {listing.shippingClass.shippingClass || 'Standard'}
+                                </p>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-gray-700">Return Policy</label>
+                                <p className="text-gray-900 font-semibold">
+                                  {listing.shippingClass.returnPolicy || '30'} Days
+                                </p>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-gray-700">Warranty</label>
+                                <p className="text-gray-900 font-semibold">
+                                  {listing.shippingClass.warranty || 'Not specified'}
+                                </p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Listing URL */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <ExternalLink className="h-5 w-5" />
+                            Listing URL
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <CopyField
+                            label="Public URL"
+                            value={`${window.location.origin}/listing/${listing._id || listing.id}`}
+                            icon={<ExternalLink />}
+                            onCopy={() => handleCopy("url", `${window.location.origin}/listing/${listing._id || listing.id}`)}
+                            copied={copiedFields.url}
+                          />
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
+                </div>
               </div>
             </div>
           </div>
         </ModalContent>
 
         {/* Action Buttons Footer */}
-        <ModalFooter className="bg-gray-50 border-t border-gray-200">
+        <ModalFooter className="bg-gray-50 border-t border-gray-200 flex-shrink-0">
           <div className="flex flex-wrap gap-3 justify-end">
             {availableActions.map((action) => (
               <Button
