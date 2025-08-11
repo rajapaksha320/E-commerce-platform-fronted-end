@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 // hooks/useSellerData.js
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   // Actions
@@ -18,6 +18,7 @@ import {
   fetchStoreProfiles,
   uploadImage,
   uploadMultipleImages,
+  searchListings,
   clearError,
   clearSuccess,
   setSelectedListing,
@@ -48,6 +49,8 @@ import {
   selectPendingImageUploads,
   selectListingsStatistics,
 } from '../store/slices/sellerSlice';
+
+import sellerService from '../services/sellerService';
 
 /**
  * Main hook for seller data management
@@ -106,7 +109,9 @@ export const useListings = () => {
   }, [dispatch]);
   
   const fetchByStatus = useCallback((status, page = 1, pageSize = 10) => {
-    return dispatch(fetchListingsByStatus({ status, page, pageSize }));
+    // Map frontend status to backend status
+    const backendStatus = sellerService.mapFrontendToBackendStatus(status);
+    return dispatch(fetchListingsByStatus({ status: backendStatus, page, pageSize }));
   }, [dispatch]);
   
   const applyFilters = useCallback((filterOptions) => {
@@ -339,15 +344,20 @@ export const useDashboardStats = () => {
         const price = parseFloat(variation.price || 0);
         const quantity = parseInt(variation.quantity || 0);
         return vSum + (price * quantity);
-      }, 0) || 0;
+      }, 0) || (parseFloat(listing.price || 0) * parseInt(listing.quantity || 0));
       return sum + value;
     }, 0);
     
     const lowStockItems = listings.filter(listing => {
-      return listing.variations?.some(v => {
-        const quantity = parseInt(v.quantity || 0);
+      if (listing.variations?.length > 0) {
+        return listing.variations.some(v => {
+          const quantity = parseInt(v.quantity || 0);
+          return quantity > 0 && quantity < 10;
+        });
+      } else {
+        const quantity = parseInt(listing.quantity || 0);
         return quantity > 0 && quantity < 10;
-      });
+      }
     });
     
     const bestSellers = [...listings]
@@ -394,13 +404,16 @@ export const useListingsByStatus = (status) => {
   
   useEffect(() => {
     if (status) {
-      dispatch(fetchListingsByStatus({ status, page: 1, pageSize: 100 }));
+      // Map frontend status to backend status
+      const backendStatus = sellerService.mapFrontendToBackendStatus(status);
+      dispatch(fetchListingsByStatus({ status: backendStatus, page: 1, pageSize: 100 }));
     }
   }, [dispatch, status]);
   
   const refreshListings = useCallback(() => {
     if (status) {
-      return dispatch(fetchListingsByStatus({ status, page: 1, pageSize: 100 }));
+      const backendStatus = sellerService.mapFrontendToBackendStatus(status);
+      return dispatch(fetchListingsByStatus({ status: backendStatus, page: 1, pageSize: 100 }));
     }
   }, [dispatch, status]);
   
@@ -424,8 +437,9 @@ export const usePagination = () => {
     dispatch(setPagination({ page }));
     
     if (filters.status) {
+      const backendStatus = sellerService.mapFrontendToBackendStatus(filters.status);
       return dispatch(fetchListingsByStatus({ 
-        status: filters.status, 
+        status: backendStatus, 
         page, 
         pageSize: pagination.pageSize 
       }));
@@ -440,8 +454,9 @@ export const usePagination = () => {
     dispatch(setPagination({ pageSize, page: 1 }));
     
     if (filters.status) {
+      const backendStatus = sellerService.mapFrontendToBackendStatus(filters.status);
       return dispatch(fetchListingsByStatus({ 
-        status: filters.status, 
+        status: backendStatus, 
         page: 1, 
         pageSize 
       }));
@@ -491,13 +506,24 @@ export const useSearch = () => {
       pageSize: 10,
     };
     
+    // Map frontend status to backend status if present
+    if (searchFilters.status) {
+      searchFilters.status = sellerService.mapFrontendToBackendStatus(searchFilters.status);
+    }
+    
     dispatch(setFilters(searchFilters));
-    return dispatch(filterListings(searchFilters));
+    return dispatch(searchListings({ searchTerm, additionalFilters: searchFilters }));
   }, [dispatch]);
   
   const advancedSearch = useCallback((searchParams) => {
-    dispatch(setFilters(searchParams));
-    return dispatch(filterListings(searchParams));
+    // Map frontend status to backend status if present
+    const processedParams = { ...searchParams };
+    if (processedParams.status) {
+      processedParams.status = sellerService.mapFrontendToBackendStatus(processedParams.status);
+    }
+    
+    dispatch(setFilters(processedParams));
+    return dispatch(filterListings(processedParams));
   }, [dispatch]);
   
   const clearSearch = useCallback(() => {
@@ -548,7 +574,13 @@ export const useSelectedListings = () => {
   
   const performBulkUpdate = useCallback((updateData) => {
     if (selectedIds.length > 0) {
-      return dispatch(bulkUpdateListings({ listingIds: selectedIds, updateData }));
+      // Map frontend status to backend status if present
+      const processedUpdateData = { ...updateData };
+      if (processedUpdateData.status) {
+        processedUpdateData.status = sellerService.mapFrontendToBackendStatus(processedUpdateData.status);
+      }
+      
+      return dispatch(bulkUpdateListings({ listingIds: selectedIds, updateData: processedUpdateData }));
     }
   }, [dispatch, selectedIds]);
   
@@ -572,8 +604,6 @@ export const useSelectedListings = () => {
     performBulkDelete,
   };
 };
-
-import { useState } from 'react';
 
 export default {
   useSellerData,

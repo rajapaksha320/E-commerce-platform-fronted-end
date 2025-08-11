@@ -68,7 +68,7 @@ import {
 
 import ListingDetails from "./ListingDetails";
 
-const ListingManagement = ({ activeSection = "all-listings" }) => {
+const ListingManagement = ({ activeSection = "all-listings", backendStatus = null }) => {
   const navigate = useNavigate();
   
   // Redux hooks
@@ -127,7 +127,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
   } = useSelectedListings();
 
   // Local state
-  const [sortField, setSortField] = useState("createdDate");
+  const [sortField, setSortField] = useState("createdAt");
   const [sortDirection, setSortDirection] = useState("desc");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBulkActionModal, setShowBulkActionModal] = useState(false);
@@ -140,8 +140,15 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
   const [selectedListing, setSelectedListing] = useState(null);
   const [showListingDetails, setShowListingDetails] = useState(false);
 
-  // Categories for filtering
-  const categories = ["Electronics", "Fashion", "Home & Garden", "Sports & Outdoors", "Automotive"];
+  // Categories for filtering - matching the backend
+  const categories = [
+    { value: "electronics", label: "Electronics" },
+    { value: "fashion", label: "Fashion" },
+    { value: "home", label: "Home & Garden" },
+    { value: "sports", label: "Sports & Outdoors" },
+    { value: "automotive", label: "Automotive" },
+  ];
+
   const priceRanges = [
     { value: "0-100", label: "$0 - $100" },
     { value: "100-500", label: "$100 - $500" },
@@ -149,39 +156,21 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
     { value: "1000-5000", label: "$1,000+" },
   ];
 
-  // Sync local filter state with Redux filters
-  useEffect(() => {
-    if (filters) {
-      setFilterCategory(filters.category || "");
-      setFilterPriceRange(filters.priceRange || "");
-      setFilterStatus(filters.status || "");
-    }
-  }, [filters]);
-
-  // Load listings based on active section
+  // Load listings based on active section and backend status
   useEffect(() => {
     const loadListings = async () => {
       try {
-        switch (activeSection) {
-          case "active-listings":
-            await fetchByStatus("active");
-            break;
-          case "inactive-listings":
-            await fetchByStatus("paused");
-            break;
-          case "out-of-stock":
-            await fetchByStatus("out-of-stock");
-            break;
-          case "draft-listings":
-            await fetchByStatus("draft");
-            break;
-          case "sold-listings":
-            // Apply filter for listings with sales
-            await applyFilters({ minSold: 1 });
-            break;
-          default:
-            // Load all listings
-            break;
+        console.log('Loading listings for section:', activeSection, 'Backend status:', backendStatus);
+        
+        // Clear any existing filters first
+        await resetFilters();
+        
+        if (backendStatus) {
+          // Use status-specific fetch for specific statuses
+          await fetchByStatus(backendStatus);
+        } else {
+          // For "all-listings", fetch all listings
+          await refreshListings();
         }
       } catch (error) {
         console.error("Error loading listings:", error);
@@ -189,28 +178,35 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
     };
 
     loadListings();
-  }, [activeSection, fetchByStatus, applyFilters]);
+  }, [activeSection, backendStatus, fetchByStatus, refreshListings, resetFilters]);
 
   // Handle search with debouncing
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (searchQuery !== currentSearch) {
         if (searchQuery.trim()) {
-          // Combine search with current filters
+          // Combine search with current filters and section status
           const searchFilters = {
+            search: searchQuery,
             ...(filterCategory && { category: filterCategory }),
             ...(filterPriceRange && { priceRange: filterPriceRange }),
-            ...(filterStatus && { status: filterStatus })
+            ...(filterStatus && { status: filterStatus }),
+            ...(backendStatus && !filterStatus && { status: backendStatus }), // Use section status if no explicit filter
           };
           searchListings(searchQuery, searchFilters);
         } else {
-          clearSearch();
+          // If search is cleared, reload based on section
+          if (backendStatus) {
+            fetchByStatus(backendStatus);
+          } else {
+            clearSearch();
+          }
         }
       }
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, filterCategory, filterPriceRange, searchListings, clearSearch, currentSearch]);
+  }, [searchQuery, filterCategory, filterPriceRange, filterStatus, backendStatus, searchListings, clearSearch, currentSearch, fetchByStatus]);
 
   // Clear messages when component unmounts or success/error changes
   useEffect(() => {
@@ -225,21 +221,22 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
   // Handle filter changes
   const handleFilterChange = async (filterType, value) => {
     try {
-      let filterParams = {};
+      let filterParams = {
+        ...(searchQuery && { search: searchQuery }),
+        ...(backendStatus && { status: backendStatus }), // Always include section status as base
+      };
       
       if (filterType === 'category') {
         setFilterCategory(value);
-        filterParams.category = value || undefined;
+        if (value) filterParams.category = value;
       } else if (filterType === 'priceRange') {
         setFilterPriceRange(value);
-        if (value) {
-          const [min, max] = value.split('-').map(Number);
-          filterParams.minPrice = min;
-          filterParams.maxPrice = max === 5000 ? undefined : max; // Handle "1000+" case
-        }
+        if (value) filterParams.priceRange = value;
       } else if (filterType === 'status') {
         setFilterStatus(value);
-        filterParams.status = value || undefined;
+        if (value) {
+          filterParams.status = value; // Override section status with explicit filter
+        }
       }
 
       // Apply filters through Redux
@@ -256,8 +253,15 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
       setFilterCategory("");
       setFilterPriceRange("");
       setFilterStatus("");
+      
       await resetFilters();
-      await clearSearch();
+      
+      // Reload based on section after resetting filters
+      if (backendStatus) {
+        await fetchByStatus(backendStatus);
+      } else {
+        await refreshListings();
+      }
     } catch (error) {
       console.error("Error resetting filters:", error);
     }
@@ -353,9 +357,9 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
     switch (status) {
       case "active":
         return <CheckCircle className="h-4 w-4" />;
-      case "paused":
+      case "inactive":
         return <Pause className="h-4 w-4" />;
-      case "out-of-stock":
+      case "outOfStock":
         return <AlertTriangle className="h-4 w-4" />;
       case "draft":
         return <Clock className="h-4 w-4" />;
@@ -368,14 +372,31 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
     switch (status) {
       case "active":
         return "success";
-      case "paused":
+      case "inactive":
         return "warning";
-      case "out-of-stock":
+      case "outOfStock":
         return "danger";
       case "draft":
         return "default";
       default:
         return "default";
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case "active":
+        return "Active";
+      case "inactive":
+        return "Inactive";
+      case "outOfStock":
+        return "Out of Stock";
+      case "draft":
+        return "Draft";
+      case "sold":
+        return "Sold";
+      default:
+        return status || "Unknown";
     }
   };
 
@@ -465,7 +486,11 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
 
   const handleRefresh = async () => {
     try {
-      await refreshListings();
+      if (backendStatus) {
+        await fetchByStatus(backendStatus);
+      } else {
+        await refreshListings();
+      }
     } catch (error) {
       console.error("Error refreshing listings:", error);
     }
@@ -483,16 +508,68 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
 
   // Calculate performance metrics
   const getPerformanceMetrics = (listing) => {
-    const conversionRate =
-      listing.views > 0 ? (listing.sold / listing.views) * 100 : 0;
-    const revenue = listing.sold * listing.price;
+    const views = listing.views || 0;
+    const sold = listing.sold || 0;
+    const favorites = listing.favorites || 0;
+    
+    const conversionRate = views > 0 ? (sold / views) * 100 : 0;
+    const price = listing.variations?.length > 0 
+      ? listing.variations.find(v => v.isDefault)?.price || listing.variations[0]?.price || listing.price
+      : listing.price;
+    const revenue = sold * (parseFloat(price) || 0);
 
     return {
       conversionRate: conversionRate.toFixed(1),
       revenue,
-      favoriteRate:
-        listing.views > 0 ? (listing.favorites / listing.views) * 100 : 0,
+      favoriteRate: views > 0 ? (favorites / views) * 100 : 0,
     };
+  };
+
+  // Extract price from listing (handle variations)
+  const getListingPrice = (listing) => {
+    if (listing.variations?.length > 0) {
+      const defaultVariation = listing.variations.find(v => v.isDefault) || listing.variations[0];
+      return {
+        price: defaultVariation.price,
+        originalPrice: defaultVariation.originalPrice,
+      };
+    }
+    return {
+      price: listing.price,
+      originalPrice: listing.originalPrice,
+    };
+  };
+
+  // Extract quantity from listing (handle variations)
+  const getListingQuantity = (listing) => {
+    if (listing.variations?.length > 0) {
+      return listing.variations.reduce((total, variation) => {
+        return total + (parseInt(variation.quantity) || 0);
+      }, 0);
+    }
+    return parseInt(listing.quantity) || 0;
+  };
+
+  // Extract main image from listing
+  const getListingImage = (listing) => {
+    let imageUrl = null;
+    
+    // Try to get image from variations first (if has variations)
+    if (listing.variations?.length > 0) {
+      const defaultVariation = listing.variations.find(v => v.isDefault) || listing.variations[0];
+      if (defaultVariation.images?.length > 0) {
+        const image = defaultVariation.images[0];
+        imageUrl = typeof image === 'string' ? image : image?.url;
+      }
+    }
+    
+    // Fallback to main product images
+    if (!imageUrl && listing.images?.length > 0) {
+      const image = listing.images[0];
+      imageUrl = typeof image === 'string' ? image : image?.url;
+    }
+    
+    return imageUrl || "/api/placeholder/48/48";
   };
 
   // Sort listings
@@ -505,11 +582,18 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
       
       // Handle special cases
       if (sortField === "price") {
-        aValue = parseFloat(aValue) || 0;
-        bValue = parseFloat(bValue) || 0;
+        const aPricing = getListingPrice(a);
+        const bPricing = getListingPrice(b);
+        aValue = parseFloat(aPricing.price) || 0;
+        bValue = parseFloat(bPricing.price) || 0;
       }
       
-      if (sortField === "createdDate" || sortField === "lastModified") {
+      if (sortField === "quantity") {
+        aValue = getListingQuantity(a);
+        bValue = getListingQuantity(b);
+      }
+      
+      if (sortField === "createdAt" || sortField === "updatedAt") {
         aValue = new Date(aValue);
         bValue = new Date(bValue);
       }
@@ -544,6 +628,11 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
               <CardTitle className="flex items-center gap-3">
                 <Package className="h-6 w-6 text-blue-600" />
                 {config.title}
+                {backendStatus && (
+                  <Badge variant="secondary" size="sm">
+                    Status: {getStatusLabel(backendStatus)}
+                  </Badge>
+                )}
               </CardTitle>
               <p className="text-sm text-gray-600 mt-1">{config.description}</p>
             </div>
@@ -563,13 +652,6 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
               >
                 Add Listing
               </Button>
-              {/* <Button 
-                variant="secondary" 
-                icon={<Download />}
-                disabled={isLoading}
-              >
-                Export
-              </Button> */}
               <Button 
                 variant="secondary" 
                 icon={<RefreshCw />}
@@ -595,12 +677,12 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                 )}
                 {filterStatus && (
                   <Badge variant="secondary" className="text-xs">
-                    Status: {filterStatus}
+                    Status: {getStatusLabel(filterStatus)}
                   </Badge>
                 )}
                 {filterCategory && (
                   <Badge variant="secondary" className="text-xs">
-                    Category: {filterCategory}
+                    Category: {categories.find(c => c.value === filterCategory)?.label}
                   </Badge>
                 )}
                 {filterPriceRange && (
@@ -613,79 +695,72 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
             
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1 relative">
-              <SearchInput
-                placeholder="Search listings by title, SKU, or tags..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                disabled={isSearching || isLoading}
-              />
-              {isSearching && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <LoadingSpinner size="sm" />
-                </div>
-              )}
-            </div>
+                <SearchInput
+                  placeholder="Search listings by title, SKU, or tags..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  disabled={isSearching || isLoading}
+                />
+                {isSearching && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <LoadingSpinner size="sm" />
+                  </div>
+                )}
+              </div>
 
-            <div className="flex gap-3">
-              <Select
-                value={filterStatus}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
-                placeholder="All Status"
-                disabled={isLoading}
-              >
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="paused">Paused</option>
-                <option value="draft">Draft</option>
-                <option value="out-of-stock">Out of Stock</option>
-              </Select>
+              <div className="flex gap-3">
+                {/* Only show status filter for all-listings */}
+                {activeSection === "all-listings" && (
+                  <Select
+                    value={filterStatus}
+                    onChange={(e) => handleFilterChange('status', e.target.value)}
+                    disabled={isLoading}
+                  >
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="draft">Draft</option>
+                    <option value="outOfStock">Out of Stock</option>
+                    <option value="sold">Sold</option>
+                  </Select>
+                )}
 
-              <Select
-                value={filterCategory}
-                onChange={(e) => handleFilterChange('category', e.target.value)}
-                placeholder="All Categories"
-                disabled={isLoading}
-              >
-                <option value="">All Categories</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </Select>
+                <Select
+                  value={filterCategory}
+                  onChange={(e) => handleFilterChange('category', e.target.value)}
+                  disabled={isLoading}
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((category) => (
+                    <option key={category.value} value={category.value}>
+                      {category.label}
+                    </option>
+                  ))}
+                </Select>
 
-              <Select
-                value={filterPriceRange}
-                onChange={(e) => handleFilterChange('priceRange', e.target.value)}
-                placeholder="All Prices"
-                disabled={isLoading}
-              >
-                <option value="">All Prices</option>
-                {priceRanges.map((range) => (
-                  <option key={range.value} value={range.value}>
-                    {range.label}
-                  </option>
-                ))}
-              </Select>
+                <Select
+                  value={filterPriceRange}
+                  onChange={(e) => handleFilterChange('priceRange', e.target.value)}
+                  disabled={isLoading}
+                >
+                  <option value="">All Prices</option>
+                  {priceRanges.map((range) => (
+                    <option key={range.value} value={range.value}>
+                      {range.label}
+                    </option>
+                  ))}
+                </Select>
 
-              <IconButton 
-                variant="secondary" 
-                title="More Filters"
-                disabled={isLoading}
-              >
-                <Filter className="h-4 w-4" />
-              </IconButton>
-              
-              <Button
-                variant="secondary"
-                icon={<RefreshCw />}
-                onClick={handleResetFilters}
-                disabled={isLoading || (!searchQuery && !filterCategory && !filterPriceRange && !filterStatus)}
-                title="Reset all filters and search"
-              >
-                Reset Filters
-              </Button>
-            </div>
+                <Button
+                  variant="secondary"
+                  icon={<RefreshCw />}
+                  onClick={handleResetFilters}
+                  disabled={isLoading || (!searchQuery && !filterCategory && !filterPriceRange && !filterStatus)}
+                  title="Reset all filters and search"
+                >
+                  Reset Filters
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -842,9 +917,9 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                 {config.showColumns.includes("lastModified") && (
                   <TableHead
                     sortable
-                    onSort={() => handleSort("lastModified")}
+                    onSort={() => handleSort("updatedAt")}
                     sortDirection={
-                      sortField === "lastModified" ? sortDirection : null
+                      sortField === "updatedAt" ? sortDirection : null
                     }
                   >
                     Last Modified
@@ -861,6 +936,9 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
               {sortedListings.map((listing) => {
                 const metrics = getPerformanceMetrics(listing);
                 const listingId = listing._id || listing.id;
+                const pricing = getListingPrice(listing);
+                const quantity = getListingQuantity(listing);
+                const imageUrl = getListingImage(listing);
 
                 return (
                   <TableRow key={listingId}>
@@ -875,7 +953,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <img
-                            src={listing.images?.[0]?.url || listing.images?.[0]}
+                            src={imageUrl}
                             alt={listing.title}
                             className="h-12 w-12 rounded-lg object-cover border border-gray-200"
                             onError={(e) => {
@@ -887,8 +965,13 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                               {listing.title}
                             </div>
                             <div className="text-sm text-gray-500">
-                              SKU: {listing.sku}
+                              SKU: {listing.sku || listing.id}
                             </div>
+                            {listing.hasVariations && (
+                              <div className="text-xs text-blue-600">
+                                {listing.variations?.length || 0} variations
+                              </div>
+                            )}
                           </div>
                         </div>
                       </TableCell>
@@ -908,11 +991,11 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                     {config.showColumns.includes("price") && (
                       <TableCell>
                         <div className="text-sm font-medium text-gray-900">
-                          ${parseFloat(listing.price || 0).toLocaleString()}
+                          ${parseFloat(pricing.price || 0).toLocaleString()}
                         </div>
-                        {listing.originalPrice > listing.price && (
+                        {pricing.originalPrice && pricing.originalPrice > pricing.price && (
                           <div className="text-xs text-gray-500 line-through">
-                            ${parseFloat(listing.originalPrice).toLocaleString()}
+                            ${parseFloat(pricing.originalPrice).toLocaleString()}
                           </div>
                         )}
                       </TableCell>
@@ -922,16 +1005,16 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                       <TableCell>
                         <div
                           className={`text-sm font-medium ${
-                            listing.quantity === 0
+                            quantity === 0
                               ? "text-red-600"
-                              : listing.quantity < 5
+                              : quantity < 5
                               ? "text-orange-600"
                               : "text-gray-900"
                           }`}
                         >
-                          {listing.quantity || 0}
+                          {quantity}
                         </div>
-                        {listing.quantity < 5 && listing.quantity > 0 && (
+                        {quantity < 5 && quantity > 0 && (
                           <div className="text-xs text-orange-500">
                             Low stock
                           </div>
@@ -953,9 +1036,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                           variant={getStatusVariant(listing.status)}
                           icon={getStatusIcon(listing.status)}
                         >
-                          {(listing.status || "draft")
-                            .replace("-", " ")
-                            .replace(/\b\w/g, (l) => l.toUpperCase())}
+                          {getStatusLabel(listing.status)}
                         </Badge>
                       </TableCell>
                     )}
@@ -996,7 +1077,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                     {config.showColumns.includes("lastModified") && (
                       <TableCell>
                         <div className="text-sm text-gray-900">
-                          {listing.lastModified || listing.updatedAt}
+                          {new Date(listing.updatedAt || listing.createdAt).toLocaleDateString()}
                         </div>
                       </TableCell>
                     )}
@@ -1036,7 +1117,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                               variant="ghost"
                               size="sm"
                               onClick={() =>
-                                handleStatusChange(listing, "paused")
+                                handleStatusChange(listing, "inactive")
                               }
                               title="Pause Listing"
                               className="text-orange-600 hover:text-orange-900"
@@ -1120,7 +1201,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <img
-                    src={listingToDelete.images?.[0]?.url || listingToDelete.images?.[0]}
+                    src={getListingImage(listingToDelete)}
                     alt={listingToDelete.title}
                     className="h-16 w-16 rounded-lg object-cover"
                     onError={(e) => {
@@ -1132,10 +1213,10 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                       {listingToDelete.title}
                     </h4>
                     <p className="text-sm text-gray-500">
-                      SKU: {listingToDelete.sku}
+                      SKU: {listingToDelete.sku || listingToDelete.id}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {listingToDelete.sold || 0} sold • ${listingToDelete.price || 0}
+                      {listingToDelete.sold || 0} sold • ${getListingPrice(listingToDelete).price || 0}
                     </p>
                   </div>
                 </div>
@@ -1178,7 +1259,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                 placeholder="Select an action..."
               >
                 <option value="active">Activate Listings</option>
-                <option value="paused">Pause Listings</option>
+                <option value="inactive">Pause Listings</option>
                 <option value="draft">Move to Draft</option>
               </Select>
             </FormField>

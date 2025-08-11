@@ -19,9 +19,8 @@ const sellerService = {
    */
   updateListing: async (listingId, updateData) => {
     // Using the correct endpoint as per your API documentation
-    return await axiosInstance.post(`/api/v1/store/update-store-profile/${listingId}`, updateData);
+    return await axiosInstance.post(`/api/v1/listing/update/${listingId}`, updateData);
   },
-
 
   /**
    * Get all listings with pagination
@@ -43,13 +42,13 @@ const sellerService = {
   },
 
   /**
-   * Get listings filtered by status
+   * Get listings filtered by status - Updated to use correct backend statuses
    * @param {string} status - Status filter (active, inactive, draft, outOfStock, sold)
    * @param {number} page - Page number
    * @param {number} pageSize - Items per page
    */
   getListingsByStatus: async (status, page = 1, pageSize = 10) => {
-    return await axiosInstance.get('/api/v1/listing/listing-using-status', {
+    return await axiosInstance.get('/api/v1/listing/listing-filter', {
       params: { status, page, pageSize }
     });
   },
@@ -63,11 +62,12 @@ const sellerService = {
   },
 
   /**
-   * Filter listings with multiple criteria
+   * Filter listings with multiple criteria - Updated to use the correct filter API
    * @param {Object} filters - Filter object
    * @param {string} filters.category - Category filter
    * @param {string} filters.priceRange - Price range (e.g., "20-30")
    * @param {string} filters.search - Search term
+   * @param {string} filters.status - Status filter
    * @param {number} filters.page - Page number
    * @param {number} filters.pageSize - Items per page
    */
@@ -77,6 +77,9 @@ const sellerService = {
     if (filters.category) params.category = filters.category;
     if (filters.priceRange) params.priceRange = filters.priceRange;
     if (filters.search) params.search = filters.search;
+    if (filters.status) params.status = filters.status;
+    if (filters.minPrice !== undefined) params.minPrice = filters.minPrice;
+    if (filters.maxPrice !== undefined) params.maxPrice = filters.maxPrice;
     params.page = filters.page || 1;
     params.pageSize = filters.pageSize || 10;
 
@@ -203,21 +206,21 @@ const sellerService = {
    */
   getListingStatistics: async () => {
     try {
-      // Fetch all statuses in parallel
+      // Fetch all statuses in parallel using the correct status values
       const [active, inactive, draft, outOfStock, sold] = await Promise.all([
-        axiosInstance.get('/api/v1/listing/listing-using-status', {
+        axiosInstance.get('/api/v1/listing/listing-filter', {
           params: { status: 'active', page: 1, pageSize: 1 }
         }),
-        axiosInstance.get('/api/v1/listing/listing-using-status', {
+        axiosInstance.get('/api/v1/listing/listing-filter', {
           params: { status: 'inactive', page: 1, pageSize: 1 }
         }),
-        axiosInstance.get('/api/v1/listing/listing-using-status', {
+        axiosInstance.get('/api/v1/listing/listing-filter', {
           params: { status: 'draft', page: 1, pageSize: 1 }
         }),
-        axiosInstance.get('/api/v1/listing/listing-using-status', {
+        axiosInstance.get('/api/v1/listing/listing-filter', {
           params: { status: 'outOfStock', page: 1, pageSize: 1 }
         }),
-        axiosInstance.get('/api/v1/listing/listing-using-status', {
+        axiosInstance.get('/api/v1/listing/listing-filter', {
           params: { status: 'sold', page: 1, pageSize: 1 }
         }),
       ]);
@@ -248,7 +251,7 @@ const sellerService = {
   // Search Operations
 
   /**
-   * Search listings by keyword
+   * Search listings by keyword using the filter API
    * @param {string} searchTerm - Search keyword
    * @param {number} page - Page number
    * @param {number} pageSize - Items per page
@@ -408,6 +411,41 @@ const sellerService = {
       bannerImage: rawData.bannerImage,
       status: rawData.status || 'active',
     };
+  },
+
+  // Status mapping utilities
+  /**
+   * Map frontend status to backend status
+   * @param {string} frontendStatus - Frontend status
+   * @returns {string} - Backend status
+   */
+  mapFrontendToBackendStatus: (frontendStatus) => {
+    const statusMap = {
+      'active': 'active',
+      'paused': 'inactive',
+      'inactive': 'inactive',
+      'draft': 'draft',
+      'out-of-stock': 'outOfStock',
+      'outOfStock': 'outOfStock',
+      'sold': 'sold'
+    };
+    return statusMap[frontendStatus] || frontendStatus;
+  },
+
+  /**
+   * Map backend status to frontend status
+   * @param {string} backendStatus - Backend status
+   * @returns {string} - Frontend status
+   */
+  mapBackendToFrontendStatus: (backendStatus) => {
+    const statusMap = {
+      'active': 'active',
+      'inactive': 'inactive',
+      'draft': 'draft',
+      'outOfStock': 'out-of-stock',
+      'sold': 'sold'
+    };
+    return statusMap[backendStatus] || backendStatus;
   },
 };
 

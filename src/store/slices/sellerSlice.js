@@ -2,6 +2,15 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import sellerService from '../../services/sellerService';
 
+// Backend status constants
+const BACKEND_STATUSES = {
+  ACTIVE: 'active',
+  INACTIVE: 'inactive', 
+  DRAFT: 'draft',
+  OUT_OF_STOCK: 'outOfStock',
+  SOLD: 'sold'
+};
+
 // Normalized state structure for performance
 const initialState = {
   // Listings state
@@ -160,7 +169,9 @@ export const fetchListingsByStatus = createAsyncThunk(
   'seller/fetchListingsByStatus',
   async ({ status, page = 1, pageSize = 10 }, { rejectWithValue }) => {
     try {
-      const response = await sellerService.getListingsByStatus(status, page, pageSize);
+      // Map frontend status to backend status
+      const backendStatus = sellerService.mapFrontendToBackendStatus(status);
+      const response = await sellerService.getListingsByStatus(backendStatus, page, pageSize);
       return response.data;
     } catch (error) {
       return rejectWithValue(
@@ -188,11 +199,44 @@ export const filterListings = createAsyncThunk(
   'seller/filterListings',
   async (filters, { rejectWithValue }) => {
     try {
+      // Map frontend status to backend status if present
+      const processedFilters = { ...filters };
+      if (processedFilters.status) {
+        processedFilters.status = sellerService.mapFrontendToBackendStatus(processedFilters.status);
+      }
+      
+      const response = await sellerService.filterListings(processedFilters);
+      return { ...response.data, filters: processedFilters };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to filter listings'
+      );
+    }
+  }
+);
+
+// Search listings
+export const searchListings = createAsyncThunk(
+  'seller/searchListings',
+  async ({ searchTerm, additionalFilters = {} }, { rejectWithValue }) => {
+    try {
+      const filters = {
+        search: searchTerm,
+        ...additionalFilters,
+        page: 1,
+        pageSize: 10,
+      };
+      
+      // Map frontend status to backend status if present
+      if (filters.status) {
+        filters.status = sellerService.mapFrontendToBackendStatus(filters.status);
+      }
+      
       const response = await sellerService.filterListings(filters);
       return { ...response.data, filters };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to filter listings'
+        error.response?.data?.message || 'Failed to search listings'
       );
     }
   }
@@ -203,8 +247,14 @@ export const bulkUpdateListings = createAsyncThunk(
   'seller/bulkUpdateListings',
   async ({ listingIds, updateData }, { rejectWithValue }) => {
     try {
+      // Map frontend status to backend status if present
+      const processedUpdateData = { ...updateData };
+      if (processedUpdateData.status) {
+        processedUpdateData.status = sellerService.mapFrontendToBackendStatus(processedUpdateData.status);
+      }
+      
       const promises = listingIds.map(id => 
-        sellerService.updateListing(id, updateData)
+        sellerService.updateListing(id, processedUpdateData)
       );
       const responses = await Promise.all(promises);
       return responses.map(r => r.data);
@@ -395,7 +445,7 @@ const sellerSlice = createSlice({
         state.listings.allIds.unshift(listing._id);
         state.listings.pagination.total += 1;
         
-        // Update status count
+        // Update status count with backend status
         if (listing.status && state.listings.statusCounts[listing.status] !== undefined) {
           state.listings.statusCounts[listing.status] += 1;
         }
@@ -421,7 +471,7 @@ const sellerSlice = createSlice({
           const oldStatus = state.listings.byId[listing._id]?.status;
           state.listings.byId[listing._id] = listing;
           
-          // Update status counts
+          // Update status counts with backend statuses
           if (oldStatus !== listing.status) {
             if (oldStatus && state.listings.statusCounts[oldStatus] !== undefined) {
               state.listings.statusCounts[oldStatus] -= 1;
@@ -453,7 +503,7 @@ const sellerSlice = createSlice({
           state.listings.pagination = action.payload.pagination;
           state.cache.listingsLastFetch = Date.now();
           
-          // Calculate status counts
+          // Calculate status counts with backend statuses
           const statusCounts = { active: 0, inactive: 0, draft: 0, outOfStock: 0, sold: 0 };
           action.payload.listings.forEach(listing => {
             if (listing.status && statusCounts[listing.status] !== undefined) {
@@ -497,14 +547,12 @@ const sellerSlice = createSlice({
         state.ui.listingsLoading = false;
         const normalized = normalizeListings(action.payload.listings);
         
-        // Merge with existing data
-        Object.keys(normalized.byId).forEach(id => {
-          state.listings.byId[id] = normalized.byId[id];
-        });
+        // Replace current data with filtered results
+        state.listings.byId = normalized.byId;
+        state.listings.allIds = normalized.allIds;
         
         // Update pagination
         state.listings.pagination = action.payload.pagination;
-        state.listings.filters.status = action.meta.arg.status;
       })
       .addCase(fetchListingsByStatus.rejected, (state, action) => {
         state.ui.listingsLoading = false;
@@ -525,7 +573,7 @@ const sellerSlice = createSlice({
         const listingId = action.payload.listingId;
         const deletedListing = state.listings.byId[listingId];
         
-        // Update status count
+        // Update status count with backend status
         if (deletedListing?.status && state.listings.statusCounts[deletedListing.status] !== undefined) {
           state.listings.statusCounts[deletedListing.status] -= 1;
         }
@@ -551,9 +599,35 @@ const sellerSlice = createSlice({
         state.listings.byId = normalized.byId;
         state.listings.allIds = normalized.allIds;
         state.listings.pagination = action.payload.pagination;
-        state.listings.filters = action.payload.filters;
+        
+        // Store the original filters (before backend mapping)
+        state.listings.filters = action.meta.arg;
       })
       .addCase(filterListings.rejected, (state, action) => {
+        state.ui.listingsLoading = false;
+        state.ui.error = action.payload;
+      });
+
+    // Search Listings
+    builder
+      .addCase(searchListings.pending, (state) => {
+        state.ui.listingsLoading = true;
+        state.ui.error = null;
+      })
+      .addCase(searchListings.fulfilled, (state, action) => {
+        state.ui.listingsLoading = false;
+        const normalized = normalizeListings(action.payload.listings);
+        state.listings.byId = normalized.byId;
+        state.listings.allIds = normalized.allIds;
+        state.listings.pagination = action.payload.pagination;
+        
+        // Store the search filters
+        state.listings.filters = {
+          ...state.listings.filters,
+          search: action.meta.arg.searchTerm,
+        };
+      })
+      .addCase(searchListings.rejected, (state, action) => {
         state.ui.listingsLoading = false;
         state.ui.error = action.payload;
       });
@@ -741,9 +815,11 @@ export const selectListingById = (listingId) => createSelector(
 export const selectListingsByStatus = (status) => createSelector(
   [selectSellerState],
   (seller) => {
+    // Map frontend status to backend status for filtering
+    const backendStatus = sellerService.mapFrontendToBackendStatus(status);
     return seller.listings.allIds
       .map(id => seller.listings.byId[id])
-      .filter(listing => listing.status === status);
+      .filter(listing => listing.status === backendStatus);
   }
 );
 
@@ -752,7 +828,7 @@ export const selectActiveListings = createSelector(
   (seller) => {
     return seller.listings.allIds
       .map(id => seller.listings.byId[id])
-      .filter(listing => listing.status === 'active');
+      .filter(listing => listing.status === BACKEND_STATUSES.ACTIVE);
   }
 );
 
@@ -798,19 +874,20 @@ export const selectListingsStatistics = createSelector(
     
     const totalListings = listings.length;
     const totalValue = listings.reduce((sum, listing) => {
-      const price = parseFloat(listing.variations?.[0]?.price || 0);
-      const quantity = parseInt(listing.variations?.[0]?.quantity || 0);
+      const price = parseFloat(listing.variations?.[0]?.price || listing.price || 0);
+      const quantity = parseInt(listing.variations?.[0]?.quantity || listing.quantity || 0);
       return sum + (price * quantity);
     }, 0);
     
     const averagePrice = listings.reduce((sum, listing) => {
-      const price = parseFloat(listing.variations?.[0]?.price || 0);
+      const price = parseFloat(listing.variations?.[0]?.price || listing.price || 0);
       return sum + price;
     }, 0) / (totalListings || 1);
     
     const outOfStock = listings.filter(l => 
-      l.status === 'outOfStock' || 
-      l.variations?.some(v => parseInt(v.quantity) === 0)
+      l.status === BACKEND_STATUSES.OUT_OF_STOCK || 
+      l.variations?.some(v => parseInt(v.quantity) === 0) ||
+      parseInt(l.quantity) === 0
     ).length;
     
     return {

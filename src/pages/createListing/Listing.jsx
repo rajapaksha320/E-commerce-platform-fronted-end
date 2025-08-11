@@ -226,7 +226,6 @@ const Listing = () => {
     }
   }, [listingsMessage, uploadError, clearListingsMessages]);
 
-
   // Create new variation template
   const createNewVariation = () => ({
     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -247,12 +246,35 @@ const Listing = () => {
     isDefault: false,
   });
 
+  // Helper function to extract image URL from different formats
+  const extractImageUrl = (image) => {
+    if (typeof image === 'string') return image;
+    if (image?.url) return image.url;
+    return null;
+  };
+
+  // Helper function to convert backend color format to frontend format
+  const convertBackendColorToFrontend = (backendColors) => {
+    if (!backendColors || !Array.isArray(backendColors)) return [];
+    
+    return backendColors.map((colorHex, index) => ({
+      id: `color_${index}`,
+      hex: colorHex,
+      name: colorHex // You might want to add a color name mapping here
+    }));
+  };
+
   // Load data if editing or duplicating
   useEffect(() => {
     if ((isEditing || isDuplicating) && editingProduct) {
+      console.log('Loading edit product data:', editingProduct);
+      
       const hasExistingVariations = editingProduct.variations && editingProduct.variations.length > 0;
       setHasVariations(hasExistingVariations);
 
+      // Extract shipping class data
+      const shippingClassData = editingProduct.shippingClass || {};
+      
       setFormData({
         title: isDuplicating
           ? `${editingProduct.title} (Copy)`
@@ -261,42 +283,72 @@ const Listing = () => {
         category: editingProduct.category?.main?.toLowerCase() || editingProduct.category?.toLowerCase() || "",
         subCategory: editingProduct.category?.sub || editingProduct.subcategory || "",
         description: editingProduct.description || "",
-        price: editingProduct.price?.toString() || "",
-        originalPrice: editingProduct.originalPrice?.toString() || "",
+        
+        // For non-variation products, extract price from main level
+        price: (!hasExistingVariations ? editingProduct.price?.toString() : "") || "",
+        originalPrice: (!hasExistingVariations ? editingProduct.originalPrice?.toString() : "") || "",
         sku: isDuplicating
-          ? `${editingProduct.sku}-COPY`
-          : editingProduct.sku || "",
-        quantity: editingProduct.quantity?.toString() || "1",
+          ? `${editingProduct.sku || editingProduct.id}-COPY`
+          : (editingProduct.sku || editingProduct.id || ""),
+        quantity: (!hasExistingVariations ? editingProduct.quantity?.toString() : "1") || "1",
         lowStockAlert: editingProduct.lowStockAlert?.toString() || "5",
-        colors: editingProduct.colors || [],
+        
+        // Extract colors - convert from backend format
+        colors: editingProduct.colors ? convertBackendColorToFrontend(editingProduct.colors) : [],
         sizes: editingProduct.sizes || [],
+        
+        // Physical properties
         weight: editingProduct.weight || "",
         dimensions: {
           length: editingProduct.dimensions?.length || "",
           width: editingProduct.dimensions?.width || "",
           height: editingProduct.dimensions?.height || "",
         },
-        images: editingProduct.images?.map(img =>
-          typeof img === 'string' ? { url: img, name: 'image.jpg' } : img
-        ) || [],
+        
+        // Images - handle different formats
+        images: editingProduct.images?.map((img, index) => {
+          const url = extractImageUrl(img);
+          return url ? { url, name: `image_${index}.jpg` } : null;
+        }).filter(Boolean) || [],
+        
+        // Variations - handle existing variations
         variations: hasExistingVariations ? editingProduct.variations.map(variation => ({
           ...variation,
           id: isDuplicating ? Date.now().toString() + Math.random().toString(36).substr(2, 9) : variation.id,
           sku: isDuplicating ? `${variation.sku}-COPY` : variation.sku,
-          color: variation.color?.[0] ? { hex: variation.color[0], name: variation.color[0] } : null,
-          images: variation.images?.map(img =>
-            typeof img === 'string' ? { url: img, name: 'image.jpg' } : img
-          ) || [],
+          // Convert color from array format to single color object
+          color: variation.color && variation.color.length > 0 ? 
+            { hex: variation.color[0], name: variation.color[0] } : null,
+          // Convert images
+          images: variation.images?.map((img, index) => {
+            const url = extractImageUrl(img);
+            return url ? { url, name: `variation_image_${index}.jpg` } : null;
+          }).filter(Boolean) || [],
         })) : [],
-        tags: editingProduct.tags || [],
+        
+        // Tags - extract from productTags
+        tags: editingProduct.productTags || editingProduct.tags || [],
+        
+        // SEO data
         metaTitle: editingProduct.metaTitle || "",
         metaDescription: editingProduct.metaDescription || "",
-        shippingWeight: editingProduct.shippingWeight || "",
-        shippingClass: editingProduct.shippingClass || "standard",
-        returnPolicy: editingProduct.returnPolicy || "30",
-        warranty: editingProduct.warranty || "",
+        
+        // Shipping & Policies - extract from shippingClass object
+        shippingWeight: shippingClassData.shippingWeight || "",
+        shippingClass: shippingClassData.shippingClass || "standard",
+        returnPolicy: shippingClassData.returnPolicy || "30",
+        warranty: shippingClassData.warranty || "",
+        
+        // Status and visibility
         status: isDuplicating ? "draft" : editingProduct.status || "draft",
         visibility: editingProduct.visibility || "public",
+      });
+      
+      console.log('Form data set for editing:', {
+        title: editingProduct.title,
+        tags: editingProduct.productTags || editingProduct.tags,
+        shippingClass: shippingClassData,
+        variations: hasExistingVariations ? editingProduct.variations : []
       });
     }
   }, [isEditing, isDuplicating, editingProduct]);
@@ -611,75 +663,75 @@ const Listing = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-const formatListingData = (formData) => {
-  const baseData = {
-    id: formData.sku, // SKU value
-    title: formData.title,
-    brand: formData.brand,
-    category: {
-      main: formData.category,
-      sub: formData.subCategory,
-    },
-    description: formData.description,
-    productTags: formData.tags, // Changed from 'tags' to 'productTags'
-    metaTitle: formData.metaTitle,
-    metaDescription: formData.metaDescription,
-    weight: formData.weight,
-    dimensions: formData.dimensions,
-    // Fix shippingClass - it needs to be an object, not just the class string
-    shippingClass: {
-      id: `ship_${Date.now()}`, // Generate unique ID
-      shippingWeight: formData.shippingWeight,
-      shippingClass: formData.shippingClass, // This is the actual class value (standard, express, etc.)
-      returnPolicy: formData.returnPolicy,
-      warranty: formData.warranty,
-    },
-    status: formData.status,
-    visibility: formData.visibility,
-    hasVariations,
-  };
+  const formatListingData = (formData) => {
+    const baseData = {
+      id: formData.sku, // SKU value
+      title: formData.title,
+      brand: formData.brand,
+      category: {
+        main: formData.category,
+        sub: formData.subCategory,
+      },
+      description: formData.description,
+      productTags: formData.tags, // Changed from 'tags' to 'productTags'
+      metaTitle: formData.metaTitle,
+      metaDescription: formData.metaDescription,
+      weight: formData.weight,
+      dimensions: formData.dimensions,
+      // Fix shippingClass - it needs to be an object, not just the class string
+      shippingClass: {
+        id: `ship_${Date.now()}`, // Generate unique ID
+        shippingWeight: formData.shippingWeight,
+        shippingClass: formData.shippingClass, // This is the actual class value (standard, express, etc.)
+        returnPolicy: formData.returnPolicy,
+        warranty: formData.warranty,
+      },
+      status: formData.status,
+      visibility: formData.visibility,
+      hasVariations,
+    };
 
-  // Rest of the function remains the same...
-  if (hasVariations) {
-    baseData.variations = formData.variations.map((variation) => ({
-      ...variation,
-      color: variation.color ? [variation.color.hex] : [], // Convert to array of hex strings
-      price: parseFloat(variation.price),
-      originalPrice: variation.originalPrice
-        ? parseFloat(variation.originalPrice)
-        : null,
-      quantity: parseInt(variation.quantity),
-    }));
+    // Rest of the function remains the same...
+    if (hasVariations) {
+      baseData.variations = formData.variations.map((variation) => ({
+        ...variation,
+        color: variation.color ? [variation.color.hex] : [], // Convert to array of hex strings
+        price: parseFloat(variation.price),
+        originalPrice: variation.originalPrice
+          ? parseFloat(variation.originalPrice)
+          : null,
+        quantity: parseInt(variation.quantity),
+      }));
 
-    // Use default variation or first variation for main product data
-    const defaultVariation =
-      formData.variations.find((v) => v.isDefault) || formData.variations[0];
-    if (defaultVariation) {
-      baseData.price = parseFloat(defaultVariation.price);
-      baseData.originalPrice = defaultVariation.originalPrice
-        ? parseFloat(defaultVariation.originalPrice)
+      // Use default variation or first variation for main product data
+      const defaultVariation =
+        formData.variations.find((v) => v.isDefault) || formData.variations[0];
+      if (defaultVariation) {
+        baseData.price = parseFloat(defaultVariation.price);
+        baseData.originalPrice = defaultVariation.originalPrice
+          ? parseFloat(defaultVariation.originalPrice)
+          : null;
+        baseData.sku = defaultVariation.sku;
+        baseData.quantity = parseInt(defaultVariation.quantity);
+        baseData.images =
+          defaultVariation.images.length > 0
+            ? defaultVariation.images
+            : formData.images;
+      }
+    } else {
+      baseData.price = parseFloat(formData.price);
+      baseData.originalPrice = formData.originalPrice
+        ? parseFloat(formData.originalPrice)
         : null;
-      baseData.sku = defaultVariation.sku;
-      baseData.quantity = parseInt(defaultVariation.quantity);
-      baseData.images =
-        defaultVariation.images.length > 0
-          ? defaultVariation.images
-          : formData.images;
+      baseData.sku = formData.sku;
+      baseData.quantity = parseInt(formData.quantity);
+      baseData.images = formData.images;
+      baseData.colors = formData.colors;
+      baseData.sizes = formData.sizes;
     }
-  } else {
-    baseData.price = parseFloat(formData.price);
-    baseData.originalPrice = formData.originalPrice
-      ? parseFloat(formData.originalPrice)
-      : null;
-    baseData.sku = formData.sku;
-    baseData.quantity = parseInt(formData.quantity);
-    baseData.images = formData.images;
-    baseData.colors = formData.colors;
-    baseData.sizes = formData.sizes;
-  }
 
-  return baseData;
-};
+    return baseData;
+  };
 
   const handleSave = async (saveType = "draft") => {
     if (!validateForm()) {
@@ -729,12 +781,12 @@ const formatListingData = (formData) => {
 
   const handleSuccessAction = () => {
     setShowSuccessModal(false);
-    navigate("/seller/listings");
+    navigate("/seller-dashboard");
   };
 
   const handleSummaryGoToListings = () => {
     setShowSummaryModal(false);
-    navigate("/seller/listings");
+    navigate("/seller-dashboard");
   };
 
   const handleSummaryCreateNew = () => {
@@ -1617,43 +1669,6 @@ const formatListingData = (formData) => {
               {/* SEO & Marketing */}
               <TabsContent value="seo">
                 <div className="space-y-6">
-                  {/* <Card>
-                    <CardHeader>
-                      <CardTitle>SEO Settings</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <FormField label="Meta Title">
-                        <Input
-                          value={formData.metaTitle}
-                          onChange={(e) =>
-                            handleInputChange("metaTitle", e.target.value)
-                          }
-                          placeholder="SEO title for search engines"
-                          maxLength={60}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          {formData.metaTitle.length}/60 characters -
-                          Auto-generated from product title
-                        </p>
-                      </FormField>
-
-                      <FormField label="Meta Description">
-                        <Textarea
-                          value={formData.metaDescription}
-                          onChange={(e) =>
-                            handleInputChange("metaDescription", e.target.value)
-                          }
-                          placeholder="Brief description for search engines"
-                          rows={3}
-                          maxLength={160}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          {formData.metaDescription.length}/160 characters
-                        </p>
-                      </FormField>
-                    </CardContent>
-                  </Card> */}
-
                   <Card>
                     <CardHeader>
                       <CardTitle>Product Tags</CardTitle>
@@ -1666,8 +1681,20 @@ const formatListingData = (formData) => {
                         maxTags={20}
                       />
                       <p className="text-xs text-gray-500 mt-2">
-                        Add relevant tags to help customers find your product
+                        Add relevant tags to help customers find your product. Current tags: {formData.tags.length}
                       </p>
+                      {formData.tags.length > 0 && (
+                        <div className="mt-3 p-3 bg-blue-50 rounded border">
+                          <p className="text-sm font-medium text-blue-900 mb-2">Preview:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {formData.tags.map((tag, index) => (
+                              <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -1742,6 +1769,19 @@ const formatListingData = (formData) => {
                           When using variations, shipping calculations will use each variation's individual weight and dimensions if specified,
                           otherwise falling back to the default values above.
                         </p>
+                      </div>
+                    )}
+
+                    {/* Preview shipping data if editing */}
+                    {(isEditing || isDuplicating) && editingProduct?.shippingClass && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h4 className="font-medium text-gray-900 mb-2">Current Shipping Settings:</h4>
+                        <div className="text-sm space-y-1">
+                          <p><strong>Weight:</strong> {formData.shippingWeight || 'Not set'} lbs</p>
+                          <p><strong>Class:</strong> {formData.shippingClass}</p>
+                          <p><strong>Return Policy:</strong> {formData.returnPolicy} days</p>
+                          <p><strong>Warranty:</strong> {formData.warranty || 'Not set'}</p>
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -1849,6 +1889,27 @@ const formatListingData = (formData) => {
                         </div>
                       </div>
                     )}
+
+                    {previewData.tags.length > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-600 mb-2">Tags:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {previewData.tags.slice(0, 3).map((tag, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {previewData.tags.length > 3 && (
+                            <span className="text-xs text-gray-500 self-center">
+                              +{previewData.tags.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1918,7 +1979,7 @@ const formatListingData = (formData) => {
                     >
                       <option value="draft">Draft</option>
                       <option value="active">Active</option>
-                      <option value="paused">Paused</option>
+                      <option value="inactive">Inactive</option>
                     </Select>
                   </FormField>
 
