@@ -29,6 +29,9 @@ import {
   Settings,
 } from "lucide-react";
 
+// Import debounce utility
+import { debounce } from "../../../../utils/debounce";
+
 // Import Redux hooks
 import {
   useListings,
@@ -148,7 +151,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
     { value: "1000-5000", label: "$1,000+" },
   ];
 
-  // Debounced filter function
+  // Debounced filter function using the utility
   const debouncedApplyFilters = useCallback(
     debounce(async (filterParams) => {
       try {
@@ -573,12 +576,18 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
     return parseInt(listing.quantity) || 0;
   };
 
-  // Extract main image from listing
+  // Extract main image from listing - FIXED to prioritize main product images
   const getListingImage = (listing) => {
     let imageUrl = null;
     
-    // Try to get image from variations first (if has variations)
-    if (listing.variations?.length > 0) {
+    // First try to get image from main product images
+    if (listing.images?.length > 0) {
+      const image = listing.images[0];
+      imageUrl = typeof image === 'string' ? image : image?.url;
+    }
+    
+    // Only fallback to variation images if no main images exist
+    if (!imageUrl && listing.variations?.length > 0) {
       const defaultVariation = listing.variations.find(v => v.isDefault) || listing.variations[0];
       if (defaultVariation.images?.length > 0) {
         const image = defaultVariation.images[0];
@@ -586,13 +595,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
       }
     }
     
-    // Fallback to main product images
-    if (!imageUrl && listing.images?.length > 0) {
-      const image = listing.images[0];
-      imageUrl = typeof image === 'string' ? image : image?.url;
-    }
-    
-    return imageUrl || "/api/placeholder/48/48";
+    return imageUrl || "/placehold.png";
   };
 
   // Sort listings
@@ -983,7 +986,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                             alt={listing.title}
                             className="h-12 w-12 rounded-lg object-cover border border-gray-200"
                             onError={(e) => {
-                              e.target.src = "/api/placeholder/48/48";
+                              e.target.src = "/placehold.png";
                             }}
                           />
                           <div className="min-w-0 flex-1">
@@ -1231,7 +1234,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                     alt={listingToDelete.title}
                     className="h-16 w-16 rounded-lg object-cover"
                     onError={(e) => {
-                      e.target.src = "/api/placeholder/64/64";
+                      e.target.src = "/placehold.png";
                     }}
                   />
                   <div>
@@ -1322,18 +1325,5 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
     </div>
   );
 };
-
-// Debounce utility function
-function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-}
 
 export default ListingManagement;

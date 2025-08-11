@@ -166,12 +166,17 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
   const extractImageUrl = (image) => {
     if (typeof image === 'string') return image;
     if (image?.url) return image.url;
-    return '/api/placeholder/400/400';
+    return '/placehold.png';
   };
 
-  // Get main images - prefer variation images if available
+  // Get main images - FIXED to prioritize main product images over variation images
   const getMainImages = () => {
-    // If has variations, get images from default variation or first variation
+    // First try to get images from main product images
+    if (listing.images?.length > 0) {
+      return listing.images.map(extractImageUrl);
+    }
+    
+    // Only fallback to variation images if no main product images exist
     if (listing.hasVariations && listing.variations?.length > 0) {
       const defaultVariation = listing.variations.find(v => v.isDefault) || listing.variations[0];
       if (defaultVariation.images?.length > 0) {
@@ -179,12 +184,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
       }
     }
     
-    // Fallback to main product images
-    if (listing.images?.length > 0) {
-      return listing.images.map(extractImageUrl);
-    }
-    
-    return ['/api/placeholder/400/400'];
+    return ['/placehold.png']; // Fallback placeholder image
   };
 
   // Get current price and pricing info
@@ -491,7 +491,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                         alt={listing.title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.target.src = "/api/placeholder/400/400";
+                          e.target.src = "/placehold.png";
                         }}
                       />
                     </div>
@@ -514,13 +514,25 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                               alt={`${listing.title} - ${index + 1}`}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.target.src = "/api/placeholder/100/100";
+                                e.target.src = "/placehold.png";
                               }}
                             />
                           </button>
                         ))}
                       </div>
                     )}
+
+                    {/* Image Source Indicator */}
+                    <div className="text-center">
+                      <Badge variant="secondary" size="sm">
+                        {listing.images?.length > 0 ? "Main Product Images" : "Variation Images"}
+                      </Badge>
+                      {listing.images?.length > 0 && listing.variations?.some(v => v.images?.length > 0) && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Showing main product images. Each variation may have different images.
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -711,7 +723,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
 
                                   {variation.images?.length > 0 && (
                                     <div className="mt-3">
-                                      <span className="text-gray-500 font-medium text-sm">Images:</span>
+                                      <span className="text-gray-500 font-medium text-sm">Variation Images:</span>
                                       <div className="flex gap-2 mt-2">
                                         {variation.images.slice(0, 4).map((image, imgIndex) => (
                                           <img
@@ -720,7 +732,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                                             alt={`${variation.name} - ${imgIndex + 1}`}
                                             className="w-12 h-12 rounded border border-gray-200 object-cover"
                                             onError={(e) => {
-                                              e.target.src = "/api/placeholder/48/48";
+                                              e.target.src = "/placehold.png";
                                             }}
                                           />
                                         ))}
@@ -1011,7 +1023,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                   alt={listing.title}
                   className="h-16 w-16 rounded-lg object-cover"
                   onError={(e) => {
-                    e.target.src = "/api/placeholder/64/64";
+                    e.target.src = "/placehold.png";
                   }}
                 />
                 <div>
