@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   Eye,
   Edit,
@@ -120,6 +121,9 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
     performBulkDelete,
   } = useSelectedListings();
 
+  // Get isEmpty state from Redux
+  const isEmpty = useSelector(state => state.seller.ui.isEmpty);
+
   // Local state
   const [sortField, setSortField] = useState("createdAt");
   const [sortDirection, setSortDirection] = useState("desc");
@@ -173,6 +177,9 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
       try {
         console.log('Loading listings for section:', activeSection, 'Backend status:', backendStatus);
         
+        // Clear previous data first to avoid showing stale listings
+        clearSelection();
+        
         if (backendStatus) {
           // Use status-specific fetch for specific statuses
           await fetchByStatus(backendStatus);
@@ -186,7 +193,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
     };
 
     loadListings();
-  }, [activeSection, backendStatus]);
+  }, [activeSection, backendStatus, fetchByStatus, refreshListings, clearSelection]);
 
   // Handle search with debouncing
   useEffect(() => {
@@ -242,15 +249,15 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
     }
   }, [searchQuery, filterCategory, filterPriceRange, filterStatus, backendStatus, debouncedApplyFilters, fetchByStatus, refreshListings]);
 
-  // Clear messages when component unmounts or success/error changes
+  // Clear success messages automatically, but don't clear "empty" state messages
   useEffect(() => {
-    if (success || error) {
+    if (success) {
       const timer = setTimeout(() => {
         clearMessages();
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [success, error, clearMessages]);
+  }, [success, clearMessages]);
 
   // Handle filter changes
   const handleFilterChange = useCallback((filterType, value) => {
@@ -637,15 +644,27 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
 
   return (
     <div className="space-y-6">
-      {/* Success/Error Messages */}
-      {(success || error) && (
+      {/* Error Messages - Only show actual errors, not empty states */}
+      {error && !isEmpty && (
         <Alert
-          variant={success ? "success" : "danger"}
-          title={success ? "Success" : "Error"}
-          onClose={clearMessages}
+          variant="danger"
+          title="Error"
+          onClose={() => clearMessages()}
           className="z-10 relative"
         >
-          {message || error}
+          {error}
+        </Alert>
+      )}
+
+      {/* Success Messages */}
+      {success && (
+        <Alert
+          variant="success"
+          title="Success"
+          onClose={() => clearMessages()}
+          className="z-10 relative"
+        >
+          {message}
         </Alert>
       )}
 
@@ -854,350 +873,356 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
               </div>
             </div>
           )}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <Checkbox
-                    checked={
-                      selectedCount === listings.length &&
-                      listings.length > 0
-                    }
-                    onChange={handleSelectAll}
-                  />
-                </TableHead>
 
-                {config.showColumns.includes("listing") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("title")}
-                    sortDirection={sortField === "title" ? sortDirection : null}
-                  >
-                    Listing
+          {/* Show table only if we have listings */}
+          {!currentIsLoading && sortedListings.length > 0 && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    <Checkbox
+                      checked={
+                        selectedCount === listings.length &&
+                        listings.length > 0
+                      }
+                      onChange={handleSelectAll}
+                    />
                   </TableHead>
-                )}
 
-                {config.showColumns.includes("category") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("category")}
-                    sortDirection={
-                      sortField === "category" ? sortDirection : null
-                    }
-                  >
-                    Category
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("listing") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("title")}
+                      sortDirection={sortField === "title" ? sortDirection : null}
+                    >
+                      Listing
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("price") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("price")}
-                    sortDirection={sortField === "price" ? sortDirection : null}
-                  >
-                    Price
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("category") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("category")}
+                      sortDirection={
+                        sortField === "category" ? sortDirection : null
+                      }
+                    >
+                      Category
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("quantity") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("quantity")}
-                    sortDirection={
-                      sortField === "quantity" ? sortDirection : null
-                    }
-                  >
-                    Stock
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("price") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("price")}
+                      sortDirection={sortField === "price" ? sortDirection : null}
+                    >
+                      Price
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("sold") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("sold")}
-                    sortDirection={sortField === "sold" ? sortDirection : null}
-                  >
-                    Sold
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("quantity") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("quantity")}
+                      sortDirection={
+                        sortField === "quantity" ? sortDirection : null
+                      }
+                    >
+                      Stock
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("status") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("status")}
-                    sortDirection={
-                      sortField === "status" ? sortDirection : null
-                    }
-                  >
-                    Status
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("sold") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("sold")}
+                      sortDirection={sortField === "sold" ? sortDirection : null}
+                    >
+                      Sold
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("performance") && (
-                  <TableHead>Performance</TableHead>
-                )}
+                  {config.showColumns.includes("status") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("status")}
+                      sortDirection={
+                        sortField === "status" ? sortDirection : null
+                      }
+                    >
+                      Status
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("revenue") && (
-                  <TableHead sortable onSort={() => handleSort("revenue")}>
-                    Revenue
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("performance") && (
+                    <TableHead>Performance</TableHead>
+                  )}
 
-                {config.showColumns.includes("lastModified") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("updatedAt")}
-                    sortDirection={
-                      sortField === "updatedAt" ? sortDirection : null
-                    }
-                  >
-                    Last Modified
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("revenue") && (
+                    <TableHead sortable onSort={() => handleSort("revenue")}>
+                      Revenue
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("actions") && (
-                  <TableHead>Actions</TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
+                  {config.showColumns.includes("lastModified") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("updatedAt")}
+                      sortDirection={
+                        sortField === "updatedAt" ? sortDirection : null
+                      }
+                    >
+                      Last Modified
+                    </TableHead>
+                  )}
 
-            <TableBody>
-              {sortedListings.map((listing) => {
-                const metrics = getPerformanceMetrics(listing);
-                const listingId = listing._id || listing.id;
-                const pricing = getListingPrice(listing);
-                const quantity = getListingQuantity(listing);
-                const imageUrl = getListingImage(listing);
+                  {config.showColumns.includes("actions") && (
+                    <TableHead>Actions</TableHead>
+                  )}
+                </TableRow>
+              </TableHeader>
 
-                return (
-                  <TableRow key={listingId}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.includes(listingId)}
-                        onChange={() => toggleListing(listingId)}
-                      />
-                    </TableCell>
+              <TableBody>
+                {sortedListings.map((listing) => {
+                  const metrics = getPerformanceMetrics(listing);
+                  const listingId = listing._id || listing.id;
+                  const pricing = getListingPrice(listing);
+                  const quantity = getListingQuantity(listing);
+                  const imageUrl = getListingImage(listing);
 
-                    {config.showColumns.includes("listing") && (
+                  return (
+                    <TableRow key={listingId}>
                       <TableCell>
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={imageUrl}
-                            alt={listing.title}
-                            className="h-12 w-12 rounded-lg object-cover border border-gray-200"
-                            onError={(e) => {
-                              e.target.src = "/placehold.png";
-                            }}
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium text-gray-900 truncate">
-                              {listing.title}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              SKU: {listing.sku || listing.id}
-                            </div>
-                            {listing.hasVariations && (
-                              <div className="text-xs text-blue-600">
-                                {listing.variations?.length || 0} variations
+                        <Checkbox
+                          checked={selectedIds.includes(listingId)}
+                          onChange={() => toggleListing(listingId)}
+                        />
+                      </TableCell>
+
+                      {config.showColumns.includes("listing") && (
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={imageUrl}
+                              alt={listing.title}
+                              className="h-12 w-12 rounded-lg object-cover border border-gray-200"
+                              onError={(e) => {
+                                e.target.src = "/placehold.png";
+                              }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium text-gray-900 truncate">
+                                {listing.title}
                               </div>
-                            )}
+                              <div className="text-sm text-gray-500">
+                                SKU: {listing.sku || listing.id}
+                              </div>
+                              {listing.hasVariations && (
+                                <div className="text-xs text-blue-600">
+                                  {listing.variations?.length || 0} variations
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                    )}
+                        </TableCell>
+                      )}
 
-                    {config.showColumns.includes("category") && (
-                      <TableCell>
-                        <div className="text-sm text-gray-900">
-                          {listing.category?.main || listing.category}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {listing.category?.sub || listing.subcategory}
-                        </div>
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("price") && (
-                      <TableCell>
-                        <div className="text-sm font-medium text-gray-900">
-                          ${parseFloat(pricing.price || 0).toLocaleString()}
-                        </div>
-                        {pricing.originalPrice && pricing.originalPrice > pricing.price && (
-                          <div className="text-xs text-gray-500 line-through">
-                            ${parseFloat(pricing.originalPrice).toLocaleString()}
+                      {config.showColumns.includes("category") && (
+                        <TableCell>
+                          <div className="text-sm text-gray-900">
+                            {listing.category?.main || listing.category}
                           </div>
-                        )}
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("quantity") && (
-                      <TableCell>
-                        <div
-                          className={`text-sm font-medium ${
-                            quantity === 0
-                              ? "text-red-600"
-                              : quantity < 5
-                              ? "text-orange-600"
-                              : "text-gray-900"
-                          }`}
-                        >
-                          {quantity}
-                        </div>
-                        {quantity < 5 && quantity > 0 && (
-                          <div className="text-xs text-orange-500">
-                            Low stock
+                          <div className="text-xs text-gray-500">
+                            {listing.category?.sub || listing.subcategory}
                           </div>
-                        )}
-                      </TableCell>
-                    )}
+                        </TableCell>
+                      )}
 
-                    {config.showColumns.includes("sold") && (
-                      <TableCell>
-                        <div className="text-sm font-medium text-gray-900">
-                          {listing.sold || 0}
-                        </div>
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("status") && (
-                      <TableCell>
-                        <Badge
-                          variant={getStatusVariant(listing.status)}
-                          icon={getStatusIcon(listing.status)}
-                        >
-                          {getStatusLabel(listing.status)}
-                        </Badge>
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("performance") && (
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Eye className="h-3 w-3 text-gray-400" />
-                            <span className="text-xs text-gray-600">
-                              {listing.views || 0}
-                            </span>
+                      {config.showColumns.includes("price") && (
+                        <TableCell>
+                          <div className="text-sm font-medium text-gray-900">
+                            ${parseFloat(pricing.price || 0).toLocaleString()}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Heart className="h-3 w-3 text-gray-400" />
-                            <span className="text-xs text-gray-600">
-                              {listing.favorites || 0}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="h-3 w-3 text-gray-400" />
-                            <span className="text-xs text-gray-600">
-                              {metrics.conversionRate}%
-                            </span>
-                          </div>
-                        </div>
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("revenue") && (
-                      <TableCell>
-                        <div className="text-sm font-medium text-green-600">
-                          ${metrics.revenue.toLocaleString()}
-                        </div>
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("lastModified") && (
-                      <TableCell>
-                        <div className="text-sm text-gray-900">
-                          {new Date(listing.updatedAt || listing.createdAt).toLocaleDateString()}
-                        </div>
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("actions") && (
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <IconButton
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewListing(listing)}
-                            title="View Details"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </IconButton>
-
-                          <IconButton
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditListing(listing)}
-                            title="Edit Listing"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </IconButton>
-
-                          <IconButton
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDuplicateListing(listing)}
-                            title="Duplicate Listing"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </IconButton>
-
-                          {listing.status === "active" ? (
-                            <IconButton
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleStatusChange(listing, "inactive")
-                              }
-                              title="Pause Listing"
-                              className="text-orange-600 hover:text-orange-900"
-                            >
-                              <Pause className="h-4 w-4" />
-                            </IconButton>
-                          ) : (
-                            <IconButton
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleStatusChange(listing, "active")
-                              }
-                              title="Activate Listing"
-                              className="text-green-600 hover:text-green-900"
-                            >
-                              <Play className="h-4 w-4" />
-                            </IconButton>
+                          {pricing.originalPrice && pricing.originalPrice > pricing.price && (
+                            <div className="text-xs text-gray-500 line-through">
+                              ${parseFloat(pricing.originalPrice).toLocaleString()}
+                            </div>
                           )}
+                        </TableCell>
+                      )}
 
-                          <IconButton
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteListing(listing)}
-                            title="Delete Listing"
-                            className="text-red-600 hover:text-red-900"
+                      {config.showColumns.includes("quantity") && (
+                        <TableCell>
+                          <div
+                            className={`text-sm font-medium ${
+                              quantity === 0
+                                ? "text-red-600"
+                                : quantity < 5
+                                ? "text-orange-600"
+                                : "text-gray-900"
+                            }`}
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </IconButton>
-                        </div>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                            {quantity}
+                          </div>
+                          {quantity < 5 && quantity > 0 && (
+                            <div className="text-xs text-orange-500">
+                              Low stock
+                            </div>
+                          )}
+                        </TableCell>
+                      )}
 
-          {/* Empty State */}
+                      {config.showColumns.includes("sold") && (
+                        <TableCell>
+                          <div className="text-sm font-medium text-gray-900">
+                            {listing.sold || 0}
+                          </div>
+                        </TableCell>
+                      )}
+
+                      {config.showColumns.includes("status") && (
+                        <TableCell>
+                          <Badge
+                            variant={getStatusVariant(listing.status)}
+                            icon={getStatusIcon(listing.status)}
+                          >
+                            {getStatusLabel(listing.status)}
+                          </Badge>
+                        </TableCell>
+                      )}
+
+                      {config.showColumns.includes("performance") && (
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Eye className="h-3 w-3 text-gray-400" />
+                              <span className="text-xs text-gray-600">
+                                {listing.views || 0}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Heart className="h-3 w-3 text-gray-400" />
+                              <span className="text-xs text-gray-600">
+                                {listing.favorites || 0}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <TrendingUp className="h-3 w-3 text-gray-400" />
+                              <span className="text-xs text-gray-600">
+                                {metrics.conversionRate}%
+                              </span>
+                            </div>
+                          </div>
+                        </TableCell>
+                      )}
+
+                      {config.showColumns.includes("revenue") && (
+                        <TableCell>
+                          <div className="text-sm font-medium text-green-600">
+                            ${metrics.revenue.toLocaleString()}
+                          </div>
+                        </TableCell>
+                      )}
+
+                      {config.showColumns.includes("lastModified") && (
+                        <TableCell>
+                          <div className="text-sm text-gray-900">
+                            {new Date(listing.updatedAt || listing.createdAt).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+                      )}
+
+                      {config.showColumns.includes("actions") && (
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <IconButton
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewListing(listing)}
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </IconButton>
+
+                            <IconButton
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditListing(listing)}
+                              title="Edit Listing"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </IconButton>
+
+                            <IconButton
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDuplicateListing(listing)}
+                              title="Duplicate Listing"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </IconButton>
+
+                            {listing.status === "active" ? (
+                              <IconButton
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleStatusChange(listing, "inactive")
+                                }
+                                title="Pause Listing"
+                                className="text-orange-600 hover:text-orange-900"
+                              >
+                                <Pause className="h-4 w-4" />
+                              </IconButton>
+                            ) : (
+                              <IconButton
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleStatusChange(listing, "active")
+                                }
+                                title="Activate Listing"
+                                className="text-green-600 hover:text-green-900"
+                              >
+                                <Play className="h-4 w-4" />
+                              </IconButton>
+                            )}
+
+                            <IconButton
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteListing(listing)}
+                              title="Delete Listing"
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </IconButton>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+
+          {/* Empty State - Only show when not loading and no listings */}
           {!currentIsLoading && sortedListings.length === 0 && (
             <div className="text-center py-12">
               <Package className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">
-                No listings found
+                {isEmpty && message ? message : "No listings found"}
               </h3>
               <p className="mt-1 text-sm text-gray-500">
                 {hasActiveFilters
                   ? "Try adjusting your filters or search terms."
+                  : isEmpty && backendStatus
+                  ? `No ${config.title.toLowerCase()} available.`
                   : `No ${config.title.toLowerCase()} available.`}
               </p>
-              {!hasActiveFilters && (
+              {!hasActiveFilters && !isEmpty && (
                 <Button
                   variant="primary"
                   icon={<PlusCircle />}

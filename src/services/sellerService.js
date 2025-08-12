@@ -18,7 +18,6 @@ const sellerService = {
    * @param {Object} updateData - The data to update
    */
   updateListing: async (listingId, updateData) => {
-    // Using the correct endpoint as per your API documentation
     return await axiosInstance.post(`/api/v1/listing/update/${listingId}`, updateData);
   },
 
@@ -28,9 +27,50 @@ const sellerService = {
    * @param {number} pageSize - Items per page
    */
   getAllListings: async (page = 1, pageSize = 10) => {
-    return await axiosInstance.get('/api/v1/listing/all', {
-      params: { page, pageSize }
-    });
+    try {
+      const response = await axiosInstance.get('/api/v1/listing/all', {
+        params: { page, pageSize }
+      });
+
+      // Check if the response indicates no listings found
+      if (response.data.message === "No listings found with the specified filters" || 
+          response.data.message === "No listings found") {
+        return {
+          data: {
+            listings: [],
+            pagination: {
+              total: 0,
+              page: page,
+              pageSize: pageSize,
+              totalPages: 0
+            },
+            message: response.data.message,
+            isEmpty: true
+          }
+        };
+      }
+
+      return response;
+    } catch (error) {
+      // If it's a 404 or empty result, normalize the response
+      if (error.response?.status === 404 || 
+          error.response?.data?.message?.includes("No listings found")) {
+        return {
+          data: {
+            listings: [],
+            pagination: {
+              total: 0,
+              page: page,
+              pageSize: pageSize,
+              totalPages: 0
+            },
+            message: error.response?.data?.message || "No listings found",
+            isEmpty: true
+          }
+        };
+      }
+      throw error;
+    }
   },
 
   /**
@@ -42,15 +82,55 @@ const sellerService = {
   },
 
   /**
-   * Get listings filtered by status - Updated to use correct backend statuses
+   * Get listings filtered by status - Fixed to handle empty results properly
    * @param {string} status - Status filter (active, inactive, draft, outOfStock, sold)
    * @param {number} page - Page number
    * @param {number} pageSize - Items per page
    */
   getListingsByStatus: async (status, page = 1, pageSize = 10) => {
-    return await axiosInstance.get('/api/v1/listing/listing-filter', {
-      params: { status, page, pageSize }
-    });
+    try {
+      const response = await axiosInstance.get('/api/v1/listing/listing-filter', {
+        params: { status, page, pageSize }
+      });
+
+      // Check if the response indicates no listings found
+      if (response.data.message === "No listings found with the specified filters") {
+        return {
+          data: {
+            listings: [],
+            pagination: {
+              total: 0,
+              page: page,
+              pageSize: pageSize,
+              totalPages: 0
+            },
+            message: response.data.message,
+            isEmpty: true
+          }
+        };
+      }
+
+      return response;
+    } catch (error) {
+      // If it's a 404 or empty result, normalize the response
+      if (error.response?.status === 404 || 
+          error.response?.data?.message?.includes("No listings found")) {
+        return {
+          data: {
+            listings: [],
+            pagination: {
+              total: 0,
+              page: page,
+              pageSize: pageSize,
+              totalPages: 0
+            },
+            message: error.response?.data?.message || "No listings found",
+            isEmpty: true
+          }
+        };
+      }
+      throw error;
+    }
   },
 
   /**
@@ -62,28 +142,62 @@ const sellerService = {
   },
 
   /**
-   * Filter listings with multiple criteria - Updated to use the correct filter API
+   * Filter listings with multiple criteria - Fixed to handle empty results
    * @param {Object} filters - Filter object
-   * @param {string} filters.category - Category filter
-   * @param {string} filters.priceRange - Price range (e.g., "20-30")
-   * @param {string} filters.search - Search term
-   * @param {string} filters.status - Status filter
-   * @param {number} filters.page - Page number
-   * @param {number} filters.pageSize - Items per page
    */
   filterListings: async (filters) => {
-    const params = {};
+    try {
+      const params = {};
 
-    if (filters.category) params.category = filters.category;
-    if (filters.priceRange) params.priceRange = filters.priceRange;
-    if (filters.search) params.search = filters.search;
-    if (filters.status) params.status = filters.status;
-    if (filters.minPrice !== undefined) params.minPrice = filters.minPrice;
-    if (filters.maxPrice !== undefined) params.maxPrice = filters.maxPrice;
-    params.page = filters.page || 1;
-    params.pageSize = filters.pageSize || 10;
+      if (filters.category) params.category = filters.category;
+      if (filters.priceRange) params.priceRange = filters.priceRange;
+      if (filters.search) params.search = filters.search;
+      if (filters.status) params.status = filters.status;
+      if (filters.minPrice !== undefined) params.minPrice = filters.minPrice;
+      if (filters.maxPrice !== undefined) params.maxPrice = filters.maxPrice;
+      params.page = filters.page || 1;
+      params.pageSize = filters.pageSize || 10;
 
-    return await axiosInstance.get('/api/v1/listing/listing-filter', { params });
+      const response = await axiosInstance.get('/api/v1/listing/listing-filter', { params });
+
+      // Check if the response indicates no listings found
+      if (response.data.message === "No listings found with the specified filters") {
+        return {
+          data: {
+            listings: [],
+            pagination: {
+              total: 0,
+              page: params.page,
+              pageSize: params.pageSize,
+              totalPages: 0
+            },
+            message: response.data.message,
+            isEmpty: true
+          }
+        };
+      }
+
+      return response;
+    } catch (error) {
+      // If it's a 404 or empty result, normalize the response
+      if (error.response?.status === 404 || 
+          error.response?.data?.message?.includes("No listings found")) {
+        return {
+          data: {
+            listings: [],
+            pagination: {
+              total: 0,
+              page: filters.page || 1,
+              pageSize: filters.pageSize || 10,
+              totalPages: 0
+            },
+            message: error.response?.data?.message || "No listings found",
+            isEmpty: true
+          }
+        };
+      }
+      throw error;
+    }
   },
 
   // Store/Shop Management APIs
@@ -206,7 +320,6 @@ const sellerService = {
    */
   getListingStatistics: async () => {
     try {
-      // Fetch all statuses in parallel using the correct status values
       const [active, inactive, draft, outOfStock, sold] = await Promise.all([
         axiosInstance.get('/api/v1/listing/listing-filter', {
           params: { status: 'active', page: 1, pageSize: 1 }
@@ -227,11 +340,11 @@ const sellerService = {
 
       return {
         data: {
-          active: active.data.pagination.total,
-          inactive: inactive.data.pagination.total,
-          draft: draft.data.pagination.total,
-          outOfStock: outOfStock.data.pagination.total,
-          sold: sold.data.pagination.total,
+          active: active.data.pagination?.total || 0,
+          inactive: inactive.data.pagination?.total || 0,
+          draft: draft.data.pagination?.total || 0,
+          outOfStock: outOfStock.data.pagination?.total || 0,
+          sold: sold.data.pagination?.total || 0,
         }
       };
     } catch (error) {
@@ -393,11 +506,9 @@ const sellerService = {
    */
   formatStoreData: (rawData) => {
     if (rawData.updateData) {
-      // Format for update
       return rawData;
     }
 
-    // Format for create
     return {
       storeName: rawData.storeName,
       storeTagLine: rawData.storeTagLine,

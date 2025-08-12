@@ -59,6 +59,7 @@ const initialState = {
     message: '',
     selectedListingId: null,
     pendingImageUploads: [],
+    isEmpty: false, // New state to track empty results
   },
   
   // Cache management
@@ -374,6 +375,11 @@ const sellerSlice = createSlice({
       state.ui.success = false;
       state.ui.message = '';
     },
+    clearMessages: (state) => {
+      state.ui.error = null;
+      state.ui.success = false;
+      state.ui.message = '';
+    },
     setSelectedListing: (state, action) => {
       state.ui.selectedListingId = action.payload;
     },
@@ -492,30 +498,48 @@ const sellerSlice = createSlice({
       .addCase(fetchAllListings.pending, (state) => {
         state.ui.listingsLoading = true;
         state.ui.error = null;
+        state.ui.isEmpty = false;
       })
       .addCase(fetchAllListings.fulfilled, (state, action) => {
         state.ui.listingsLoading = false;
         
         if (!action.payload.cached) {
-          const normalized = normalizeListings(action.payload.listings);
-          state.listings.byId = normalized.byId;
-          state.listings.allIds = normalized.allIds;
-          state.listings.pagination = action.payload.pagination;
-          state.cache.listingsLastFetch = Date.now();
-          
-          // Calculate status counts with backend statuses
-          const statusCounts = { active: 0, inactive: 0, draft: 0, outOfStock: 0, sold: 0 };
-          action.payload.listings.forEach(listing => {
-            if (listing.status && statusCounts[listing.status] !== undefined) {
-              statusCounts[listing.status]++;
-            }
-          });
-          state.listings.statusCounts = statusCounts;
+          if (action.payload.isEmpty) {
+            // Handle empty results case
+            state.listings.byId = {};
+            state.listings.allIds = [];
+            state.listings.pagination = action.payload.pagination || {
+              total: 0,
+              page: 1,
+              pageSize: 10,
+              totalPages: 0
+            };
+            state.ui.isEmpty = true;
+            state.ui.message = action.payload.message || "No listings found";
+          } else {
+            // Handle normal results
+            const normalized = normalizeListings(action.payload.listings || []);
+            state.listings.byId = normalized.byId;
+            state.listings.allIds = normalized.allIds;
+            state.listings.pagination = action.payload.pagination;
+            state.cache.listingsLastFetch = Date.now();
+            state.ui.isEmpty = false;
+            
+            // Calculate status counts with backend statuses
+            const statusCounts = { active: 0, inactive: 0, draft: 0, outOfStock: 0, sold: 0 };
+            (action.payload.listings || []).forEach(listing => {
+              if (listing.status && statusCounts[listing.status] !== undefined) {
+                statusCounts[listing.status]++;
+              }
+            });
+            state.listings.statusCounts = statusCounts;
+          }
         }
       })
       .addCase(fetchAllListings.rejected, (state, action) => {
         state.ui.listingsLoading = false;
         state.ui.error = action.payload;
+        state.ui.isEmpty = false;
       });
     
     // Fetch Listing By ID
@@ -537,26 +561,56 @@ const sellerSlice = createSlice({
         state.ui.error = action.payload;
       });
     
-    // Fetch Listings By Status
+    // Fetch Listings By Status - Fixed to handle empty results properly
     builder
       .addCase(fetchListingsByStatus.pending, (state) => {
         state.ui.listingsLoading = true;
         state.ui.error = null;
+        state.ui.success = false;
+        state.ui.isEmpty = false;
       })
       .addCase(fetchListingsByStatus.fulfilled, (state, action) => {
         state.ui.listingsLoading = false;
-        const normalized = normalizeListings(action.payload.listings);
         
-        // Replace current data with filtered results
-        state.listings.byId = normalized.byId;
-        state.listings.allIds = normalized.allIds;
+        // Always clear existing data when fetching by status to avoid stale data
+        state.listings.byId = {};
+        state.listings.allIds = [];
         
-        // Update pagination
-        state.listings.pagination = action.payload.pagination;
+        if (action.payload.isEmpty) {
+          // Handle empty results case - this is NOT an error
+          state.ui.isEmpty = true;
+          state.ui.message = action.payload.message || "No listings found for this status";
+          state.ui.error = null; // Clear any previous errors
+          state.listings.pagination = action.payload.pagination || {
+            total: 0,
+            page: 1,
+            pageSize: 10,
+            totalPages: 0
+          };
+        } else {
+          // Handle normal results
+          const normalized = normalizeListings(action.payload.listings || []);
+          state.listings.byId = normalized.byId;
+          state.listings.allIds = normalized.allIds;
+          state.listings.pagination = action.payload.pagination;
+          state.ui.isEmpty = false;
+          state.ui.message = '';
+        }
       })
       .addCase(fetchListingsByStatus.rejected, (state, action) => {
         state.ui.listingsLoading = false;
         state.ui.error = action.payload;
+        state.ui.isEmpty = false;
+        
+        // Clear listings on error to show empty state
+        state.listings.byId = {};
+        state.listings.allIds = [];
+        state.listings.pagination = {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 0
+        };
       });
     
     // Delete Listing
@@ -587,18 +641,41 @@ const sellerSlice = createSlice({
         state.ui.error = action.payload;
       });
     
-    // Filter Listings
+    // Filter Listings - Fixed to handle empty results
     builder
       .addCase(filterListings.pending, (state) => {
         state.ui.listingsLoading = true;
         state.ui.error = null;
+        state.ui.success = false;
+        state.ui.isEmpty = false;
       })
       .addCase(filterListings.fulfilled, (state, action) => {
         state.ui.listingsLoading = false;
-        const normalized = normalizeListings(action.payload.listings);
-        state.listings.byId = normalized.byId;
-        state.listings.allIds = normalized.allIds;
-        state.listings.pagination = action.payload.pagination;
+        
+        // Always clear existing data when filtering to avoid stale data
+        state.listings.byId = {};
+        state.listings.allIds = [];
+        
+        if (action.payload.isEmpty) {
+          // Handle empty results case - this is NOT an error
+          state.ui.isEmpty = true;
+          state.ui.message = action.payload.message || "No listings found with the specified filters";
+          state.ui.error = null; // Clear any previous errors
+          state.listings.pagination = action.payload.pagination || {
+            total: 0,
+            page: 1,
+            pageSize: 10,
+            totalPages: 0
+          };
+        } else {
+          // Handle normal results
+          const normalized = normalizeListings(action.payload.listings || []);
+          state.listings.byId = normalized.byId;
+          state.listings.allIds = normalized.allIds;
+          state.listings.pagination = action.payload.pagination;
+          state.ui.isEmpty = false;
+          state.ui.message = '';
+        }
         
         // Store the original filters (before backend mapping)
         state.listings.filters = action.meta.arg;
@@ -606,20 +683,54 @@ const sellerSlice = createSlice({
       .addCase(filterListings.rejected, (state, action) => {
         state.ui.listingsLoading = false;
         state.ui.error = action.payload;
+        state.ui.isEmpty = false;
+        
+        // Clear listings on error to show empty state
+        state.listings.byId = {};
+        state.listings.allIds = [];
+        state.listings.pagination = {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 0
+        };
       });
 
-    // Search Listings
+    // Search Listings - Fixed to handle empty results
     builder
       .addCase(searchListings.pending, (state) => {
         state.ui.listingsLoading = true;
         state.ui.error = null;
+        state.ui.success = false;
+        state.ui.isEmpty = false;
       })
       .addCase(searchListings.fulfilled, (state, action) => {
         state.ui.listingsLoading = false;
-        const normalized = normalizeListings(action.payload.listings);
-        state.listings.byId = normalized.byId;
-        state.listings.allIds = normalized.allIds;
-        state.listings.pagination = action.payload.pagination;
+        
+        // Always clear existing data when searching to avoid stale data
+        state.listings.byId = {};
+        state.listings.allIds = [];
+        
+        if (action.payload.isEmpty) {
+          // Handle empty results case - this is NOT an error
+          state.ui.isEmpty = true;
+          state.ui.message = action.payload.message || "No listings found for your search";
+          state.ui.error = null; // Clear any previous errors
+          state.listings.pagination = action.payload.pagination || {
+            total: 0,
+            page: 1,
+            pageSize: 10,
+            totalPages: 0
+          };
+        } else {
+          // Handle normal results
+          const normalized = normalizeListings(action.payload.listings || []);
+          state.listings.byId = normalized.byId;
+          state.listings.allIds = normalized.allIds;
+          state.listings.pagination = action.payload.pagination;
+          state.ui.isEmpty = false;
+          state.ui.message = '';
+        }
         
         // Store the search filters
         state.listings.filters = {
@@ -630,6 +741,17 @@ const sellerSlice = createSlice({
       .addCase(searchListings.rejected, (state, action) => {
         state.ui.listingsLoading = false;
         state.ui.error = action.payload;
+        state.ui.isEmpty = false;
+        
+        // Clear listings on error to show empty state
+        state.listings.byId = {};
+        state.listings.allIds = [];
+        state.listings.pagination = {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 0
+        };
       });
     
     // Bulk Update Listings
@@ -789,6 +911,7 @@ const sellerSlice = createSlice({
 export const {
   clearError,
   clearSuccess,
+  clearMessages,
   setSelectedListing,
   setFilters,
   clearFilters,
@@ -864,6 +987,7 @@ export const selectIsLoading = (state) => state.seller.ui.listingsLoading;
 export const selectError = (state) => state.seller.ui.error;
 export const selectSuccess = (state) => state.seller.ui.success;
 export const selectMessage = (state) => state.seller.ui.message;
+export const selectIsEmpty = (state) => state.seller.ui.isEmpty;
 export const selectPendingImageUploads = (state) => state.seller.ui.pendingImageUploads;
 
 // Statistics selectors
