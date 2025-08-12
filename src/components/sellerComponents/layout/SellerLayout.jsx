@@ -57,15 +57,10 @@ const SellerLayout = ({ children }) => {
   // Redux selectors
   const user = useSelector(selectUser);
   const isAuthenticated = useSelector(selectIsAuthenticated);
-  
-  // Get shop info from user data or use defaults
-  // const shopName = user?.businessInfo?.businessName || "My shop";
-  // const shopRating = "257 ⭐";
 
   const [activeTab, setActiveTab] = useState("overview");
   const [activeSubTab, setActiveSubTab] = useState(null);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  // const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
 
   // Check authentication on mount
   useEffect(() => {
@@ -74,17 +69,16 @@ const SellerLayout = ({ children }) => {
     }
   }, [isAuthenticated, navigate]);
 
-  // PLACEHOLDER ARRAYS - Add your content here later
   const navigation = [
     { id: "overview", name: "Overview", href: "/seller/overview" },
     { id: "orders", name: "Orders", href: "/seller/orders", badge: "12" },
     { id: "listings", name: "Listings", href: "/seller/listings" },
     { id: "customer", name: "Customer", href: "/seller/customer", badge: "3" },
-    // { id: "payments", name: "Payments", href: "/seller/payments" },
     { id: "store", name: "Store", href: "/seller/profile" },
   ];
 
-const sidebarNavigation = {
+  // Updated sidebar navigation with correct status mapping for backend
+  const sidebarNavigation = {
     orders: [
       { id: "all-orders", name: "All orders" },
       { id: "awaiting-payment", name: "Awaiting payment" },
@@ -95,12 +89,12 @@ const sidebarNavigation = {
       { id: "disputes", name: "Requests and disputes" },
     ],
     listings: [
-      { id: "all-listings", name: "All listings" },
-      { id: "active-listings", name: "Active listings" },
-      { id: "inactive-listings", name: "Inactive listings" },
-      { id: "out-of-stock", name: "Out of stock" },
-      { id: "draft-listings", name: "Draft listings" },
-      { id: "sold-listings", name: "Sold listings" },
+      { id: "all-listings", name: "All listings", backendStatus: null },
+      { id: "active-listings", name: "Active listings", backendStatus: "active" },
+      { id: "inactive-listings", name: "Inactive listings", backendStatus: "inactive" },
+      { id: "out-of-stock", name: "Out of stock", backendStatus: "outOfStock" },
+      { id: "draft-listings", name: "Draft listings", backendStatus: "draft" },
+      { id: "sold-listings", name: "Sold listings", backendStatus: "sold" },
     ],
     customer: [
       { id: "messages", name: "Customer messages" },
@@ -118,606 +112,6 @@ const sidebarNavigation = {
     ],
   };
 
-  // PLACEHOLDER FILTER CONFIGURATIONS - Add your filters here later
-   const filterConfigurations = {
-    orders: {
-      "all-orders": [
-        {
-          type: "select",
-          label: "Order Status",
-          options: [
-            { value: "all", label: "All Orders" },
-            { value: "pending", label: "Pending Payment" },
-            { value: "paid", label: "Paid" },
-            { value: "shipped", label: "Shipped" },
-            { value: "delivered", label: "Delivered" },
-            { value: "cancelled", label: "Cancelled" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "all", label: "All Time" },
-            { value: "7days", label: "Last 7 days" },
-            { value: "30days", label: "Last 30 days" },
-            { value: "90days", label: "Last 90 days" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search by buyer",
-          placeholder: "Enter buyer name...",
-        },
-        {
-          type: "search",
-          label: "Order number",
-          placeholder: "Enter order number...",
-        },
-      ],
-      "awaiting-payment": [
-        {
-          type: "select",
-          label: "Payment Method",
-          options: [
-            { value: "all", label: "All Methods" },
-            { value: "paypal", label: "PayPal" },
-            { value: "credit-card", label: "Credit Card" },
-            { value: "bank-transfer", label: "Bank Transfer" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "all", label: "All Time" },
-            { value: "7days", label: "Last 7 days" },
-            { value: "30days", label: "Last 30 days" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search buyer",
-          placeholder: "Buyer name...",
-        },
-      ],
-      "awaiting-shipment": [
-        {
-          type: "select",
-          label: "Shipping Method",
-          options: [
-            { value: "all", label: "All Methods" },
-            { value: "standard", label: "Standard" },
-            { value: "express", label: "Express" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Priority",
-          options: [
-            { value: "all", label: "All Orders" },
-            { value: "urgent", label: "Urgent (Same Day)" },
-            { value: "normal", label: "Normal" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search order",
-          placeholder: "Order number...",
-        },
-      ],
-      "paid-shipped": [
-        {
-          type: "select",
-          label: "Status",
-          options: [
-            { value: "all", label: "All" },
-            { value: "shipped", label: "Shipped" },
-            { value: "delivered", label: "Delivered" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Shipping Method",
-          options: [
-            { value: "all", label: "All Methods" },
-            { value: "standard", label: "Standard" },
-            { value: "express", label: "Express" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Tracking Number",
-          placeholder: "Enter tracking number...",
-        },
-      ],
-      cancellations: [
-        {
-          type: "select",
-          label: "Cancel Reason",
-          options: [
-            { value: "all", label: "All Reasons" },
-            { value: "customer-request", label: "Customer Request" },
-            { value: "out-of-stock", label: "Out of Stock" },
-            { value: "pricing-error", label: "Pricing Error" },
-            { value: "other", label: "Other" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "all", label: "All Time" },
-            { value: "7days", label: "Last 7 days" },
-            { value: "30days", label: "Last 30 days" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search order",
-          placeholder: "Order number...",
-        },
-      ],
-      returns: [
-        {
-          type: "select",
-          label: "Return Status",
-          options: [
-            { value: "all", label: "All Returns" },
-            { value: "requested", label: "Requested" },
-            { value: "approved", label: "Approved" },
-            { value: "completed", label: "Completed" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search order",
-          placeholder: "Order number...",
-        },
-      ],
-      disputes: [
-        {
-          type: "select",
-          label: "Dispute Type",
-          options: [
-            { value: "all", label: "All Disputes" },
-            { value: "item-not-received", label: "Item Not Received" },
-            { value: "item-not-described", label: "Item Not As Described" },
-            { value: "return-request", label: "Return Request" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Status",
-          options: [
-            { value: "all", label: "All Status" },
-            { value: "open", label: "Open" },
-            { value: "closed", label: "Closed" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search case",
-          placeholder: "Case ID...",
-        },
-      ],
-    },
-    listings: {
-      "all-listings": [
-        {
-          type: "select",
-          label: "Status",
-          options: [
-            { value: "all", label: "All Status" },
-            { value: "active", label: "Active" },
-            { value: "paused", label: "Paused" },
-            { value: "out-of-stock", label: "Out of Stock" },
-            { value: "draft", label: "Draft" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Category",
-          options: [
-            { value: "all", label: "All Categories" },
-            { value: "electronics", label: "Electronics" },
-            { value: "gaming", label: "Gaming" },
-            { value: "fashion", label: "Fashion" },
-            { value: "home", label: "Home & Garden" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Price Range",
-          options: [
-            { value: "all", label: "All Prices" },
-            { value: "0-100", label: "$0 - $100" },
-            { value: "100-500", label: "$100 - $500" },
-            { value: "500-1000", label: "$500 - $1,000" },
-            { value: "1000-5000", label: "$1,000+" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search listings",
-          placeholder: "Product name, SKU, or tags...",
-        },
-      ],
-      "active-listings": [
-        {
-          type: "select",
-          label: "Category",
-          options: [
-            { value: "all", label: "All Categories" },
-            { value: "electronics", label: "Electronics" },
-            { value: "gaming", label: "Gaming" },
-            { value: "fashion", label: "Fashion" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Performance",
-          options: [
-            { value: "all", label: "All Performance" },
-            { value: "high-views", label: "High Views" },
-            { value: "low-conversion", label: "Low Conversion" },
-            { value: "top-rated", label: "Top Rated" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search active listings",
-          placeholder: "Product name or SKU...",
-        },
-      ],
-      "inactive-listings": [
-        {
-          type: "select",
-          label: "Reason",
-          options: [
-            { value: "all", label: "All Reasons" },
-            { value: "paused", label: "Manually Paused" },
-            { value: "policy", label: "Policy Violation" },
-            { value: "temporary", label: "Temporary Hold" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "all", label: "All Time" },
-            { value: "7days", label: "Last 7 days" },
-            { value: "30days", label: "Last 30 days" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search inactive",
-          placeholder: "Product name...",
-        },
-      ],
-      "out-of-stock": [
-        {
-          type: "select",
-          label: "Category",
-          options: [
-            { value: "all", label: "All Categories" },
-            { value: "electronics", label: "Electronics" },
-            { value: "gaming", label: "Gaming" },
-            { value: "fashion", label: "Fashion" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Priority",
-          options: [
-            { value: "all", label: "All Items" },
-            { value: "high-demand", label: "High Demand" },
-            { value: "low-stock-alert", label: "Low Stock Alert" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search out of stock",
-          placeholder: "Product name...",
-        },
-      ],
-      "draft-listings": [
-        {
-          type: "select",
-          label: "Completion Status",
-          options: [
-            { value: "all", label: "All Drafts" },
-            { value: "incomplete", label: "Incomplete" },
-            { value: "ready", label: "Ready to Publish" },
-            { value: "needs-review", label: "Needs Review" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Last Modified",
-          options: [
-            { value: "all", label: "All Time" },
-            { value: "today", label: "Today" },
-            { value: "7days", label: "Last 7 days" },
-            { value: "30days", label: "Last 30 days" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search drafts",
-          placeholder: "Draft name...",
-        },
-      ],
-      "sold-listings": [
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "30days", label: "Last 30 days" },
-            { value: "90days", label: "Last 90 days" },
-            { value: "year", label: "This year" },
-            { value: "all", label: "All time" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Sales Performance",
-          options: [
-            { value: "all", label: "All Performance" },
-            { value: "best-sellers", label: "Best Sellers" },
-            { value: "low-performers", label: "Low Performers" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search sold items",
-          placeholder: "Product name...",
-        },
-      ],
-    },
-    customer: {
-      messages: [
-        {
-          type: "select",
-          label: "Message Status",
-          options: [
-            { value: "all", label: "All Messages" },
-            { value: "unread", label: "Unread" },
-            { value: "replied", label: "Replied" },
-            { value: "pending", label: "Pending Response" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "all", label: "All Time" },
-            { value: "today", label: "Today" },
-            { value: "7days", label: "Last 7 days" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search customer",
-          placeholder: "Customer name...",
-        },
-      ],
-      questions: [
-        {
-          type: "select",
-          label: "Question Status",
-          options: [
-            { value: "all", label: "All Questions" },
-            { value: "unanswered", label: "Unanswered" },
-            { value: "answered", label: "Answered" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search questions",
-          placeholder: "Question or product...",
-        },
-      ],
-      cases: [
-        {
-          type: "select",
-          label: "Case Status",
-          options: [
-            { value: "all", label: "All Cases" },
-            { value: "open", label: "Open" },
-            { value: "closed", label: "Closed" },
-            { value: "escalated", label: "Escalated" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Case Type",
-          options: [
-            { value: "all", label: "All Types" },
-            { value: "return", label: "Return Request" },
-            { value: "dispute", label: "Dispute" },
-            { value: "complaint", label: "Complaint" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search case",
-          placeholder: "Case ID...",
-        },
-      ],
-      feedback: [
-        {
-          type: "select",
-          label: "Feedback Type",
-          options: [
-            { value: "all", label: "All Feedback" },
-            { value: "positive", label: "Positive" },
-            { value: "negative", label: "Negative" },
-            { value: "neutral", label: "Neutral" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search feedback",
-          placeholder: "Customer or order...",
-        },
-      ],
-      reviews: [
-        {
-          type: "select",
-          label: "Rating",
-          options: [
-            { value: "all", label: "All Ratings" },
-            { value: "5", label: "5 Stars" },
-            { value: "4", label: "4 Stars" },
-            { value: "3", label: "3 Stars" },
-            { value: "2", label: "2 Stars" },
-            { value: "1", label: "1 Star" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search reviews",
-          placeholder: "Product or customer...",
-        },
-      ],
-    },
-    payments: {
-      payouts: [
-        {
-          type: "select",
-          label: "Payout Status",
-          options: [
-            { value: "all", label: "All Payouts" },
-            { value: "pending", label: "Pending" },
-            { value: "completed", label: "Completed" },
-            { value: "failed", label: "Failed" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "30days", label: "Last 30 days" },
-            { value: "90days", label: "Last 90 days" },
-            { value: "year", label: "This year" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search payout",
-          placeholder: "Payout ID...",
-        },
-      ],
-      transactions: [
-        {
-          type: "select",
-          label: "Transaction Type",
-          options: [
-            { value: "all", label: "All Transactions" },
-            { value: "sale", label: "Sales" },
-            { value: "refund", label: "Refunds" },
-            { value: "fee", label: "Fees" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "30days", label: "Last 30 days" },
-            { value: "90days", label: "Last 90 days" },
-            { value: "year", label: "This year" },
-          ],
-        },
-        {
-          type: "search",
-          label: "Search transaction",
-          placeholder: "Transaction ID...",
-        },
-      ],
-      fees: [
-        {
-          type: "select",
-          label: "Fee Type",
-          options: [
-            { value: "all", label: "All Fees" },
-            { value: "listing", label: "Listing Fees" },
-            { value: "final-value", label: "Final Value Fees" },
-            { value: "payment", label: "Payment Processing" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Time Period",
-          options: [
-            { value: "30days", label: "Last 30 days" },
-            { value: "90days", label: "Last 90 days" },
-            { value: "year", label: "This year" },
-          ],
-        },
-      ],
-      "tax-documents": [
-        {
-          type: "select",
-          label: "Document Type",
-          options: [
-            { value: "all", label: "All Documents" },
-            { value: "1099", label: "1099 Forms" },
-            { value: "tax-summary", label: "Tax Summary" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Year",
-          options: [
-            { value: "2024", label: "2024" },
-            { value: "2023", label: "2023" },
-            { value: "2022", label: "2022" },
-          ],
-        },
-      ],
-      "payment-methods": [
-        {
-          type: "select",
-          label: "Method Type",
-          options: [
-            { value: "all", label: "All Methods" },
-            { value: "bank", label: "Bank Account" },
-            { value: "paypal", label: "PayPal" },
-            { value: "card", label: "Credit Card" },
-          ],
-        },
-        {
-          type: "select",
-          label: "Status",
-          options: [
-            { value: "all", label: "All Status" },
-            { value: "active", label: "Active" },
-            { value: "inactive", label: "Inactive" },
-          ],
-        },
-      ],
-    },
-  };
-
-  // PLACEHOLDER NOTIFICATIONS - Add real notifications later
-  // const notifications = [
-  //   {
-  //     id: 1,
-  //     title: "New order received",
-  //     message: "Order #12345 from John Doe",
-  //     time: "2 min ago",
-  //     unread: true,
-  //   },
-  //   {
-  //     id: 2,
-  //     title: "Low stock alert",
-  //     message: "iPhone 15 Pro has only 3 items left",
-  //     time: "1 hour ago",
-  //     unread: true,
-  //   },
-  // ];
 
   // Navigation handlers
   const handleNavigation = (tabId) => {
@@ -746,11 +140,7 @@ const sidebarNavigation = {
     setProfileDropdownOpen(false);
   };
 
-  const getCurrentFilters = () => {
-    const tabFilters = filterConfigurations[activeTab];
-    if (!tabFilters || !activeSubTab) return [];
-    return tabFilters[activeSubTab] || [];
-  };
+
 
   const showSidebar =
     activeTab !== "overview" &&
@@ -985,73 +375,10 @@ const sidebarNavigation = {
                   Seller Hub
                 </span>
               </div>
-              {/* Shop Name Display */}
-              {/* <div className="ml-4 text-sm text-gray-500">
-                <span className="font-medium">{shopName}</span>
-                {shopRating && (
-                  <span className="ml-1">({shopRating})</span>
-                )}
-              </div> */}
             </div>
 
             {/* Right side */}
             <div className="flex items-center space-x-4">
-              {/* User welcome message */}
-              {/* <div className="text-sm text-gray-600">
-                Welcome, <span className="font-medium">{user?.firstName || user?.email?.split('@')[0] || 'Seller'}</span>
-              </div> */}
-
-              {/* Messages */}
-              {/* <Button variant="secondary" size="sm">
-                Messages (0)
-              </Button> */}
-
-              {/* Notifications Dropdown */}
-              {/* <Dropdown
-                trigger={
-                  <IconButton className="relative">
-                    <Bell className="h-5 w-5" />
-                    <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-                  </IconButton>
-                }
-                isOpen={notificationDropdownOpen}
-                onToggle={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
-                className="w-80"
-              >
-                <div className="p-4 border-b border-gray-200">
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Notifications
-                  </h3>
-                </div>
-                <div className="max-h-64 overflow-y-auto">
-                  {notifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`p-4 border-b border-gray-100 hover:bg-gray-50 ${
-                        notification.unread ? "bg-blue-50" : ""
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            {notification.title}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {notification.message}
-                          </p>
-                        </div>
-                        {notification.unread && (
-                          <div className="w-2 h-2 bg-blue-600 rounded-full ml-2 mt-1"></div>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        {notification.time}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </Dropdown> */}
-
               {/* Profile Dropdown */}
               {isAuthenticated && user ? (
                 <Dropdown
@@ -1216,11 +543,6 @@ const sidebarNavigation = {
               {/* Other tabs content */}
               {activeTab !== "overview" && activeTab !== "store" && (
                 <div className="space-y-0">
-                  {/* Filter Bar */}
-                  {activeSubTab && getCurrentFilters().length > 0 && (
-                    <FilterBar filters={getCurrentFilters()} />
-                  )}
-
                   <div className="px-4 sm:px-6 lg:px-8 py-8">
                     <div className="space-y-6">
                       {/* Orders Management */}
@@ -1228,9 +550,12 @@ const sidebarNavigation = {
                         <OrderManagement activeSection={activeSubTab} />
                       )}
 
-                      {/* Listings Management */}
+                      {/* Listings Management - Pass the backend status */}
                       {activeTab === "listings" && activeSubTab && (
-                        <ListingManagement activeSection={activeSubTab} />
+                        <ListingManagement 
+                          activeSection={activeSubTab}
+                          backendStatus={sidebarNavigation.listings.find(item => item.id === activeSubTab)?.backendStatus}
+                        />
                       )}
 
                       {/* Other sections content */}

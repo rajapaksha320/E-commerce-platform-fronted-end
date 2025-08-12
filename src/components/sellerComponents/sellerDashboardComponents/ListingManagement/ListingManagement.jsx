@@ -1,5 +1,7 @@
-import React, { useState, useMemo } from "react";
+/* eslint-disable no-unused-vars */
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   Eye,
   Edit,
@@ -28,6 +30,18 @@ import {
   Settings,
 } from "lucide-react";
 
+// Import debounce utility
+import { debounce } from "../../../../utils/debounce";
+
+// Import Redux hooks
+import {
+  useListings,
+  useListingDetails,
+  usePagination,
+  useSearch,
+  useSelectedListings,
+} from "../../../../hooks/useSellerData";
+
 // Import UI components
 import {
   Button,
@@ -53,13 +67,66 @@ import {
   TableCell,
   Alert,
   SearchInput,
+  LoadingSpinner,
 } from "../../../ui/sellerUis/Uis";
 
-const ListingManagement = ({ activeSection = "all-listings" }) => {
+import ListingDetails from "./ListingDetails";
+
+const ListingManagement = ({ activeSection = "all-listings", backendStatus = null }) => {
   const navigate = useNavigate();
-  const [sortField, setSortField] = useState("createdDate");
+  
+  // Redux hooks
+  const {
+    listings,
+    statusCounts,
+    statistics,
+    isLoading,
+    error,
+    success,
+    message,
+    createNewListing,
+    updateExistingListing,
+    deleteExistingListing,
+    fetchByStatus,
+    applyFilters,
+    resetFilters,
+    bulkUpdate,
+    bulkDelete,
+    refreshListings,
+    clearMessages,
+  } = useListings();
+
+  const {
+    goToPage,
+    changePageSize,
+    nextPage,
+    previousPage,
+    hasNextPage,
+    hasPreviousPage,
+    page,
+    pageSize,
+    total,
+    totalPages,
+  } = usePagination();
+
+  const {
+    selectedIds,
+    selectedCount,
+    selectListing,
+    deselectListing,
+    toggleListing,
+    selectAll,
+    clearSelection,
+    performBulkUpdate,
+    performBulkDelete,
+  } = useSelectedListings();
+
+  // Get isEmpty state from Redux
+  const isEmpty = useSelector(state => state.seller.ui.isEmpty);
+
+  // Local state
+  const [sortField, setSortField] = useState("createdAt");
   const [sortDirection, setSortDirection] = useState("desc");
-  const [selectedListings, setSelectedListings] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBulkActionModal, setShowBulkActionModal] = useState(false);
   const [listingToDelete, setListingToDelete] = useState(null);
@@ -67,433 +134,171 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterPriceRange, setFilterPriceRange] = useState("");
-  const [listings, setListings] = useState([]);
+  const [filterStatus, setFilterStatus] = useState("");
+  const [selectedListing, setSelectedListing] = useState(null);
+  const [showListingDetails, setShowListingDetails] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
-  // Complete listings dataset
-  const allListingsData = [
-    {
-      id: "1",
-      title: "iPhone 15 Pro Max 256GB - Natural Titanium",
-      description:
-        "Brand new iPhone 15 Pro Max with 256GB storage in Natural Titanium color. Comes with original box and all accessories.",
-      sku: "IPH15PM-256-NT",
-      category: "Electronics",
-      subcategory: "Smartphones",
-      brand: "Apple",
-      price: 1199.0,
-      originalPrice: 1299.0,
-      quantity: 25,
-      sold: 15,
-      status: "active",
-      condition: "new",
-      visibility: "public",
-      createdDate: "2024-06-01",
-      lastModified: "2024-06-15",
-      views: 1250,
-      favorites: 89,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop",
-          name: "main.jpg",
-        },
-        {
-          id: "2",
-          url: "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=400&h=400&fit=crop",
-          name: "side.jpg",
-        },
-      ],
-      colors: [
-        { id: "1", name: "Natural Titanium", hex: "#C0C0C0" },
-        { id: "2", name: "Blue Titanium", hex: "#1E40AF" },
-        { id: "3", name: "White Titanium", hex: "#FFFFFF" },
-        { id: "4", name: "Black Titanium", hex: "#000000" },
-      ],
-      sizes: ["256GB"],
-      tags: ["iphone", "apple", "smartphone", "5g", "titanium"],
-      features: ["5G Compatible", "48MP Camera", "Titanium Build", "USB-C"],
-      rating: 4.8,
-      reviews: 45,
-      weight: "221",
-      dimensions: { length: "6.3", width: "3.1", height: "0.3" },
-      shippingWeight: "350",
-      shippingClass: "express",
-      returnPolicy: "30",
-      warranty: "1 Year Apple Limited Warranty",
-      metaTitle: "iPhone 15 Pro Max 256GB Natural Titanium - Best Price",
-      metaDescription:
-        "Get the latest iPhone 15 Pro Max with 256GB storage. Free shipping, authentic warranty.",
-      shipping: {
-        weight: 0.5,
-        dimensions: "6.3 x 3.1 x 0.3 inches",
-        freeShipping: true,
-        expedited: true,
-      },
-      seo: {
-        metaTitle: "iPhone 15 Pro Max 256GB Natural Titanium - Best Price",
-        metaDescription:
-          "Get the latest iPhone 15 Pro Max with 256GB storage. Free shipping, authentic warranty.",
-        keywords: ["iphone 15 pro max", "256gb", "natural titanium"],
-      },
-    },
-    {
-      id: "2",
-      title: "MacBook Air M3 13-inch - Midnight",
-      description:
-        "Latest MacBook Air with M3 chip, 13-inch Liquid Retina display, 8GB RAM, 256GB SSD in Midnight color.",
-      sku: "MBA-M3-13-MD",
-      category: "Electronics",
-      subcategory: "Laptops",
-      brand: "Apple",
-      price: 1099.0,
-      originalPrice: 1199.0,
-      quantity: 12,
-      sold: 8,
-      status: "active",
-      condition: "new",
-      visibility: "public",
-      createdDate: "2024-05-28",
-      lastModified: "2024-06-14",
-      views: 890,
-      favorites: 67,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop",
-          name: "macbook-main.jpg",
-        },
-      ],
-      colors: [
-        { id: "1", name: "Midnight", hex: "#191970" },
-        { id: "2", name: "Starlight", hex: "#F5F5DC" },
-        { id: "3", name: "Silver", hex: "#C0C0C0" },
-        { id: "4", name: "Space Gray", hex: "#696969" },
-      ],
-      sizes: ["13-inch"],
-      tags: ["macbook", "apple", "laptop", "m3", "ultrabook"],
-      features: ["M3 Chip", "13-inch Display", "8GB RAM", "256GB SSD"],
-      rating: 4.9,
-      reviews: 32,
-      weight: "1200",
-      dimensions: { length: "11.97", width: "8.46", height: "0.44" },
-      shippingWeight: "1350",
-      shippingClass: "standard",
-      returnPolicy: "30",
-      warranty: "1 Year Apple Limited Warranty",
-      metaTitle: "MacBook Air M3 13-inch Midnight - Latest Apple Laptop",
-      metaDescription:
-        "Latest MacBook Air with M3 chip and 13-inch display. Perfect for professionals and students.",
-    },
-    {
-      id: "3",
-      title: "Samsung Galaxy S24 Ultra 512GB - Titanium Black",
-      description:
-        "Samsung's flagship smartphone with S Pen, 200MP camera, and AI features. 512GB storage model.",
-      sku: "SGS24U-512-TB",
-      category: "Electronics",
-      subcategory: "Smartphones",
-      brand: "Samsung",
-      price: 1299.99,
-      originalPrice: 1399.99,
-      quantity: 0,
-      sold: 20,
-      status: "out-of-stock",
-      condition: "new",
-      visibility: "public",
-      createdDate: "2024-05-25",
-      lastModified: "2024-06-12",
-      views: 2100,
-      favorites: 156,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=400&fit=crop",
-          name: "galaxy-main.jpg",
-        },
-      ],
-      colors: [
-        { id: "1", name: "Titanium Black", hex: "#2F2F2F" },
-        { id: "2", name: "Titanium Gray", hex: "#808080" },
-        { id: "3", name: "Titanium Violet", hex: "#8A2BE2" },
-        { id: "4", name: "Titanium Yellow", hex: "#FFD700" },
-      ],
-      sizes: ["512GB"],
-      tags: ["samsung", "galaxy", "s24", "ultra", "android", "s-pen"],
-      features: ["S Pen", "200MP Camera", "AI Features", "512GB Storage"],
-      rating: 4.7,
-      reviews: 78,
-      weight: "232",
-      dimensions: { length: "6.4", width: "3.1", height: "0.34" },
-      shippingWeight: "380",
-      shippingClass: "express",
-      returnPolicy: "30",
-      warranty: "1 Year Samsung Warranty",
-      metaTitle:
-        "Samsung Galaxy S24 Ultra 512GB Titanium Black - Flagship Smartphone",
-      metaDescription:
-        "Samsung's most advanced smartphone with S Pen, 200MP camera, and AI features.",
-    },
-    {
-      id: "4",
-      title: 'iPad Pro 12.9" M4 WiFi 256GB - Space Black',
-      description:
-        "Most advanced iPad Pro with M4 chip, 12.9-inch Liquid Retina XDR display, perfect for professionals.",
-      sku: "IPADPM4-256-SB",
-      category: "Electronics",
-      subcategory: "Tablets",
-      brand: "Apple",
-      price: 1099.0,
-      originalPrice: 1199.0,
-      quantity: 18,
-      sold: 12,
-      status: "active",
-      condition: "new",
-      visibility: "public",
-      createdDate: "2024-05-20",
-      lastModified: "2024-06-10",
-      views: 1450,
-      favorites: 98,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=400&h=400&fit=crop",
-          name: "ipad-main.jpg",
-        },
-      ],
-      colors: [
-        { id: "1", name: "Space Black", hex: "#2F2F2F" },
-        { id: "2", name: "Silver", hex: "#C0C0C0" },
-      ],
-      sizes: ["12.9-inch"],
-      tags: ["ipad", "pro", "m4", "tablet", "apple", "professional"],
-      features: ["M4 Chip", "12.9-inch Display", "WiFi 6E", "256GB Storage"],
-      rating: 4.8,
-      reviews: 56,
-      weight: "682",
-      dimensions: { length: "11.04", width: "8.48", height: "0.25" },
-      shippingWeight: "850",
-      shippingClass: "standard",
-      returnPolicy: "30",
-      warranty: "1 Year Apple Limited Warranty",
-      metaTitle: "iPad Pro 12.9 M4 WiFi 256GB Space Black - Pro Tablet",
-      metaDescription:
-        "Most advanced iPad Pro with M4 chip and 12.9-inch display. Perfect for creative professionals.",
-    },
-    {
-      id: "5",
-      title: "AirPods Pro 2nd Generation USB-C",
-      description:
-        "Active Noise Cancellation, Adaptive Transparency, and Personalized Spatial Audio with USB-C charging case.",
-      sku: "APP2-USB-C",
-      category: "Electronics",
-      subcategory: "Audio",
-      brand: "Apple",
-      price: 199.0,
-      originalPrice: 249.0,
-      quantity: 45,
-      sold: 89,
-      status: "active",
-      condition: "new",
-      visibility: "public",
-      createdDate: "2024-05-15",
-      lastModified: "2024-06-08",
-      views: 3200,
-      favorites: 245,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=400&h=400&fit=crop",
-          name: "airpods-main.jpg",
-        },
-      ],
-      colors: [{ id: "1", name: "White", hex: "#FFFFFF" }],
-      sizes: ["One Size"],
-      tags: ["airpods", "pro", "noise cancellation", "wireless", "earbuds"],
-      features: [
-        "Active Noise Cancellation",
-        "Spatial Audio",
-        "USB-C",
-        "MagSafe Compatible",
-      ],
-      rating: 4.9,
-      reviews: 234,
-      weight: "56",
-      dimensions: { length: "3.9", width: "3.0", height: "1.7" },
-      shippingWeight: "150",
-      shippingClass: "standard",
-      returnPolicy: "30",
-      warranty: "1 Year Apple Limited Warranty",
-      metaTitle: "AirPods Pro 2nd Generation USB-C - Premium Wireless Earbuds",
-      metaDescription:
-        "Premium wireless earbuds with Active Noise Cancellation and Spatial Audio. USB-C charging case.",
-    },
-    {
-      id: "6",
-      title: "Sony WH-1000XM5 Wireless Headphones",
-      description:
-        "Industry-leading noise canceling with Dual Noise Sensor technology. 30-hour battery life.",
-      sku: "SONY-WH1000XM5",
-      category: "Electronics",
-      subcategory: "Audio",
-      brand: "Sony",
-      price: 329.0,
-      originalPrice: 399.0,
-      quantity: 8,
-      sold: 25,
-      status: "paused",
-      condition: "new",
-      visibility: "private",
-      createdDate: "2024-05-10",
-      lastModified: "2024-06-05",
-      views: 780,
-      favorites: 45,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=400&h=400&fit=crop",
-          name: "sony-headphones.jpg",
-        },
-      ],
-      colors: [
-        { id: "1", name: "Black", hex: "#000000" },
-        { id: "2", name: "Silver", hex: "#C0C0C0" },
-      ],
-      sizes: ["One Size"],
-      tags: ["sony", "headphones", "noise cancelling", "wireless", "premium"],
-      features: [
-        "30hr Battery",
-        "Quick Charge",
-        "Touch Controls",
-        "AI Noise Cancelling",
-      ],
-      rating: 4.6,
-      reviews: 89,
-      weight: "250",
-      dimensions: { length: "10.2", width: "8.7", height: "3.2" },
-      shippingWeight: "450",
-      shippingClass: "standard",
-      returnPolicy: "30",
-      warranty: "1 Year Sony Warranty",
-      metaTitle: "Sony WH-1000XM5 Wireless Headphones - Premium Audio",
-      metaDescription:
-        "Industry-leading noise canceling headphones with 30-hour battery life and premium sound quality.",
-    },
-    {
-      id: "7",
-      title: "Nintendo Switch OLED Model - White",
-      description:
-        "Enhanced Nintendo Switch with vibrant 7-inch OLED screen, wide adjustable stand, and dock with wired LAN port.",
-      sku: "NSW-OLED-WHT",
-      category: "Gaming",
-      subcategory: "Consoles",
-      brand: "Nintendo",
-      price: 299.0,
-      originalPrice: 349.99,
-      quantity: 0,
-      sold: 45,
-      status: "draft",
-      condition: "new",
-      visibility: "private",
-      createdDate: "2024-05-05",
-      lastModified: "2024-05-05",
-      views: 0,
-      favorites: 0,
-      images: [
-        {
-          id: "1",
-          url: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop",
-          name: "switch-oled.jpg",
-        },
-      ],
-      colors: [
-        { id: "1", name: "White", hex: "#FFFFFF" },
-        { id: "2", name: "Neon Blue/Red", hex: "#FF0000" },
-      ],
-      sizes: ["Standard"],
-      tags: ["nintendo", "switch", "oled", "gaming", "console", "portable"],
-      features: [
-        "7-inch OLED Screen",
-        "Enhanced Audio",
-        "Wide Stand",
-        "64GB Storage",
-      ],
-      rating: 0,
-      reviews: 0,
-      weight: "420",
-      dimensions: { length: "9.5", width: "4.0", height: "0.55" },
-      shippingWeight: "650",
-      shippingClass: "standard",
-      returnPolicy: "30",
-      warranty: "1 Year Nintendo Warranty",
-      metaTitle: "Nintendo Switch OLED Model White - Enhanced Gaming Console",
-      metaDescription:
-        "Enhanced Nintendo Switch with vibrant OLED display and improved features for portable gaming.",
-    },
+  // Categories for filtering - matching the backend
+  const categories = [
+    { value: "electronics", label: "Electronics" },
+    { value: "fashion", label: "Fashion" },
+    { value: "home", label: "Home & Garden" },
+    { value: "sports", label: "Sports & Outdoors" },
+    { value: "automotive", label: "Automotive" },
   ];
 
-  // Initialize listings state
-  React.useEffect(() => {
-    setListings(allListingsData);
+  const priceRanges = [
+    { value: "0-100", label: "$0 - $100" },
+    { value: "100-500", label: "$100 - $500" },
+    { value: "500-1000", label: "$500 - $1,000" },
+    { value: "1000-5000", label: "$1,000+" },
+  ];
+
+  // Debounced filter function using the utility
+  const debouncedApplyFilters = useCallback(
+    debounce(async (filterParams) => {
+      try {
+        setIsSearching(true);
+        console.log('Applying filters:', filterParams);
+        await applyFilters(filterParams);
+      } catch (error) {
+        console.error("Error applying filters:", error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500),
+    [applyFilters]
+  );
+
+  // Load listings based on active section and backend status
+  useEffect(() => {
+    const loadListings = async () => {
+      try {
+        console.log('Loading listings for section:', activeSection, 'Backend status:', backendStatus);
+        
+        // Clear previous data first to avoid showing stale listings
+        clearSelection();
+        
+        if (backendStatus) {
+          // Use status-specific fetch for specific statuses
+          await fetchByStatus(backendStatus);
+        } else {
+          // For "all-listings", fetch all listings
+          await refreshListings();
+        }
+      } catch (error) {
+        console.error("Error loading listings:", error);
+      }
+    };
+
+    loadListings();
+  }, [activeSection, backendStatus, fetchByStatus, refreshListings, clearSelection]);
+
+  // Handle search with debouncing
+  useEffect(() => {
+    const buildFilterParams = () => {
+      const params = {};
+      
+      // Add search if present
+      if (searchQuery.trim()) {
+        params.search = searchQuery.trim();
+      }
+      
+      // Add category filter
+      if (filterCategory) {
+        params.category = filterCategory;
+      }
+      
+      // Add price range filter
+      if (filterPriceRange) {
+        params.priceRange = filterPriceRange;
+      }
+      
+      // Add status filter
+      if (filterStatus) {
+        params.status = filterStatus;
+      } else if (backendStatus) {
+        // Use section status if no explicit filter
+        params.status = backendStatus;
+      }
+      
+      // Add pagination
+      params.page = 1;
+      params.pageSize = 10;
+      
+      return params;
+    };
+
+    // Only apply filters if there are actual filter parameters
+    const filterParams = buildFilterParams();
+    const hasFilters = Object.keys(filterParams).some(key => 
+      key !== 'page' && key !== 'pageSize' && filterParams[key]
+    );
+
+    if (hasFilters) {
+      console.log('Triggering search/filter with params:', filterParams);
+      debouncedApplyFilters(filterParams);
+    } else if (!searchQuery && !filterCategory && !filterPriceRange && !filterStatus) {
+      // If no filters, reload based on section
+      if (backendStatus) {
+        fetchByStatus(backendStatus);
+      } else {
+        refreshListings();
+      }
+    }
+  }, [searchQuery, filterCategory, filterPriceRange, filterStatus, backendStatus, debouncedApplyFilters, fetchByStatus, refreshListings]);
+
+  // Clear success messages automatically, but don't clear "empty" state messages
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        clearMessages();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, clearMessages]);
+
+  // Handle filter changes
+  const handleFilterChange = useCallback((filterType, value) => {
+    console.log(`Filter change: ${filterType} = ${value}`);
+    
+    if (filterType === 'category') {
+      setFilterCategory(value);
+    } else if (filterType === 'priceRange') {
+      setFilterPriceRange(value);
+    } else if (filterType === 'status') {
+      setFilterStatus(value);
+    }
   }, []);
 
-  // Filter listings based on active section and search
-  const filteredListings = useMemo(() => {
-    let filtered = listings;
+  // Handle search change
+  const handleSearchChange = useCallback((value) => {
+    console.log('Search change:', value);
+    setSearchQuery(value);
+  }, []);
 
-    // Filter by section
-    switch (activeSection) {
-      case "all-listings":
-        break;
-      case "active-listings":
-        filtered = filtered.filter((listing) => listing.status === "active");
-        break;
-      case "inactive-listings":
-        filtered = filtered.filter((listing) => listing.status === "paused");
-        break;
-      case "out-of-stock":
-        filtered = filtered.filter(
-          (listing) => listing.status === "out-of-stock"
-        );
-        break;
-      case "draft-listings":
-        filtered = filtered.filter((listing) => listing.status === "draft");
-        break;
-      case "sold-listings":
-        filtered = filtered.filter((listing) => listing.sold > 0);
-        break;
-      default:
-        break;
+  // Handle reset filters
+  const handleResetFilters = useCallback(async () => {
+    try {
+      console.log('Resetting filters');
+      setSearchQuery("");
+      setFilterCategory("");
+      setFilterPriceRange("");
+      setFilterStatus("");
+      
+      await resetFilters();
+      
+      // Reload based on section after resetting filters
+      if (backendStatus) {
+        await fetchByStatus(backendStatus);
+      } else {
+        await refreshListings();
+      }
+    } catch (error) {
+      console.error("Error resetting filters:", error);
     }
-
-    // Filter by search query
-    if (searchQuery && typeof searchQuery === "string") {
-      filtered = filtered.filter(
-        (listing) =>
-          listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          listing.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          listing.tags.some((tag) =>
-            tag.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-      );
-    }
-
-    // Filter by category
-    if (filterCategory) {
-      filtered = filtered.filter(
-        (listing) => listing.category === filterCategory
-      );
-    }
-
-    // Filter by price range
-    if (filterPriceRange) {
-      const [min, max] = filterPriceRange.split("-").map(Number);
-      filtered = filtered.filter(
-        (listing) => listing.price >= min && listing.price <= max
-      );
-    }
-
-    return filtered;
-  }, [activeSection, listings, searchQuery, filterCategory, filterPriceRange]);
+  }, [resetFilters, backendStatus, fetchByStatus, refreshListings]);
 
   // Get section configuration
   const getSectionConfig = () => {
@@ -585,9 +390,9 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
     switch (status) {
       case "active":
         return <CheckCircle className="h-4 w-4" />;
-      case "paused":
+      case "inactive":
         return <Pause className="h-4 w-4" />;
-      case "out-of-stock":
+      case "outOfStock":
         return <AlertTriangle className="h-4 w-4" />;
       case "draft":
         return <Clock className="h-4 w-4" />;
@@ -600,9 +405,9 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
     switch (status) {
       case "active":
         return "success";
-      case "paused":
+      case "inactive":
         return "warning";
-      case "out-of-stock":
+      case "outOfStock":
         return "danger";
       case "draft":
         return "default";
@@ -611,13 +416,31 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
     }
   };
 
-  // Action handlers with navigation
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case "active":
+        return "Active";
+      case "inactive":
+        return "Inactive";
+      case "outOfStock":
+        return "Out of Stock";
+      case "draft":
+        return "Draft";
+      case "sold":
+        return "Sold";
+      default:
+        return status || "Unknown";
+    }
+  };
+
+  // Action handlers
   const handleCreateListing = () => {
     navigate("/create-listing");
   };
 
   const handleViewListing = (listing) => {
-    navigate(`/product/${listing.id}`);
+    setSelectedListing(listing);
+    setShowListingDetails(true);
   };
 
   const handleEditListing = (listing) => {
@@ -630,26 +453,51 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
   };
 
   const handleDuplicateListing = (listing) => {
-    const duplicatedListing = {
-      ...listing,
-      id: undefined, // Will be generated as new
-      title: `${listing.title} (Copy)`,
-      sku: `${listing.sku}-COPY`,
-      status: "draft",
-      sold: 0,
-      views: 0,
-      reviews: 0,
-      rating: 0,
-      createdDate: undefined,
-      lastModified: undefined,
-    };
-
     navigate("/create-listing", {
       state: {
-        product: duplicatedListing,
+        product: listing,
         isDuplicating: true,
       },
     });
+  };
+
+  const handleDeleteListing = (listing) => {
+    setListingToDelete(listing);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeletion = async () => {
+    if (listingToDelete) {
+      try {
+        await deleteExistingListing(listingToDelete._id || listingToDelete.id);
+        setShowDeleteModal(false);
+        setListingToDelete(null);
+        clearSelection();
+      } catch (error) {
+        console.error("Error deleting listing:", error);
+      }
+    }
+  };
+
+  const handleStatusChange = async (listing, newStatus) => {
+    try {
+      await updateExistingListing(listing._id || listing.id, { status: newStatus });
+    } catch (error) {
+      console.error("Error updating listing status:", error);
+    }
+  };
+
+  const handleBulkAction = async () => {
+    if (!bulkAction || selectedCount === 0) return;
+
+    try {
+      await performBulkUpdate({ status: bulkAction });
+      setShowBulkActionModal(false);
+      setBulkAction("");
+      clearSelection();
+    } catch (error) {
+      console.error("Error performing bulk action:", error);
+    }
   };
 
   const handleSort = (field) => {
@@ -661,84 +509,165 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
     }
   };
 
-  const handleSelectListing = (listingId) => {
-    setSelectedListings((prev) =>
-      prev.includes(listingId)
-        ? prev.filter((id) => id !== listingId)
-        : [...prev, listingId]
-    );
-  };
-
   const handleSelectAll = () => {
-    setSelectedListings(
-      selectedListings.length === filteredListings.length
-        ? []
-        : filteredListings.map((listing) => listing.id)
-    );
+    if (selectedCount === listings.length && listings.length > 0) {
+      clearSelection();
+    } else {
+      selectAll(listings.map((listing) => listing._id || listing.id));
+    }
   };
 
-  const handleDeleteListing = (listing) => {
-    setListingToDelete(listing);
-    setShowDeleteModal(true);
+  const handleRefresh = async () => {
+    try {
+      if (backendStatus) {
+        await fetchByStatus(backendStatus);
+      } else {
+        await refreshListings();
+      }
+    } catch (error) {
+      console.error("Error refreshing listings:", error);
+    }
   };
 
-  const confirmDeletion = () => {
-    setListings((prevListings) =>
-      prevListings.filter((listing) => listing.id !== listingToDelete.id)
-    );
-    setShowDeleteModal(false);
-    setListingToDelete(null);
-  };
-
-  const handleStatusChange = (listing, newStatus) => {
-    setListings((prevListings) =>
-      prevListings.map((l) =>
-        l.id === listing.id ? { ...l, status: newStatus } : l
-      )
-    );
-  };
-
-  const handleBulkAction = () => {
-    if (!bulkAction || selectedListings.length === 0) return;
-
-    setListings((prevListings) =>
-      prevListings.map((listing) =>
-        selectedListings.includes(listing.id)
-          ? { ...listing, status: bulkAction }
-          : listing
-      )
-    );
-
-    setSelectedListings([]);
-    setShowBulkActionModal(false);
-    setBulkAction("");
+  const handleListingUpdate = async (updatedListing, action) => {
+    if (action === "delete") {
+      await deleteExistingListing(selectedListing._id || selectedListing.id);
+    } else if (updatedListing) {
+      await updateExistingListing(selectedListing._id || selectedListing.id, updatedListing);
+    }
+    setShowListingDetails(false);
+    setSelectedListing(null);
   };
 
   // Calculate performance metrics
   const getPerformanceMetrics = (listing) => {
-    const conversionRate =
-      listing.views > 0 ? (listing.sold / listing.views) * 100 : 0;
-    const revenue = listing.sold * listing.price;
+    const views = listing.views || 0;
+    const sold = listing.sold || 0;
+    const favorites = listing.favorites || 0;
+    
+    const conversionRate = views > 0 ? (sold / views) * 100 : 0;
+    const price = listing.variations?.length > 0 
+      ? listing.variations.find(v => v.isDefault)?.price || listing.variations[0]?.price || listing.price
+      : listing.price;
+    const revenue = sold * (parseFloat(price) || 0);
 
     return {
       conversionRate: conversionRate.toFixed(1),
       revenue,
-      favoriteRate:
-        listing.views > 0 ? (listing.favorites / listing.views) * 100 : 0,
+      favoriteRate: views > 0 ? (favorites / views) * 100 : 0,
     };
   };
 
-  // Categories for filtering
-  const categories = [...new Set(listings.map((listing) => listing.category))];
-  const priceRanges = [
-    { value: "0-100", label: "$0 - $100" },
-    { value: "100-500", label: "$100 - $500" },
-    { value: "500-1000", label: "$500 - $1,000" },
-    { value: "1000-5000", label: "$1,000+" },
-  ];
+  // Extract price from listing (handle variations)
+  const getListingPrice = (listing) => {
+    if (listing.variations?.length > 0) {
+      const defaultVariation = listing.variations.find(v => v.isDefault) || listing.variations[0];
+      return {
+        price: defaultVariation.price,
+        originalPrice: defaultVariation.originalPrice,
+      };
+    }
+    return {
+      price: listing.price,
+      originalPrice: listing.originalPrice,
+    };
+  };
+
+  // Extract quantity from listing (handle variations)
+  const getListingQuantity = (listing) => {
+    if (listing.variations?.length > 0) {
+      return listing.variations.reduce((total, variation) => {
+        return total + (parseInt(variation.quantity) || 0);
+      }, 0);
+    }
+    return parseInt(listing.quantity) || 0;
+  };
+
+  // Extract main image from listing - FIXED to prioritize main product images
+  const getListingImage = (listing) => {
+    let imageUrl = null;
+    
+    // First try to get image from main product images
+    if (listing.images?.length > 0) {
+      const image = listing.images[0];
+      imageUrl = typeof image === 'string' ? image : image?.url;
+    }
+    
+    // Only fallback to variation images if no main images exist
+    if (!imageUrl && listing.variations?.length > 0) {
+      const defaultVariation = listing.variations.find(v => v.isDefault) || listing.variations[0];
+      if (defaultVariation.images?.length > 0) {
+        const image = defaultVariation.images[0];
+        imageUrl = typeof image === 'string' ? image : image?.url;
+      }
+    }
+    
+    return imageUrl || "/placehold.png";
+  };
+
+  // Sort listings
+  const sortedListings = React.useMemo(() => {
+    if (!listings.length) return [];
+    
+    return [...listings].sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+      
+      // Handle special cases
+      if (sortField === "price") {
+        const aPricing = getListingPrice(a);
+        const bPricing = getListingPrice(b);
+        aValue = parseFloat(aPricing.price) || 0;
+        bValue = parseFloat(bPricing.price) || 0;
+      }
+      
+      if (sortField === "quantity") {
+        aValue = getListingQuantity(a);
+        bValue = getListingQuantity(b);
+      }
+      
+      if (sortField === "createdAt" || sortField === "updatedAt") {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      }
+      
+      if (sortDirection === "asc") {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+  }, [listings, sortField, sortDirection]);
+
+  const hasActiveFilters = searchQuery || filterCategory || filterPriceRange || filterStatus;
+  const currentIsLoading = isLoading || isSearching;
 
   return (
     <div className="space-y-6">
+      {/* Error Messages - Only show actual errors, not empty states */}
+      {error && !isEmpty && (
+        <Alert
+          variant="danger"
+          title="Error"
+          onClose={() => clearMessages()}
+          className="z-10 relative"
+        >
+          {error}
+        </Alert>
+      )}
+
+      {/* Success Messages */}
+      {success && (
+        <Alert
+          variant="success"
+          title="Success"
+          onClose={() => clearMessages()}
+          className="z-10 relative"
+        >
+          {message}
+        </Alert>
+      )}
+
       {/* Header with Search and Filters */}
       <Card>
         <CardHeader>
@@ -747,64 +676,139 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
               <CardTitle className="flex items-center gap-3">
                 <Package className="h-6 w-6 text-blue-600" />
                 {config.title}
+                {backendStatus && (
+                  <Badge variant="secondary" size="sm">
+                    Status: {getStatusLabel(backendStatus)}
+                  </Badge>
+                )}
               </CardTitle>
               <p className="text-sm text-gray-600 mt-1">{config.description}</p>
             </div>
 
             <div className="flex items-center gap-3">
+              {currentIsLoading && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <LoadingSpinner size="sm" />
+                  <span>Loading...</span>
+                </div>
+              )}
               <Button
                 variant="primary"
                 icon={<PlusCircle />}
                 onClick={handleCreateListing}
+                disabled={currentIsLoading}
               >
                 Add Listing
               </Button>
-              <Button variant="secondary" icon={<Download />}>
-                Export
+              <Button 
+                variant="secondary" 
+                icon={<RefreshCw />}
+                onClick={handleRefresh}
+                disabled={currentIsLoading}
+              >
+                Refresh
               </Button>
             </div>
           </div>
 
           {/* Search and Filters */}
-          <div className="flex flex-col lg:flex-row gap-4 mt-4">
-            <div className="flex-1">
-              <SearchInput
-                placeholder="Search listings by title, SKU, or tags..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <Select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                placeholder="All Categories"
-              >
-                <option value="">All Categories</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </Select>
-
-              <Select
-                value={filterPriceRange}
-                onChange={(e) => setFilterPriceRange(e.target.value)}
-                placeholder="All Prices"
-              >
-                <option value="">All Prices</option>
-                {priceRanges.map((range) => (
-                  <option key={range.value} value={range.value}>
-                    {range.label}
-                  </option>
-                ))}
-              </Select>
-
-              <IconButton variant="secondary" title="More Filters">
+          <div className="flex flex-col gap-4 mt-4">
+            {/* Active Filters Indicator */}
+            {hasActiveFilters && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Filter className="h-4 w-4" />
-              </IconButton>
+                <span>Active filters:</span>
+                {searchQuery && (
+                  <Badge variant="secondary" className="text-xs">
+                    Search: "{searchQuery}"
+                  </Badge>
+                )}
+                {filterStatus && (
+                  <Badge variant="secondary" className="text-xs">
+                    Status: {getStatusLabel(filterStatus)}
+                  </Badge>
+                )}
+                {filterCategory && (
+                  <Badge variant="secondary" className="text-xs">
+                    Category: {categories.find(c => c.value === filterCategory)?.label}
+                  </Badge>
+                )}
+                {filterPriceRange && (
+                  <Badge variant="secondary" className="text-xs">
+                    Price: {priceRanges.find(r => r.value === filterPriceRange)?.label}
+                  </Badge>
+                )}
+              </div>
+            )}
+            
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1 relative">
+                <SearchInput
+                  placeholder="Search listings by title, SKU, or tags..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  disabled={currentIsLoading}
+                />
+                {isSearching && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <LoadingSpinner size="sm" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                {/* Only show status filter for all-listings */}
+                {activeSection === "all-listings" && (
+                  <Select
+                    value={filterStatus}
+                    onChange={(e) => handleFilterChange('status', e.target.value)}
+                    disabled={currentIsLoading}
+                  >
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="draft">Draft</option>
+                    <option value="outOfStock">Out of Stock</option>
+                    <option value="sold">Sold</option>
+                  </Select>
+                )}
+
+                <Select
+                  value={filterCategory}
+                  onChange={(e) => handleFilterChange('category', e.target.value)}
+                  disabled={currentIsLoading}
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((category) => (
+                    <option key={category.value} value={category.value}>
+                      {category.label}
+                    </option>
+                  ))}
+                </Select>
+
+                <Select
+                  value={filterPriceRange}
+                  onChange={(e) => handleFilterChange('priceRange', e.target.value)}
+                  disabled={currentIsLoading}
+                >
+                  <option value="">All Prices</option>
+                  {priceRanges.map((range) => (
+                    <option key={range.value} value={range.value}>
+                      {range.label}
+                    </option>
+                  ))}
+                </Select>
+
+                <Button
+                  variant="secondary"
+                  icon={<RefreshCw />}
+                  onClick={handleResetFilters}
+                  disabled={currentIsLoading || !hasActiveFilters}
+                  title="Reset all filters and search"
+                >
+                  Reset Filters
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -816,13 +820,13 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <h3 className="text-lg font-semibold">
-                {filteredListings.length}{" "}
-                {filteredListings.length === 1 ? "Listing" : "Listings"}
+                {total || listings.length}{" "}
+                {(total || listings.length) === 1 ? "Listing" : "Listings"}
               </h3>
-              {selectedListings.length > 0 && (
+              {selectedCount > 0 && (
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-gray-600">
-                    {selectedListings.length} selected
+                    {selectedCount} selected
                   </span>
                   <Button
                     size="sm"
@@ -835,351 +839,390 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
             </div>
 
             <div className="flex items-center gap-2">
-              <IconButton variant="ghost" title="Refresh">
-                <RefreshCw className="h-4 w-4" />
-              </IconButton>
-              <IconButton variant="ghost" title="Settings">
-                <Settings className="h-4 w-4" />
-              </IconButton>
+              <span className="text-sm text-gray-500">
+                Page {page} of {totalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <IconButton 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={previousPage}
+                  disabled={!hasPreviousPage || currentIsLoading}
+                >
+                  ←
+                </IconButton>
+                <IconButton 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={nextPage}
+                  disabled={!hasNextPage || currentIsLoading}
+                >
+                  →
+                </IconButton>
+              </div>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <Checkbox
-                    checked={
-                      selectedListings.length === filteredListings.length &&
-                      filteredListings.length > 0
-                    }
-                    onChange={handleSelectAll}
-                  />
-                </TableHead>
+        <CardContent className="p-0 relative">
+          {currentIsLoading && (
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
+              <div className="flex items-center gap-3 text-gray-600">
+                <LoadingSpinner size="md" />
+                <span className="text-sm font-medium">Loading listings...</span>
+              </div>
+            </div>
+          )}
 
-                {config.showColumns.includes("listing") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("title")}
-                    sortDirection={sortField === "title" ? sortDirection : null}
-                  >
-                    Listing
+          {/* Show table only if we have listings */}
+          {!currentIsLoading && sortedListings.length > 0 && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    <Checkbox
+                      checked={
+                        selectedCount === listings.length &&
+                        listings.length > 0
+                      }
+                      onChange={handleSelectAll}
+                    />
                   </TableHead>
-                )}
 
-                {config.showColumns.includes("category") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("category")}
-                    sortDirection={
-                      sortField === "category" ? sortDirection : null
-                    }
-                  >
-                    Category
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("listing") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("title")}
+                      sortDirection={sortField === "title" ? sortDirection : null}
+                    >
+                      Listing
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("price") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("price")}
-                    sortDirection={sortField === "price" ? sortDirection : null}
-                  >
-                    Price
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("category") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("category")}
+                      sortDirection={
+                        sortField === "category" ? sortDirection : null
+                      }
+                    >
+                      Category
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("quantity") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("quantity")}
-                    sortDirection={
-                      sortField === "quantity" ? sortDirection : null
-                    }
-                  >
-                    Stock
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("price") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("price")}
+                      sortDirection={sortField === "price" ? sortDirection : null}
+                    >
+                      Price
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("sold") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("sold")}
-                    sortDirection={sortField === "sold" ? sortDirection : null}
-                  >
-                    Sold
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("quantity") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("quantity")}
+                      sortDirection={
+                        sortField === "quantity" ? sortDirection : null
+                      }
+                    >
+                      Stock
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("status") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("status")}
-                    sortDirection={
-                      sortField === "status" ? sortDirection : null
-                    }
-                  >
-                    Status
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("sold") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("sold")}
+                      sortDirection={sortField === "sold" ? sortDirection : null}
+                    >
+                      Sold
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("performance") && (
-                  <TableHead>Performance</TableHead>
-                )}
+                  {config.showColumns.includes("status") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("status")}
+                      sortDirection={
+                        sortField === "status" ? sortDirection : null
+                      }
+                    >
+                      Status
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("revenue") && (
-                  <TableHead sortable onSort={() => handleSort("revenue")}>
-                    Revenue
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("performance") && (
+                    <TableHead>Performance</TableHead>
+                  )}
 
-                {config.showColumns.includes("lastModified") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("lastModified")}
-                    sortDirection={
-                      sortField === "lastModified" ? sortDirection : null
-                    }
-                  >
-                    Last Modified
-                  </TableHead>
-                )}
+                  {config.showColumns.includes("revenue") && (
+                    <TableHead sortable onSort={() => handleSort("revenue")}>
+                      Revenue
+                    </TableHead>
+                  )}
 
-                {config.showColumns.includes("actions") && (
-                  <TableHead>Actions</TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
+                  {config.showColumns.includes("lastModified") && (
+                    <TableHead
+                      sortable
+                      onSort={() => handleSort("updatedAt")}
+                      sortDirection={
+                        sortField === "updatedAt" ? sortDirection : null
+                      }
+                    >
+                      Last Modified
+                    </TableHead>
+                  )}
 
-            <TableBody>
-              {filteredListings.map((listing) => {
-                const metrics = getPerformanceMetrics(listing);
+                  {config.showColumns.includes("actions") && (
+                    <TableHead>Actions</TableHead>
+                  )}
+                </TableRow>
+              </TableHeader>
 
-                return (
-                  <TableRow key={listing.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedListings.includes(listing.id)}
-                        onChange={() => handleSelectListing(listing.id)}
-                      />
-                    </TableCell>
+              <TableBody>
+                {sortedListings.map((listing) => {
+                  const metrics = getPerformanceMetrics(listing);
+                  const listingId = listing._id || listing.id;
+                  const pricing = getListingPrice(listing);
+                  const quantity = getListingQuantity(listing);
+                  const imageUrl = getListingImage(listing);
 
-                    {config.showColumns.includes("listing") && (
+                  return (
+                    <TableRow key={listingId}>
                       <TableCell>
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={listing.images[0]?.url}
-                            alt={listing.title}
-                            className="h-12 w-12 rounded-lg object-cover border border-gray-200"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium text-gray-900 truncate">
-                              {listing.title}
+                        <Checkbox
+                          checked={selectedIds.includes(listingId)}
+                          onChange={() => toggleListing(listingId)}
+                        />
+                      </TableCell>
+
+                      {config.showColumns.includes("listing") && (
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={imageUrl}
+                              alt={listing.title}
+                              className="h-12 w-12 rounded-lg object-cover border border-gray-200"
+                              onError={(e) => {
+                                e.target.src = "/placehold.png";
+                              }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium text-gray-900 truncate">
+                                {listing.title}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                SKU: {listing.sku || listing.id}
+                              </div>
+                              {listing.hasVariations && (
+                                <div className="text-xs text-blue-600">
+                                  {listing.variations?.length || 0} variations
+                                </div>
+                              )}
                             </div>
-                            <div className="text-sm text-gray-500">
-                              SKU: {listing.sku}
+                          </div>
+                        </TableCell>
+                      )}
+
+                      {config.showColumns.includes("category") && (
+                        <TableCell>
+                          <div className="text-sm text-gray-900">
+                            {listing.category?.main || listing.category}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {listing.category?.sub || listing.subcategory}
+                          </div>
+                        </TableCell>
+                      )}
+
+                      {config.showColumns.includes("price") && (
+                        <TableCell>
+                          <div className="text-sm font-medium text-gray-900">
+                            ${parseFloat(pricing.price || 0).toLocaleString()}
+                          </div>
+                          {pricing.originalPrice && pricing.originalPrice > pricing.price && (
+                            <div className="text-xs text-gray-500 line-through">
+                              ${parseFloat(pricing.originalPrice).toLocaleString()}
                             </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("category") && (
-                      <TableCell>
-                        <div className="text-sm text-gray-900">
-                          {listing.category}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {listing.subcategory}
-                        </div>
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("price") && (
-                      <TableCell>
-                        <div className="text-sm font-medium text-gray-900">
-                          ${listing.price.toLocaleString()}
-                        </div>
-                        {listing.originalPrice > listing.price && (
-                          <div className="text-xs text-gray-500 line-through">
-                            ${listing.originalPrice.toLocaleString()}
-                          </div>
-                        )}
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("quantity") && (
-                      <TableCell>
-                        <div
-                          className={`text-sm font-medium ${
-                            listing.quantity === 0
-                              ? "text-red-600"
-                              : listing.quantity < 5
-                              ? "text-orange-600"
-                              : "text-gray-900"
-                          }`}
-                        >
-                          {listing.quantity}
-                        </div>
-                        {listing.quantity < 5 && listing.quantity > 0 && (
-                          <div className="text-xs text-orange-500">
-                            Low stock
-                          </div>
-                        )}
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("sold") && (
-                      <TableCell>
-                        <div className="text-sm font-medium text-gray-900">
-                          {listing.sold}
-                        </div>
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("status") && (
-                      <TableCell>
-                        <Badge
-                          variant={getStatusVariant(listing.status)}
-                          icon={getStatusIcon(listing.status)}
-                        >
-                          {listing.status
-                            .replace("-", " ")
-                            .replace(/\b\w/g, (l) => l.toUpperCase())}
-                        </Badge>
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("performance") && (
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Eye className="h-3 w-3 text-gray-400" />
-                            <span className="text-xs text-gray-600">
-                              {listing.views}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Heart className="h-3 w-3 text-gray-400" />
-                            <span className="text-xs text-gray-600">
-                              {listing.favorites}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="h-3 w-3 text-gray-400" />
-                            <span className="text-xs text-gray-600">
-                              {metrics.conversionRate}%
-                            </span>
-                          </div>
-                        </div>
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("revenue") && (
-                      <TableCell>
-                        <div className="text-sm font-medium text-green-600">
-                          ${metrics.revenue.toLocaleString()}
-                        </div>
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("lastModified") && (
-                      <TableCell>
-                        <div className="text-sm text-gray-900">
-                          {listing.lastModified}
-                        </div>
-                      </TableCell>
-                    )}
-
-                    {config.showColumns.includes("actions") && (
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <IconButton
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewListing(listing)}
-                            title="View Product Page"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </IconButton>
-
-                          <IconButton
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditListing(listing)}
-                            title="Edit Listing"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </IconButton>
-
-                          <IconButton
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDuplicateListing(listing)}
-                            title="Duplicate Listing"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </IconButton>
-
-                          {listing.status === "active" ? (
-                            <IconButton
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleStatusChange(listing, "paused")
-                              }
-                              title="Pause Listing"
-                              className="text-orange-600 hover:text-orange-900"
-                            >
-                              <Pause className="h-4 w-4" />
-                            </IconButton>
-                          ) : (
-                            <IconButton
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleStatusChange(listing, "active")
-                              }
-                              title="Activate Listing"
-                              className="text-green-600 hover:text-green-900"
-                            >
-                              <Play className="h-4 w-4" />
-                            </IconButton>
                           )}
+                        </TableCell>
+                      )}
 
-                          <IconButton
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteListing(listing)}
-                            title="Delete Listing"
-                            className="text-red-600 hover:text-red-900"
+                      {config.showColumns.includes("quantity") && (
+                        <TableCell>
+                          <div
+                            className={`text-sm font-medium ${
+                              quantity === 0
+                                ? "text-red-600"
+                                : quantity < 5
+                                ? "text-orange-600"
+                                : "text-gray-900"
+                            }`}
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </IconButton>
-                        </div>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                            {quantity}
+                          </div>
+                          {quantity < 5 && quantity > 0 && (
+                            <div className="text-xs text-orange-500">
+                              Low stock
+                            </div>
+                          )}
+                        </TableCell>
+                      )}
 
-          {/* Empty State */}
-          {filteredListings.length === 0 && (
+                      {config.showColumns.includes("sold") && (
+                        <TableCell>
+                          <div className="text-sm font-medium text-gray-900">
+                            {listing.sold || 0}
+                          </div>
+                        </TableCell>
+                      )}
+
+                      {config.showColumns.includes("status") && (
+                        <TableCell>
+                          <Badge
+                            variant={getStatusVariant(listing.status)}
+                            icon={getStatusIcon(listing.status)}
+                          >
+                            {getStatusLabel(listing.status)}
+                          </Badge>
+                        </TableCell>
+                      )}
+
+                      {config.showColumns.includes("performance") && (
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Eye className="h-3 w-3 text-gray-400" />
+                              <span className="text-xs text-gray-600">
+                                {listing.views || 0}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Heart className="h-3 w-3 text-gray-400" />
+                              <span className="text-xs text-gray-600">
+                                {listing.favorites || 0}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <TrendingUp className="h-3 w-3 text-gray-400" />
+                              <span className="text-xs text-gray-600">
+                                {metrics.conversionRate}%
+                              </span>
+                            </div>
+                          </div>
+                        </TableCell>
+                      )}
+
+                      {config.showColumns.includes("revenue") && (
+                        <TableCell>
+                          <div className="text-sm font-medium text-green-600">
+                            ${metrics.revenue.toLocaleString()}
+                          </div>
+                        </TableCell>
+                      )}
+
+                      {config.showColumns.includes("lastModified") && (
+                        <TableCell>
+                          <div className="text-sm text-gray-900">
+                            {new Date(listing.updatedAt || listing.createdAt).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+                      )}
+
+                      {config.showColumns.includes("actions") && (
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <IconButton
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewListing(listing)}
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </IconButton>
+
+                            <IconButton
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditListing(listing)}
+                              title="Edit Listing"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </IconButton>
+
+                            <IconButton
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDuplicateListing(listing)}
+                              title="Duplicate Listing"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </IconButton>
+
+                            {listing.status === "active" ? (
+                              <IconButton
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleStatusChange(listing, "inactive")
+                                }
+                                title="Pause Listing"
+                                className="text-orange-600 hover:text-orange-900"
+                              >
+                                <Pause className="h-4 w-4" />
+                              </IconButton>
+                            ) : (
+                              <IconButton
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleStatusChange(listing, "active")
+                                }
+                                title="Activate Listing"
+                                className="text-green-600 hover:text-green-900"
+                              >
+                                <Play className="h-4 w-4" />
+                              </IconButton>
+                            )}
+
+                            <IconButton
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteListing(listing)}
+                              title="Delete Listing"
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </IconButton>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+
+          {/* Empty State - Only show when not loading and no listings */}
+          {!currentIsLoading && sortedListings.length === 0 && (
             <div className="text-center py-12">
               <Package className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">
-                No listings found
+                {isEmpty && message ? message : "No listings found"}
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {searchQuery || filterCategory || filterPriceRange
+                {hasActiveFilters
                   ? "Try adjusting your filters or search terms."
+                  : isEmpty && backendStatus
+                  ? `No ${config.title.toLowerCase()} available.`
                   : `No ${config.title.toLowerCase()} available.`}
               </p>
-              {!searchQuery && !filterCategory && !filterPriceRange && (
+              {!hasActiveFilters && !isEmpty && (
                 <Button
                   variant="primary"
                   icon={<PlusCircle />}
@@ -1212,19 +1255,22 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <img
-                    src={listingToDelete.images[0]?.url}
+                    src={getListingImage(listingToDelete)}
                     alt={listingToDelete.title}
                     className="h-16 w-16 rounded-lg object-cover"
+                    onError={(e) => {
+                      e.target.src = "/placehold.png";
+                    }}
                   />
                   <div>
                     <h4 className="font-medium text-gray-900">
                       {listingToDelete.title}
                     </h4>
                     <p className="text-sm text-gray-500">
-                      SKU: {listingToDelete.sku}
+                      SKU: {listingToDelete.sku || listingToDelete.id}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {listingToDelete.sold} sold • ${listingToDelete.price}
+                      {listingToDelete.sold || 0} sold • ${getListingPrice(listingToDelete).price || 0}
                     </p>
                   </div>
                 </div>
@@ -1236,8 +1282,13 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
           <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={confirmDeletion} icon={<Trash2 />}>
-            Delete Listing
+          <Button 
+            variant="danger" 
+            onClick={confirmDeletion} 
+            icon={<Trash2 />}
+            disabled={currentIsLoading}
+          >
+            {currentIsLoading ? "Deleting..." : "Delete Listing"}
           </Button>
         </ModalFooter>
       </Modal>
@@ -1252,7 +1303,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
         <ModalContent className="space-y-4">
           <div>
             <p className="text-sm text-gray-600 mb-4">
-              Apply action to {selectedListings.length} selected listings
+              Apply action to {selectedCount} selected listings
             </p>
 
             <FormField label="Action" required>
@@ -1262,7 +1313,7 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
                 placeholder="Select an action..."
               >
                 <option value="active">Activate Listings</option>
-                <option value="paused">Pause Listings</option>
+                <option value="inactive">Pause Listings</option>
                 <option value="draft">Move to Draft</option>
               </Select>
             </FormField>
@@ -1275,11 +1326,27 @@ const ListingManagement = ({ activeSection = "all-listings" }) => {
           >
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleBulkAction}>
-            Apply Action
+          <Button 
+            variant="primary" 
+            onClick={handleBulkAction}
+            disabled={!bulkAction || currentIsLoading}
+          >
+            {currentIsLoading ? "Applying..." : "Apply Action"}
           </Button>
         </ModalFooter>
       </Modal>
+
+      {/* Listing Details Modal */}
+      {showListingDetails && selectedListing && (
+        <ListingDetails
+          listing={selectedListing}
+          onClose={() => {
+            setShowListingDetails(false);
+            setSelectedListing(null);
+          }}
+          onListingUpdate={handleListingUpdate}
+        />
+      )}
     </div>
   );
 };

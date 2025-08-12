@@ -11,6 +11,7 @@ import {
   FileText,
   Image as ImageIcon,
   Settings,
+  Info,
   ShoppingCart,
   Palette,
   Plus,
@@ -20,7 +21,16 @@ import {
   Edit3,
   ChevronDown,
   ChevronUp,
+  Upload,
+  Loader2,
 } from "lucide-react";
+
+// Import Redux hooks
+import {
+  useListings,
+  useImageUpload,
+  useListingDetails,
+} from "../../hooks/useSellerData";
 
 import {
   Button,
@@ -40,6 +50,8 @@ import {
   ImageUpload,
   TagInput,
   SuccessModal,
+  LoadingSpinner,
+  Alert,
 } from "../../components/ui/sellerUis/Uis";
 
 import { MultiColorPicker } from "../../components/ui/ColorPicker/Uis";
@@ -48,6 +60,25 @@ const Listing = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+
+  // Redux hooks
+  const {
+    createNewListing,
+    updateExistingListing,
+    isLoading: listingsLoading,
+    error: listingsError,
+    success: listingsSuccess,
+    message: listingsMessage,
+    clearMessages: clearListingsMessages,
+  } = useListings();
+
+  const {
+    uploadSingleImage,
+    uploadImages,
+    isUploading,
+    pendingUploads,
+    error: uploadError,
+  } = useImageUpload();
 
   // Check if we're editing (product data passed via state)
   const editingProduct = location.state?.product;
@@ -62,6 +93,7 @@ const Listing = () => {
   const [hasVariations, setHasVariations] = useState(false);
   const [expandedVariations, setExpandedVariations] = useState(new Set());
   const [savedListingData, setSavedListingData] = useState(null);
+  const [uploadingImages, setUploadingImages] = useState(new Set());
 
   // Form state
   const [formData, setFormData] = useState({
@@ -171,6 +203,33 @@ const Listing = () => {
     },
   };
 
+  // Clear messages when component unmounts
+  useEffect(() => {
+    return () => {
+      clearListingsMessages();
+    };
+  }, [clearListingsMessages]);
+
+  // Handle success/error messages
+  useEffect(() => {
+    if (listingsSuccess && !isSaving) {
+      setShowSuccessModal(true);
+    }
+  }, [listingsSuccess, isSaving]);
+
+  // remove error and success messages after showing within a few seconds
+  useEffect(() => {
+    if (listingsMessage || uploadError) {
+      const timer = setTimeout(() => {
+        clearListingsMessages();
+        if (uploadError) {
+          setShowSuccessModal(false);
+        }
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [listingsMessage, uploadError, clearListingsMessages]);
+
   // Create new variation template
   const createNewVariation = () => ({
     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -191,55 +250,150 @@ const Listing = () => {
     isDefault: false,
   });
 
+  // Helper function to extract image URL from different formats
+  const extractImageUrl = (image) => {
+    if (typeof image === 'string') return image;
+    if (image?.url) return image.url;
+    return null;
+  };
+
+  // Helper function to convert backend color format to frontend format
+  const convertBackendColorToFrontend = (backendColors) => {
+    if (!backendColors || !Array.isArray(backendColors)) return [];
+    
+    return backendColors.map((colorHex, index) => ({
+      id: `color_${index}`,
+      hex: colorHex,
+      name: colorHex // You might want to add a color name mapping here
+    }));
+  };
+
+  // **NEW**: Function to automatically set default images based on variations
+  const updateDefaultImagesFromVariations = (variations) => {
+    if (!hasVariations || !variations || variations.length === 0) {
+      return formData.images;
+    }
+
+    // Find the default variation or use the first one
+    const defaultVariation = variations.find(v => v.isDefault) || variations[0];
+    
+    if (defaultVariation && defaultVariation.images && defaultVariation.images.length > 0) {
+      // Use the first image from the default variation as the main product image
+      const defaultImage = defaultVariation.images[0];
+      
+      // Create an image object in the correct format
+      const imageForMainProduct = {
+        id: `img_main_${Date.now()}`,
+        url: extractImageUrl(defaultImage) || defaultImage.url || defaultImage,
+        alt: `${formData.title || 'Product'} - Main Image`,
+        isPrimary: true,
+        sortOrder: 1,
+        uploadedAt: new Date().toISOString(),
+      };
+
+      // Return array with the default image as primary
+      return [imageForMainProduct];
+    }
+
+    return formData.images;
+  };
+
   // Load data if editing or duplicating
   useEffect(() => {
     if ((isEditing || isDuplicating) && editingProduct) {
+      console.log('Loading edit product data:', editingProduct);
+      
       const hasExistingVariations = editingProduct.variations && editingProduct.variations.length > 0;
       setHasVariations(hasExistingVariations);
+
+      // Extract shipping class data
+      const shippingClassData = editingProduct.shippingClass || {};
       
-      setFormData({
+      const loadedFormData = {
         title: isDuplicating
           ? `${editingProduct.title} (Copy)`
           : editingProduct.title || "",
         brand: editingProduct.brand || "",
-        category: editingProduct.category?.toLowerCase() || "",
-        subCategory: editingProduct.subcategory || "",
+        category: editingProduct.category?.main?.toLowerCase() || editingProduct.category?.toLowerCase() || "",
+        subCategory: editingProduct.category?.sub || editingProduct.subcategory || "",
         description: editingProduct.description || "",
-        price: editingProduct.price?.toString() || "",
-        originalPrice: editingProduct.originalPrice?.toString() || "",
+        
+        // For non-variation products, extract price from main level
+        price: (!hasExistingVariations ? editingProduct.price?.toString() : "") || "",
+        originalPrice: (!hasExistingVariations ? editingProduct.originalPrice?.toString() : "") || "",
         sku: isDuplicating
-          ? `${editingProduct.sku}-COPY`
-          : editingProduct.sku || "",
-        quantity: editingProduct.quantity?.toString() || "1",
+          ? `${editingProduct.sku || editingProduct.id}-COPY`
+          : (editingProduct.sku || editingProduct.id || ""),
+        quantity: (!hasExistingVariations ? editingProduct.quantity?.toString() : "1") || "1",
         lowStockAlert: editingProduct.lowStockAlert?.toString() || "5",
-        colors: editingProduct.colors || [],
+        
+        // Extract colors - convert from backend format
+        colors: editingProduct.colors ? convertBackendColorToFrontend(editingProduct.colors) : [],
         sizes: editingProduct.sizes || [],
+        
+        // Physical properties
         weight: editingProduct.weight || "",
         dimensions: {
           length: editingProduct.dimensions?.length || "",
           width: editingProduct.dimensions?.width || "",
           height: editingProduct.dimensions?.height || "",
         },
-        images: editingProduct.images || [],
+        
+        // Images - handle different formats
+        images: editingProduct.images?.map((img, index) => {
+          const url = extractImageUrl(img);
+          return url ? { url, name: `image_${index}.jpg` } : null;
+        }).filter(Boolean) || [],
+        
+        // Variations - handle existing variations
         variations: hasExistingVariations ? editingProduct.variations.map(variation => ({
           ...variation,
           id: isDuplicating ? Date.now().toString() + Math.random().toString(36).substr(2, 9) : variation.id,
           sku: isDuplicating ? `${variation.sku}-COPY` : variation.sku,
-          // Remove lowStockAlert if it exists in old data
-          lowStockAlert: undefined,
+          // Convert color from array format to single color object
+          color: variation.color && variation.color.length > 0 ? 
+            { hex: variation.color[0], name: variation.color[0] } : null,
+          // Convert images
+          images: variation.images?.map((img, index) => {
+            const url = extractImageUrl(img);
+            return url ? { url, name: `variation_image_${index}.jpg` } : null;
+          }).filter(Boolean) || [],
         })) : [],
-        tags: editingProduct.tags || [],
+        
+        // Tags - extract from productTags
+        tags: editingProduct.productTags || editingProduct.tags || [],
+        
+        // SEO data
         metaTitle: editingProduct.metaTitle || "",
         metaDescription: editingProduct.metaDescription || "",
-        shippingWeight: editingProduct.shippingWeight || "",
-        shippingClass: editingProduct.shippingClass || "standard",
-        returnPolicy: editingProduct.returnPolicy || "30",
-        warranty: editingProduct.warranty || "",
+        
+        // Shipping & Policies - extract from shippingClass object
+        shippingWeight: shippingClassData.shippingWeight || "",
+        shippingClass: shippingClassData.shippingClass || "standard",
+        returnPolicy: shippingClassData.returnPolicy || "30",
+        warranty: shippingClassData.warranty || "",
+        
+        // Status and visibility
         status: isDuplicating ? "draft" : editingProduct.status || "draft",
         visibility: editingProduct.visibility || "public",
-      });
+      };
+
+      setFormData(loadedFormData);
     }
   }, [isEditing, isDuplicating, editingProduct]);
+
+  // **NEW**: Update default images when variations change
+  useEffect(() => {
+    if (hasVariations && formData.variations.length > 0) {
+      const updatedImages = updateDefaultImagesFromVariations(formData.variations);
+      if (JSON.stringify(updatedImages) !== JSON.stringify(formData.images)) {
+        setFormData(prev => ({
+          ...prev,
+          images: updatedImages
+        }));
+      }
+    }
+  }, [hasVariations, formData.variations]);
 
   // Auto-generate meta title when title changes
   useEffect(() => {
@@ -257,9 +411,9 @@ const Listing = () => {
       const generatedSku = `${formData.brand
         .slice(0, 3)
         .toUpperCase()}-${formData.title
-        .slice(0, 10)
-        .replace(/\s+/g, "")
-        .toUpperCase()}-${Date.now().toString().slice(-4)}`;
+          .slice(0, 10)
+          .replace(/\s+/g, "")
+          .toUpperCase()}-${Date.now().toString().slice(-4)}`;
       setFormData((prev) => ({
         ...prev,
         sku: generatedSku,
@@ -297,6 +451,89 @@ const Listing = () => {
     handleInputChange("colors", colors);
   };
 
+  // **ENHANCED**: Image upload handlers with better UI feedback
+  const handleImagesChange = async (images) => {
+    const uploadedImages = [];
+    setUploadingImages(new Set(['main']));
+
+    try {
+      for (const image of images) {
+        if (image.file) {
+          try {
+            const uploadedUrl = await uploadSingleImage(image.file);
+            uploadedImages.push({
+              url: uploadedUrl,
+              name: image.file.name,
+              id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              alt: `${formData.title || 'Product'} - Image`,
+              isPrimary: uploadedImages.length === 0,
+              sortOrder: uploadedImages.length + 1,
+              uploadedAt: new Date().toISOString(),
+            });
+          } catch (error) {
+            console.error("Error uploading image:", error);
+            // Add original image if upload fails
+            uploadedImages.push(image);
+          }
+        } else {
+          // Existing image
+          uploadedImages.push(image);
+        }
+      }
+
+      handleInputChange("images", uploadedImages);
+    } finally {
+      setUploadingImages(new Set());
+    }
+  };
+
+  const handleVariationImagesChange = async (variationId, images) => {
+    const uploadedImages = [];
+    setUploadingImages(new Set([variationId]));
+
+    try {
+      for (const image of images) {
+        if (image.file) {
+          try {
+            const uploadedUrl = await uploadSingleImage(image.file);
+            uploadedImages.push({
+              url: uploadedUrl,
+              name: image.file.name,
+              id: `var_img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              alt: `Variation Image`,
+              isPrimary: uploadedImages.length === 0,
+              sortOrder: uploadedImages.length + 1,
+              uploadedAt: new Date().toISOString(),
+            });
+          } catch (error) {
+            console.error("Error uploading variation image:", error);
+            uploadedImages.push(image);
+          }
+        } else {
+          uploadedImages.push(image);
+        }
+      }
+
+      updateVariation(variationId, "images", uploadedImages);
+      
+      // **NEW**: Update default images if this is the default variation
+      const updatedVariations = formData.variations.map(v => 
+        v.id === variationId ? { ...v, images: uploadedImages } : v
+      );
+      
+      if (hasVariations) {
+        const updatedDefaultImages = updateDefaultImagesFromVariations(updatedVariations);
+        setFormData(prev => ({
+          ...prev,
+          variations: updatedVariations,
+          images: updatedDefaultImages
+        }));
+      }
+    } finally {
+      setUploadingImages(new Set());
+    }
+  };
+
   // Variation management functions
   const handleVariationToggle = (enabled) => {
     setHasVariations(enabled);
@@ -304,16 +541,21 @@ const Listing = () => {
       // Add first variation when enabling
       const newVariation = createNewVariation();
       newVariation.isDefault = true;
+      const newVariations = [newVariation];
+      
       setFormData(prev => ({
         ...prev,
-        variations: [newVariation]
+        variations: newVariations,
+        // Update default images based on variations
+        images: updateDefaultImagesFromVariations(newVariations)
       }));
       setExpandedVariations(new Set([newVariation.id]));
     } else if (!enabled) {
       // Clear variations when disabling
       setFormData(prev => ({
         ...prev,
-        variations: []
+        variations: [],
+        // Keep existing images when disabling variations
       }));
       setExpandedVariations(new Set());
     }
@@ -321,18 +563,27 @@ const Listing = () => {
 
   const addVariation = () => {
     const newVariation = createNewVariation();
+    const updatedVariations = [...formData.variations, newVariation];
+    
     setFormData(prev => ({
       ...prev,
-      variations: [...prev.variations, newVariation]
+      variations: updatedVariations,
+      // Update default images
+      images: updateDefaultImagesFromVariations(updatedVariations)
     }));
     setExpandedVariations(prev => new Set([...prev, newVariation.id]));
   };
 
   const removeVariation = (variationId) => {
+    const updatedVariations = formData.variations.filter(v => v.id !== variationId);
+    
     setFormData(prev => ({
       ...prev,
-      variations: prev.variations.filter(v => v.id !== variationId)
+      variations: updatedVariations,
+      // Update default images
+      images: updateDefaultImagesFromVariations(updatedVariations)
     }));
+    
     setExpandedVariations(prev => {
       const newSet = new Set(prev);
       newSet.delete(variationId);
@@ -350,22 +601,33 @@ const Listing = () => {
         sku: `${variation.sku}-COPY`,
         isDefault: false,
       };
+      
+      const updatedVariations = [...formData.variations, duplicatedVariation];
+      
       setFormData(prev => ({
         ...prev,
-        variations: [...prev.variations, duplicatedVariation]
+        variations: updatedVariations,
+        // Update default images
+        images: updateDefaultImagesFromVariations(updatedVariations)
       }));
       setExpandedVariations(prev => new Set([...prev, duplicatedVariation.id]));
     }
   };
 
   const updateVariation = (variationId, field, value) => {
+    const updatedVariations = formData.variations.map(variation =>
+      variation.id === variationId
+        ? { ...variation, [field]: value }
+        : variation
+    );
+    
     setFormData(prev => ({
       ...prev,
-      variations: prev.variations.map(variation =>
-        variation.id === variationId
-          ? { ...variation, [field]: value }
-          : variation
-      )
+      variations: updatedVariations,
+      // Update default images if the change affects images or default status
+      images: (field === 'images' || field === 'isDefault') 
+        ? updateDefaultImagesFromVariations(updatedVariations)
+        : prev.images
     }));
   };
 
@@ -375,12 +637,12 @@ const Listing = () => {
       variations: prev.variations.map(variation =>
         variation.id === variationId
           ? {
-              ...variation,
-              dimensions: {
-                ...variation.dimensions,
-                [dimension]: value,
-              },
-            }
+            ...variation,
+            dimensions: {
+              ...variation.dimensions,
+              [dimension]: value,
+            },
+          }
           : variation
       )
     }));
@@ -399,12 +661,16 @@ const Listing = () => {
   };
 
   const setDefaultVariation = (variationId) => {
+    const updatedVariations = formData.variations.map(variation => ({
+      ...variation,
+      isDefault: variation.id === variationId
+    }));
+    
     setFormData(prev => ({
       ...prev,
-      variations: prev.variations.map(variation => ({
-        ...variation,
-        isDefault: variation.id === variationId
-      }))
+      variations: updatedVariations,
+      // Update default images when default variation changes
+      images: updateDefaultImagesFromVariations(updatedVariations)
     }));
   };
 
@@ -457,11 +723,11 @@ const Listing = () => {
         // Validate each variation
         formData.variations.forEach((variation, index) => {
           const prefix = `variation_${index}`;
-          
+
           if (!variation.name.trim()) {
             newErrors[`${prefix}_name`] = `Variation ${index + 1} name is required`;
           }
-          
+
           if (!variation.price) {
             newErrors[`${prefix}_price`] = `Variation ${index + 1} price is required`;
           } else if (isNaN(variation.price) || parseFloat(variation.price) <= 0) {
@@ -502,6 +768,76 @@ const Listing = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const formatListingData = (formData) => {
+    const baseData = {
+      id: formData.sku, // SKU value
+      title: formData.title,
+      brand: formData.brand,
+      category: {
+        main: formData.category,
+        sub: formData.subCategory,
+      },
+      description: formData.description,
+      productTags: formData.tags, // Changed from 'tags' to 'productTags'
+      metaTitle: formData.metaTitle,
+      metaDescription: formData.metaDescription,
+      weight: formData.weight,
+      dimensions: formData.dimensions,
+      // Fix shippingClass - it needs to be an object, not just the class string
+      shippingClass: {
+        id: `ship_${Date.now()}`, // Generate unique ID
+        shippingWeight: formData.shippingWeight,
+        shippingClass: formData.shippingClass, // This is the actual class value (standard, express, etc.)
+        returnPolicy: formData.returnPolicy,
+        warranty: formData.warranty,
+      },
+      status: formData.status,
+      visibility: formData.visibility,
+      hasVariations,
+    };
+
+    // Rest of the function remains the same...
+    if (hasVariations) {
+      baseData.variations = formData.variations.map((variation) => ({
+        ...variation,
+        color: variation.color ? [variation.color.hex] : [], // Convert to array of hex strings
+        price: parseFloat(variation.price),
+        originalPrice: variation.originalPrice
+          ? parseFloat(variation.originalPrice)
+          : null,
+        quantity: parseInt(variation.quantity),
+      }));
+
+      // Use default variation or first variation for main product data
+      const defaultVariation =
+        formData.variations.find((v) => v.isDefault) || formData.variations[0];
+      if (defaultVariation) {
+        baseData.price = parseFloat(defaultVariation.price);
+        baseData.originalPrice = defaultVariation.originalPrice
+          ? parseFloat(defaultVariation.originalPrice)
+          : null;
+        baseData.sku = defaultVariation.sku;
+        baseData.quantity = parseInt(defaultVariation.quantity);
+        
+        // **UPDATED**: Use the properly formatted default images
+        baseData.images = formData.images.length > 0 ? formData.images : 
+          (defaultVariation.images.length > 0 ? defaultVariation.images : []);
+      }
+    } else {
+      baseData.price = parseFloat(formData.price);
+      baseData.originalPrice = formData.originalPrice
+        ? parseFloat(formData.originalPrice)
+        : null;
+      baseData.sku = formData.sku;
+      baseData.quantity = parseInt(formData.quantity);
+      baseData.images = formData.images;
+      baseData.colors = formData.colors;
+      baseData.sizes = formData.sizes;
+    }
+
+    return baseData;
+  };
+
   const handleSave = async (saveType = "draft") => {
     if (!validateForm()) {
       // Scroll to first error
@@ -516,38 +852,33 @@ const Listing = () => {
     }
 
     setIsSaving(true);
+    clearListingsMessages();
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      const listingData = {
+      const listingData = formatListingData({
         ...formData,
-        hasVariations,
-        status: saveType === "publish" ? "active" : "draft",
-        updatedAt: new Date().toISOString(),
-      };
+        status: saveType === "publish" ? "active" : formData.status,
+      });
 
+      let result;
       if (isEditing && !isDuplicating) {
-        listingData.id = editingProduct.id;
-        console.log("Updating listing:", listingData);
+        result = await updateExistingListing(editingProduct._id || editingProduct.id, listingData);
       } else {
-        listingData.id = Date.now().toString();
-        listingData.createdAt = new Date().toISOString();
-        console.log("Creating new listing:", listingData);
+        result = await createNewListing(listingData);
       }
 
-      setSavedListingData(listingData);
+      if (result.type?.endsWith('fulfilled')) {
+        setSavedListingData(result.payload);
 
-      // Show different modals based on save type
-      if (saveType === "publish") {
-        setShowSummaryModal(true);
-      } else {
-        setShowSuccessModal(true);
+        // Show different modals based on save type
+        if (saveType === "publish") {
+          setShowSummaryModal(true);
+        } else {
+          setShowSuccessModal(true);
+        }
       }
     } catch (error) {
       console.error("Error saving listing:", error);
-      alert("Failed to save listing. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -555,12 +886,12 @@ const Listing = () => {
 
   const handleSuccessAction = () => {
     setShowSuccessModal(false);
-    navigate("/seller/listings");
+    navigate("/seller-dashboard");
   };
 
   const handleSummaryGoToListings = () => {
     setShowSummaryModal(false);
-    navigate("/seller/listings");
+    navigate("/seller-dashboard");
   };
 
   const handleSummaryCreateNew = () => {
@@ -580,7 +911,7 @@ const Listing = () => {
     { id: "pricing", name: hasVariations ? "Variations" : "Pricing", icon: hasVariations ? Grid3X3 : DollarSign },
     { id: "details", name: "Details", icon: Package },
     { id: "media", name: "Images", icon: ImageIcon },
-    { id: "seo", name: "SEO & Tags", icon: Settings },
+    { id: "seo", name: "Tags", icon: Settings },
     { id: "shipping", name: "Shipping", icon: ShoppingCart },
   ];
 
@@ -604,7 +935,7 @@ const Listing = () => {
         ...formData,
         price: defaultVariation.price,
         originalPrice: defaultVariation.originalPrice,
-        images: defaultVariation.images.length > 0 ? defaultVariation.images : formData.images,
+        images: formData.images.length > 0 ? formData.images : defaultVariation.images,
         sku: defaultVariation.sku,
         colors: defaultVariation.color ? [defaultVariation.color] : [],
         sizes: defaultVariation.sizes,
@@ -614,9 +945,38 @@ const Listing = () => {
   };
 
   const previewData = getPreviewData();
+  const isProcessing = isSaving || listingsLoading || isUploading || uploadingImages.size > 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Success/Error Messages */}
+      {(listingsError || uploadError) && (
+        <div className="fixed top-4 right-4 z-50 max-w-md">
+          <Alert
+            variant="danger"
+            title="Error"
+            onClose={clearListingsMessages}
+          >
+            {listingsError || uploadError}
+          </Alert>
+        </div>
+      )}
+
+      {/* Upload Progress Indicator */}
+      {uploadingImages.size > 0 && (
+        <div className="fixed top-4 left-4 z-50 max-w-md">
+          <Alert
+            variant="info"
+            title="Uploading Images"
+          >
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Uploading {uploadingImages.size} image{uploadingImages.size > 1 ? 's' : ''}...</span>
+            </div>
+          </Alert>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -647,7 +1007,7 @@ const Listing = () => {
               <Button
                 variant="secondary"
                 onClick={handlePreview}
-                disabled={!formData.title}
+                disabled={!formData.title || isProcessing}
               >
                 <Eye className="h-4 w-4 mr-2" />
                 Preview
@@ -656,16 +1016,21 @@ const Listing = () => {
               <Button
                 variant="secondary"
                 onClick={() => handleSave("draft")}
-                disabled={isSaving}
+                disabled={isProcessing}
               >
                 <Save className="h-4 w-4 mr-2" />
-                {isSaving ? "Saving..." : "Save Draft"}
+                {isProcessing ? "Saving..." : "Save Draft"}
+                {isProcessing && <LoadingSpinner size="sm" className="ml-2" />}
               </Button>
 
-              <Button onClick={() => handleSave("publish")} disabled={isSaving}>
+              <Button
+                onClick={() => handleSave("publish")}
+                disabled={isProcessing}
+              >
                 {isEditing && !isDuplicating
                   ? "Update Listing"
                   : "Publish Listing"}
+                {isProcessing && <LoadingSpinner size="sm" className="ml-2" />}
               </Button>
             </div>
           </div>
@@ -893,7 +1258,7 @@ const Listing = () => {
                                 {Math.round(
                                   ((formData.originalPrice - formData.price) /
                                     formData.originalPrice) *
-                                    100
+                                  100
                                 )}
                                 % OFF
                               </Badge>
@@ -936,6 +1301,22 @@ const Listing = () => {
                     ) : (
                       // Variations form
                       <div className="space-y-6">
+                        {/* Default Image Auto-Update Notice */}
+                        {formData.variations.length > 0 && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="flex items-start gap-3">
+                              <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+                              <div>
+                                <h4 className="font-medium text-blue-900 mb-1">Automatic Default Image</h4>
+                                <p className="text-sm text-blue-700">
+                                  The first image from your default variation will automatically become the main product image. 
+                                  Change the default variation or update variation images to update the main product image.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         {errors.variations && (
                           <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-3">
                             {errors.variations}
@@ -978,7 +1359,7 @@ const Listing = () => {
                                   )}
                                 </div>
                               </div>
-                              
+
                               <div className="flex items-center space-x-2">
                                 <Button
                                   variant="ghost"
@@ -1114,7 +1495,7 @@ const Listing = () => {
                                   <MultiColorPicker
                                     label="Variation Color (Optional)"
                                     colors={variation.color ? [variation.color] : []}
-                                    onChange={(colors) => 
+                                    onChange={(colors) =>
                                       updateVariation(variation.id, "color", colors[0] || null)
                                     }
                                     maxColors={1}
@@ -1139,7 +1520,7 @@ const Listing = () => {
                                 {/* Physical Properties */}
                                 <div className="space-y-4">
                                   <h4 className="font-medium text-gray-900">Physical Properties (Optional)</h4>
-                                  
+
                                   <FormField label="Weight (Optional)">
                                     <div className="flex space-x-2">
                                       <Input
@@ -1210,12 +1591,20 @@ const Listing = () => {
                                     <ImageUpload
                                       images={variation.images}
                                       onImagesChange={(images) =>
-                                        updateVariation(variation.id, "images", images)
+                                        handleVariationImagesChange(variation.id, images)
                                       }
                                       maxImages={5}
+                                      disabled={uploadingImages.has(variation.id)}
                                     />
+                                    {uploadingImages.has(variation.id) && (
+                                      <div className="flex items-center gap-2 mt-2 text-sm text-blue-600">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        <span>Uploading images...</span>
+                                      </div>
+                                    )}
                                     <p className="text-xs text-gray-500 mt-2">
-                                      Upload up to 5 images for this variation. These will override the main product images.
+                                      Upload up to 5 images for this variation. 
+                                      {variation.isDefault && " The first image will become the main product image."}
                                     </p>
                                   </FormField>
                                 </div>
@@ -1229,6 +1618,7 @@ const Listing = () => {
                           variant="outline"
                           onClick={addVariation}
                           className="w-full border-dashed border-2 border-gray-300 py-6"
+                          disabled={isProcessing}
                         >
                           <Plus className="h-5 w-5 mr-2" />
                           Add New Variation
@@ -1393,9 +1783,16 @@ const Listing = () => {
                     <CardTitle>
                       {hasVariations ? "Default Product Images" : "Product Images"}
                     </CardTitle>
-                    {hasVariations && (
+                    {hasVariations ? (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-sm text-blue-700">
+                          <strong>Auto-generated from variations:</strong> These images are automatically set based on your default variation's images. 
+                          To change these images, update the default variation or switch which variation is set as default.
+                        </p>
+                      </div>
+                    ) : (
                       <p className="text-sm text-gray-600">
-                        These images will be used as fallback when variations don't have their own images
+                        Upload high-quality images of your product. The first image will be the main product image.
                       </p>
                     )}
                   </CardHeader>
@@ -1404,15 +1801,24 @@ const Listing = () => {
                       <ImageUpload
                         data-field="images"
                         images={formData.images}
-                        onImagesChange={(images) =>
-                          handleInputChange("images", images)
-                        }
+                        onImagesChange={handleImagesChange}
                         maxImages={10}
+                        disabled={uploadingImages.has('main') || hasVariations}
+                        readOnly={hasVariations}
                       />
+                      {uploadingImages.has('main') && (
+                        <div className="flex items-center gap-2 mt-2 text-sm text-blue-600">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Uploading images...</span>
+                        </div>
+                      )}
                       <p className="text-xs text-gray-500 mt-2">
-                        Upload up to 10 high-quality images. 
-                        {!hasVariations && " First image will be the main product image."}
-                        {hasVariations && " Each variation can have its own images that override these."}
+                        {hasVariations ? (
+                          "These images are managed through your product variations. Edit the default variation to change the main product image."
+                        ) : (
+                          "Upload up to 10 high-quality images. First image will be the main product image."
+                        )}
+                        {(uploadingImages.has('main') || isUploading) && " Please wait while images are being uploaded..."}
                       </p>
                     </FormField>
                   </CardContent>
@@ -1422,43 +1828,6 @@ const Listing = () => {
               {/* SEO & Marketing */}
               <TabsContent value="seo">
                 <div className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>SEO Settings</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <FormField label="Meta Title">
-                        <Input
-                          value={formData.metaTitle}
-                          onChange={(e) =>
-                            handleInputChange("metaTitle", e.target.value)
-                          }
-                          placeholder="SEO title for search engines"
-                          maxLength={60}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          {formData.metaTitle.length}/60 characters -
-                          Auto-generated from product title
-                        </p>
-                      </FormField>
-
-                      <FormField label="Meta Description">
-                        <Textarea
-                          value={formData.metaDescription}
-                          onChange={(e) =>
-                            handleInputChange("metaDescription", e.target.value)
-                          }
-                          placeholder="Brief description for search engines"
-                          rows={3}
-                          maxLength={160}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          {formData.metaDescription.length}/160 characters
-                        </p>
-                      </FormField>
-                    </CardContent>
-                  </Card>
-
                   <Card>
                     <CardHeader>
                       <CardTitle>Product Tags</CardTitle>
@@ -1471,8 +1840,20 @@ const Listing = () => {
                         maxTags={20}
                       />
                       <p className="text-xs text-gray-500 mt-2">
-                        Add relevant tags to help customers find your product
+                        Add relevant tags to help customers find your product. Current tags: {formData.tags.length}
                       </p>
+                      {formData.tags.length > 0 && (
+                        <div className="mt-3 p-3 bg-blue-50 rounded border">
+                          <p className="text-sm font-medium text-blue-900 mb-2">Preview:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {formData.tags.map((tag, index) => (
+                              <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -1544,9 +1925,22 @@ const Listing = () => {
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <h4 className="font-medium text-blue-900 mb-2">Variation Shipping</h4>
                         <p className="text-sm text-blue-700">
-                          When using variations, shipping calculations will use each variation's individual weight and dimensions if specified, 
+                          When using variations, shipping calculations will use each variation's individual weight and dimensions if specified,
                           otherwise falling back to the default values above.
                         </p>
+                      </div>
+                    )}
+
+                    {/* Preview shipping data if editing */}
+                    {(isEditing || isDuplicating) && editingProduct?.shippingClass && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h4 className="font-medium text-gray-900 mb-2">Current Shipping Settings:</h4>
+                        <div className="text-sm space-y-1">
+                          <p><strong>Weight:</strong> {formData.shippingWeight || 'Not set'} lbs</p>
+                          <p><strong>Class:</strong> {formData.shippingClass}</p>
+                          <p><strong>Return Policy:</strong> {formData.returnPolicy} days</p>
+                          <p><strong>Warranty:</strong> {formData.warranty || 'Not set'}</p>
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -1654,6 +2048,27 @@ const Listing = () => {
                         </div>
                       </div>
                     )}
+
+                    {previewData.tags.length > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-600 mb-2">Tags:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {previewData.tags.slice(0, 3).map((tag, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {previewData.tags.length > 3 && (
+                            <span className="text-xs text-gray-500 self-center">
+                              +{previewData.tags.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1723,7 +2138,7 @@ const Listing = () => {
                     >
                       <option value="draft">Draft</option>
                       <option value="active">Active</option>
-                      <option value="paused">Paused</option>
+                      <option value="inactive">Inactive</option>
                     </Select>
                   </FormField>
 
@@ -1745,17 +2160,19 @@ const Listing = () => {
                       <Button
                         variant="secondary"
                         onClick={() => handleSave("draft")}
-                        disabled={isSaving}
+                        disabled={isProcessing}
                         className="flex-1"
                       >
                         Save Draft
+                        {isProcessing && <LoadingSpinner size="sm" className="ml-2" />}
                       </Button>
                       <Button
                         onClick={() => handleSave("publish")}
-                        disabled={isSaving}
+                        disabled={isProcessing}
                         className="flex-1"
                       >
                         {isEditing && !isDuplicating ? "Update" : "Publish"}
+                        {isProcessing && <LoadingSpinner size="sm" className="ml-2" />}
                       </Button>
                     </div>
                   </div>
@@ -1795,15 +2212,15 @@ const Listing = () => {
           isDuplicating
             ? "Listing Duplicated!"
             : isEditing
-            ? "Listing Updated!"
-            : "Draft Saved!"
+              ? "Listing Updated!"
+              : "Draft Saved!"
         }
         message={
           isDuplicating
             ? "Your product listing has been successfully duplicated."
             : isEditing
-            ? "Your product listing has been successfully updated."
-            : "Your draft has been saved successfully."
+              ? "Your product listing has been successfully updated."
+              : "Your draft has been saved successfully."
         }
         actionLabel="View Listings"
         onAction={handleSuccessAction}
@@ -1811,7 +2228,7 @@ const Listing = () => {
 
       {/* Listing Summary Modal */}
       {showSummaryModal && savedListingData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-transparent backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
             <div className="p-6">
               <div className="text-center mb-6">
@@ -1839,13 +2256,13 @@ const Listing = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Category:</span>
                     <span className="font-medium">
-                      {categories[savedListingData.category]?.name || savedListingData.category}
+                      {categories[savedListingData.category?.main]?.name || savedListingData.category}
                     </span>
                   </div>
                   {hasVariations ? (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Variations:</span>
-                      <span className="font-medium">{savedListingData.variations.length} variations</span>
+                      <span className="font-medium">{savedListingData.variations?.length || 0} variations</span>
                     </div>
                   ) : (
                     <div className="flex justify-between">
