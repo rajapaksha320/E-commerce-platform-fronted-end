@@ -23,7 +23,7 @@ const Footer = () => {
     support: [
       { name: "Contact Us", href: "/contact-us" },
       { name: "FAQs", href: "/faqs" },
-      { name: "Tracking & Returns", href: "/returns-and-refund" },
+      // { name: "Tracking & Returns", href: "/returns-and-refund" },
       { name: "Shipping Info", href: "/shipping-info" },
       { name: "Size Guide", href: "/size-guide" },
     ],

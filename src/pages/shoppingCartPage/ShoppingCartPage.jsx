@@ -193,16 +193,6 @@ const ShoppingCartPage = () => {
     }
   };
 
-  const moveToCart = (item) => {
-    setCartItems((prev) => [...prev, { ...item, quantity: 1 }]);
-    setSavedItems((prev) => prev.filter((saved) => saved.id !== item.id));
-    if (
-      savedPage > Math.ceil((savedItems.length - 1) / savedItemsPerPage) &&
-      savedPage > 1
-    ) {
-      setSavedPage(savedPage - 1);
-    }
-  };
 
   const getBadgeVariant = (badge) => {
     const variants = {
@@ -226,13 +216,8 @@ const ShoppingCartPage = () => {
     return cartItems.slice(startIndex, startIndex + itemsPerPage);
   };
 
-  const getPaginatedSavedItems = () => {
-    const startIndex = (savedPage - 1) * savedItemsPerPage;
-    return savedItems.slice(startIndex, startIndex + savedItemsPerPage);
-  };
 
   const paginatedCartItems = getPaginatedCartItems();
-  const paginatedSavedItems = getPaginatedSavedItems();
 
   // Reset pagination when items change
   useEffect(() => {
@@ -302,7 +287,7 @@ const ShoppingCartPage = () => {
             <div className="sm:hidden">
               <div className="text-right">
                 <p className="text-lg font-bold text-blue-600">
-                  ${total.toFixed(2)}
+                  LKR {total.toFixed(2)}
                 </p>
                 <p className="text-xs text-gray-500">Total</p>
               </div>
@@ -404,11 +389,11 @@ const ShoppingCartPage = () => {
                             {/* Price */}
                             <div className="flex items-center space-x-2 mb-2">
                               <span className="font-bold text-gray-900">
-                                ${item.price}
+                                LKR {item.price}
                               </span>
                               {item.originalPrice && (
                                 <span className="text-sm text-gray-500 line-through">
-                                  ${item.originalPrice}
+                                  LKR {item.originalPrice}
                                 </span>
                               )}
                               {item.discount && (
@@ -431,11 +416,11 @@ const ShoppingCartPage = () => {
                           {/* Item Total */}
                           <div className="text-right">
                             <p className="font-bold text-gray-900">
-                              ${(item.price * item.quantity).toFixed(2)}
+                              LKR {(item.price * item.quantity).toFixed(2)}
                             </p>
                             {item.originalPrice && (
                               <p className="text-xs text-gray-500 line-through">
-                                $
+                                <span>LKR</span>
                                 {(item.originalPrice * item.quantity).toFixed(
                                   2
                                 )}
@@ -548,11 +533,11 @@ const ShoppingCartPage = () => {
 
                             <div className="flex items-center space-x-3 mb-4">
                               <span className="font-bold text-gray-900 text-xl">
-                                ${item.price}
+                                LKR {item.price}
                               </span>
                               {item.originalPrice && (
                                 <span className="text-base text-gray-500 line-through">
-                                  ${item.originalPrice}
+                                  LKR {item.originalPrice}
                                 </span>
                               )}
                               {item.discount && (
@@ -628,11 +613,11 @@ const ShoppingCartPage = () => {
                           {/* Item Total */}
                           <div className="text-right">
                             <p className="font-bold text-xl text-gray-900">
-                              ${(item.price * item.quantity).toFixed(2)}
+                              LKR {(item.price * item.quantity).toFixed(2)}
                             </p>
                             {item.originalPrice && (
                               <p className="text-sm text-gray-500 line-through">
-                                $
+                                <span>LKR </span> 
                                 {(item.originalPrice * item.quantity).toFixed(
                                   2
                                 )}
@@ -659,87 +644,7 @@ const ShoppingCartPage = () => {
                 </div>
               )}
 
-              {/* Saved for Later */}
-              {savedItems.length > 0 && (
-                <Card className="mt-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-bold text-gray-900">
-                      Saved for Later
-                    </h3>
-                    <Badge variant="secondary" size="sm">
-                      {savedItems.length} items
-                    </Badge>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                    {paginatedSavedItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="group relative bg-gray-50/50 rounded-lg p-3 hover:bg-gray-50 transition-colors duration-200"
-                      >
-                        <div className="relative mb-3">
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="w-full aspect-square object-cover rounded-lg"
-                          />
-                          <Button
-                            onClick={() =>
-                              setSavedItems((prev) =>
-                                prev.filter((saved) => saved.id !== item.id)
-                              )
-                            }
-                            variant="ghost"
-                            size="sm"
-                            className="absolute top-1 right-1 p-1 bg-white/90 hover:bg-white rounded-full"
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <h4 className="text-xs sm:text-sm font-semibold text-gray-900 line-clamp-2 mb-2">
-                          {item.name}
-                        </h4>
-                        <div className="flex items-center space-x-1 mb-2">
-                          {renderStars(item.rating)}
-                          <span className="text-xs text-gray-500">
-                            ({item.totalReviews})
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2 mb-3">
-                          <span className="text-sm font-bold text-gray-900">
-                            ${item.price}
-                          </span>
-                          {item.originalPrice && (
-                            <span className="text-xs text-gray-500 line-through">
-                              ${item.originalPrice}
-                            </span>
-                          )}
-                        </div>
-                        <Button
-                          onClick={() => moveToCart(item)}
-                          size="sm"
-                          className="w-full text-xs"
-                        >
-                          Move to Cart
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Saved Items Pagination */}
-                  {savedItems.length > savedItemsPerPage && (
-                    <div className="mt-6 pt-4 border-t border-gray-200">
-                      <Pagination
-                        currentPage={savedPage}
-                        totalPages={totalSavedPages}
-                        onPageChange={setSavedPage}
-                        itemsPerPage={savedItemsPerPage}
-                        totalItems={savedItems.length}
-                      />
-                    </div>
-                  )}
-                </Card>
-              )}
+            
             </div>
 
             {/* Order Summary - Mobile Optimized */}
@@ -749,7 +654,7 @@ const ShoppingCartPage = () => {
                 <div className="sm:hidden">
                   <Button className="w-full" size="lg">
                     <CreditCard className="h-5 w-5 mr-2" />
-                    Checkout - ${total.toFixed(2)}
+                    Checkout - LKR {total.toFixed(2)}
                   </Button>
                 </div>
 
@@ -765,7 +670,7 @@ const ShoppingCartPage = () => {
                         Subtotal ({itemCount} items)
                       </span>
                       <span className="font-semibold">
-                        ${subtotal.toFixed(2)}
+                        LKR {subtotal.toFixed(2)}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -784,13 +689,13 @@ const ShoppingCartPage = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Tax</span>
-                      <span className="font-semibold">${tax.toFixed(2)}</span>
+                      <span className="font-semibold">LKR {tax.toFixed(2)}</span>
                     </div>
                     <div className="border-t border-gray-200 pt-3">
                       <div className="flex justify-between text-base font-bold">
                         <span>Total</span>
                         <span className="text-blue-600">
-                          ${total.toFixed(2)}
+                          LKR {total.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -821,7 +726,7 @@ const ShoppingCartPage = () => {
                       <div className="flex items-center text-blue-700 text-sm mb-2">
                         <Truck className="h-4 w-4 mr-2" />
                         <span className="font-medium">
-                          Add ${(75 - subtotal).toFixed(2)} more for free
+                          Add LKR {(75 - subtotal).toFixed(2)} more for free
                           shipping!
                         </span>
                       </div>

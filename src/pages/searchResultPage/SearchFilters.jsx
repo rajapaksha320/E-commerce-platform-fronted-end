@@ -280,12 +280,10 @@ const SearchFilters = ({
           </div>
           <div className="space-y-2">
             {[
-              { label: "Under $25", min: 0, max: 25 },
-              { label: "$25 to $50", min: 25, max: 50 },
-              { label: "$50 to $100", min: 50, max: 100 },
-              { label: "$100 to $250", min: 100, max: 250 },
-              { label: "$250 to $500", min: 250, max: 500 },
-              { label: "Over $500", min: 500, max: null },
+              { label: "Under LKR 1000", min: 0, max: 1000 },
+              { label: "LKR 1000 to LKR 5000", min: 1000, max: 5000 },
+              { label: "LKR 5000 to $10000", min: 5000, max: 100000 },
+              { label: "Over LKR 10000", min: 10000, max: null },
             ].map((range, index) => (
               <label
                 key={index}

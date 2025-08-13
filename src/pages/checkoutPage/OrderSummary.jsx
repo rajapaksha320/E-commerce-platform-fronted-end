@@ -145,11 +145,11 @@ const OrderSummary = ({
                   <p className="text-xs text-gray-600">{item.brand}</p>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-sm font-semibold text-gray-900">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      LKR {(item.price * item.quantity).toFixed(2)}
                     </span>
                     {item.originalPrice && (
                       <span className="text-xs text-gray-500 line-through">
-                        ${(item.originalPrice * item.quantity).toFixed(2)}
+                        LKR {(item.originalPrice * item.quantity).toFixed(2)}
                       </span>
                     )}
                   </div>
@@ -226,13 +226,13 @@ const OrderSummary = ({
         <div className="space-y-3 text-sm">
           <div className="flex justify-between">
             <span className="text-gray-600">Subtotal ({itemCount} items)</span>
-            <span className="font-medium">${subtotal.toFixed(2)}</span>
+            <span className="font-medium">LKR {subtotal.toFixed(2)}</span>
           </div>
 
           {appliedPromo && promoDiscount > 0 && (
             <div className="flex justify-between text-green-600">
               <span>Discount ({appliedPromo.code})</span>
-              <span className="font-medium">-${promoDiscount.toFixed(2)}</span>
+              <span className="font-medium">-LKR {promoDiscount.toFixed(2)}</span>
             </div>
           )}
 
@@ -254,13 +254,13 @@ const OrderSummary = ({
 
           <div className="flex justify-between">
             <span className="text-gray-600">Tax</span>
-            <span className="font-medium">${tax.toFixed(2)}</span>
+            <span className="font-medium">LKR {tax.toFixed(2)}</span>
           </div>
 
           <div className="border-t border-gray-200 pt-3">
             <div className="flex justify-between text-base font-bold">
               <span>Total</span>
-              <span className="text-blue-600">${finalTotal.toFixed(2)}</span>
+              <span className="text-blue-600">LKR {finalTotal.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -273,7 +273,7 @@ const OrderSummary = ({
               <div className="flex items-center text-blue-700 text-sm mb-2">
                 <Truck className="h-4 w-4 mr-2" />
                 <span className="font-medium">
-                  Add ${needsForFreeShipping.toFixed(2)} more for free shipping!
+                  Add LKR {needsForFreeShipping.toFixed(2)} more for free shipping!
                 </span>
               </div>
               <div className="w-full bg-blue-200 rounded-full h-2">
@@ -314,7 +314,7 @@ const OrderSummary = ({
       </Card>
 
       {/* Customer Reviews */}
-      <Card className="hidden lg:block">
+      {/* <Card className="hidden lg:block">
         <h4 className="font-bold text-gray-900 mb-4 flex items-center">
           <Star className="h-4 w-4 text-yellow-500 mr-2" />
           Customer Reviews
@@ -358,10 +358,10 @@ const OrderSummary = ({
             </div>
           ))}
         </div>
-      </Card>
+      </Card> */}
 
       {/* Gift Message */}
-      <Card className="hidden lg:block">
+      {/* <Card className="hidden lg:block">
         <div className="flex items-center mb-3">
           <Gift className="h-4 w-4 text-pink-600 mr-2" />
           <span className="text-sm font-medium text-gray-700">
@@ -376,7 +376,7 @@ const OrderSummary = ({
         <p className="text-xs text-gray-500 mt-2">
           Gift messages are included free of charge
         </p>
-      </Card>
+      </Card> */}
     </div>
   );
 };

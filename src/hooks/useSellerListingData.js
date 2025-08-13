@@ -48,9 +48,9 @@ import {
   selectMessage,
   selectPendingImageUploads,
   selectListingsStatistics,
-} from '../store/slices/sellerSlice';
+} from '../store/slices/sellerListingSlice';
 
-import sellerService from '../services/sellerService';
+import sellerService from '../services/sellerListingService';
 
 /**
  * Main hook for seller data management

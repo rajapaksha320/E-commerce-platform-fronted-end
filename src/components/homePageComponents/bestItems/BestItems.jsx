@@ -285,11 +285,11 @@ const BestItems = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <span className="text-lg font-bold text-gray-900">
-                      ${product.price}
+                     LKR {product.price}
                     </span>
                     {product.originalPrice && (
                       <span className="text-sm text-gray-500 line-through ml-2">
-                        ${product.originalPrice}
+                       LKR {product.originalPrice}
                       </span>
                     )}
                   </div>

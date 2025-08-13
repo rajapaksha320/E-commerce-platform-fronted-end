@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 // ProfileManagement.jsx - Redux Integrated (Store Management)
 import React, { useState, useEffect } from "react";
-import { useStore, useImageUpload } from "../../../../hooks/useSellerData";
+import { useStore, useImageUpload } from "../../../../hooks/useSellerListingData";
 import {
   User,
   Camera,
