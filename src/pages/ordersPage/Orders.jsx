@@ -320,7 +320,7 @@ const Orders = () => {
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+            {/* <div className="flex items-center space-x-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -334,7 +334,7 @@ const Orders = () => {
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -380,14 +380,14 @@ const Orders = () => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
               />
             </div>
-            <Button
+            {/* <Button
               variant="outline"
               size="md"
               className="flex items-center space-x-2 sm:w-auto"
             >
               <Filter className="h-4 w-4" />
               <span>More Filters</span>
-            </Button>
+            </Button> */}
           </div>
         </div>
 
@@ -435,7 +435,8 @@ const Orders = () => {
                             {formatDate(order.date)}
                           </span>
                           <span className="flex items-center">
-                            <CreditCard className="h-4 w-4 mr-1" />$
+                            <CreditCard className="h-4 w-4 mr-1" />
+                            <span className="mr-1">LKR</span>
                             {order.total.toFixed(2)}
                           </span>
                         </div>
@@ -471,7 +472,8 @@ const Orders = () => {
                               Qty: {item.quantity}
                             </span>
                             <span className="text-sm font-medium text-gray-900">
-                              ${item.price.toFixed(2)}
+                              <span className="mr-1">LKR</span>
+                              {item.price.toFixed(2)}
                             </span>
                           </div>
                         </div>
@@ -493,7 +495,7 @@ const Orders = () => {
                   )}
 
                   {/* Tracking Info */}
-                  {order.trackingNumber && (
+                  {/* {order.trackingNumber && (
                     <div className="flex items-center justify-between bg-green-50 p-3 rounded-lg">
                       <div className="flex items-center space-x-2 text-sm">
                         <Truck className="h-4 w-4 text-green-600" />
@@ -508,10 +510,10 @@ const Orders = () => {
                         </span>
                       )}
                     </div>
-                  )}
+                  )} */}
 
                   {/* Delivered Info */}
-                  {order.status === "delivered" && order.actualDelivery && (
+                  {/* {order.status === "delivered" && order.actualDelivery && (
                     <div className="bg-green-50 p-3 rounded-lg">
                       <div className="flex items-center space-x-2 text-sm text-green-800">
                         <CheckCircle className="h-4 w-4" />
@@ -521,7 +523,7 @@ const Orders = () => {
                         </span>
                       </div>
                     </div>
-                  )}
+                  )} */}
 
                   {/* Cancelled Info */}
                   {order.status === "cancelled" && order.cancelReason && (
@@ -548,7 +550,7 @@ const Orders = () => {
                       View Details
                     </Button>
 
-                    {order.trackingNumber && order.status !== "delivered" && (
+                    {/* {order.trackingNumber && order.status !== "delivered" && (
                       <Button
                         variant="primary"
                         size="sm"
@@ -558,11 +560,11 @@ const Orders = () => {
                         <Truck className="h-4 w-4 mr-2" />
                         Track Order
                       </Button>
-                    )}
+                    )} */}
 
                     {order.status === "delivered" && (
                       <>
-                        <Button
+                        {/* <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleReorder(order)}
@@ -570,8 +572,8 @@ const Orders = () => {
                         >
                           <RotateCcw className="h-4 w-4 mr-2" />
                           Reorder
-                        </Button>
-                        <Button
+                        </Button> */}
+                        {/* <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleReturnOrder(order)}
@@ -579,7 +581,7 @@ const Orders = () => {
                         >
                           <RotateCcw className="h-4 w-4 mr-2" />
                           Return
-                        </Button>
+                        </Button> */}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -591,7 +593,7 @@ const Orders = () => {
                       </>
                     )}
 
-                    {order.status === "cancelled" && (
+                    {/* {order.status === "cancelled" && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -601,16 +603,16 @@ const Orders = () => {
                         <RotateCcw className="h-4 w-4 mr-2" />
                         Order Again
                       </Button>
-                    )}
+                    )} */}
 
-                    <Button
+                    {/* <Button
                       variant="ghost"
                       size="sm"
                       className="flex items-center text-gray-600 hover:text-gray-700"
                     >
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Support
-                    </Button>
+                    </Button> */}
                   </div>
                 </div>
               </Card>

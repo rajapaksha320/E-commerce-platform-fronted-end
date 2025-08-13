@@ -15,7 +15,6 @@ import {
   Package,
   UserCircle,
   ChevronDown,
-  Bell,
   Star,
 } from "lucide-react";
 
@@ -62,7 +61,7 @@ const NavBar = () => {
     { name: "Home", href: "/" },
     { name: "Shops", href: "/shop-collections" },
     { name: "Categories", href: "/category-collections" },
-    { name: "Deals", href: "/deals" },
+    // { name: "Deals", href: "/deals" },
     { name: "About", href: "/about-us" },
     { name: "Contact", href: "/contact-us" },
   ];
@@ -256,7 +255,7 @@ const NavBar = () => {
                 {/* Action Icons */}
                 <div className="flex items-center space-x-1 sm:space-x-2">
                   {/* Notifications - Tablet and Desktop */}
-                  <Button
+                  {/* <Button
                     variant="ghost"
                     className="hidden md:block relative p-2 xl:p-2.5 text-gray-600 hover:text-blue-600 transition-all duration-200 rounded-xl hover:bg-blue-50 group"
                   >
@@ -264,7 +263,7 @@ const NavBar = () => {
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-3 w-3 xl:h-4 xl:w-4 flex items-center justify-center animate-pulse text-[10px] xl:text-xs">
                       2
                     </span>
-                  </Button>
+                  </Button> */}
 
                   {/* Wishlist - Mobile and up */}
                   <Button
@@ -405,7 +404,7 @@ const NavBar = () => {
                                 <Heart className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
                                 Wishlist
                               </Button>
-                              <Button
+                              {/* <Button
                                 variant="ghost"
                                 onClick={() => {
                                   navigate("/track-parcel");
@@ -415,8 +414,8 @@ const NavBar = () => {
                               >
                                 <LocateFixed className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
                                 Track Orders
-                              </Button>
-                              <Button
+                              </Button> */}
+                              {/* <Button
                                 variant="ghost"
                                 onClick={() => {
                                   navigate("/profile");
@@ -426,7 +425,7 @@ const NavBar = () => {
                               >
                                 <Settings className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
                                 Settings
-                              </Button>
+                              </Button> */}
 
                               {/* 🏢 PROFESSIONAL: Seller-specific menu item */}
                               {userRole === 'seller' && (

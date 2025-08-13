@@ -374,7 +374,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                     </span>
                   </div>
                   <p className="text-2xl font-bold text-green-900">
-                    ${order.total.toLocaleString()}
+                    LKR {order.total.toLocaleString()}
                   </p>
                 </CardContent>
               </Card>
@@ -568,7 +568,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                             Unit Price
                           </p>
                           <p className="text-lg font-semibold text-gray-900">
-                            ${item.price.toLocaleString()}
+                            LKR {item.price.toLocaleString()}
                           </p>
                         </div>
                         <div className="text-center">
@@ -576,7 +576,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                             Item Total
                           </p>
                           <p className="text-lg font-bold text-green-600">
-                            ${(item.quantity * item.price).toLocaleString()}
+                            LKR {(item.quantity * item.price).toLocaleString()}
                           </p>
                         </div>
                       </div>
@@ -592,7 +592,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                         Order Total:
                       </span>
                       <span className="text-3xl font-bold text-green-600">
-                        ${order.total.toLocaleString()}
+                        LKR {order.total.toLocaleString()}
                       </span>
                     </CardContent>
                   </Card>
@@ -761,7 +761,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                   {order.buyer.name}
                 </p>
                 <p>
-                  <span className="font-medium">Total:</span> $
+                  <span className="font-medium">Total:</span> LKR{" "}
                   {order.total.toLocaleString()}
                 </p>
                 <p>

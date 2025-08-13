@@ -613,7 +613,7 @@ const OrderManagement = ({ activeSection = "all-orders" }) => {
                 {orderToDelete?.buyer.name}
               </p>
               <p>
-                <span className="font-medium">Total:</span> $
+                <span className="font-medium">Total:</span> LKR{" "}
                 {orderToDelete?.total.toLocaleString()}
               </p>
               <p>
@@ -861,7 +861,7 @@ const OrderManagement = ({ activeSection = "all-orders" }) => {
                                 {item.name}
                               </div>
                               <div className="text-xs text-gray-500">
-                                Qty: {item.quantity} × ${item.price}
+                                Qty: {item.quantity} × LKR {item.price}
                               </div>
                             </div>
                           </div>
@@ -873,7 +873,7 @@ const OrderManagement = ({ activeSection = "all-orders" }) => {
                   {config.showColumns.includes("total") && (
                     <TableCell>
                       <div className="text-sm font-medium text-gray-900">
-                        ${order.total.toLocaleString()}
+                        LKR {order.total.toLocaleString()}
                       </div>
                     </TableCell>
                   )}

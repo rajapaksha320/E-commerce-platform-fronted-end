@@ -1,6 +1,6 @@
 // store/slices/sellerSlice.js
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
-import sellerService from '../../services/sellerService';
+import sellerService from '../../services/sellerListingService';
 
 // Backend status constants
 const BACKEND_STATUSES = {

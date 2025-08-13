@@ -40,7 +40,7 @@ import {
   usePagination,
   useSearch,
   useSelectedListings,
-} from "../../../../hooks/useSellerData";
+} from "../../../../hooks/useSellerListingData";
 
 // Import UI components
 import {
@@ -149,10 +149,10 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
   ];
 
   const priceRanges = [
-    { value: "0-100", label: "$0 - $100" },
-    { value: "100-500", label: "$100 - $500" },
-    { value: "500-1000", label: "$500 - $1,000" },
-    { value: "1000-5000", label: "$1,000+" },
+    { value: "0-2000", label: "LKR 0 - LKR 2000" },
+    { value: "2000-5000", label: "LKR 2000 - LKR 5000" },
+    { value: "5000-10000", label: "LKR 5000 - LKR 10,000" },
+    { value: "10000-10000000", label: "LKR 10,000+" },
   ];
 
   // Debounced filter function using the utility
@@ -1042,11 +1042,11 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                       {config.showColumns.includes("price") && (
                         <TableCell>
                           <div className="text-sm font-medium text-gray-900">
-                            ${parseFloat(pricing.price || 0).toLocaleString()}
+                            LKR {parseFloat(pricing.price || 0).toLocaleString()}
                           </div>
                           {pricing.originalPrice && pricing.originalPrice > pricing.price && (
                             <div className="text-xs text-gray-500 line-through">
-                              ${parseFloat(pricing.originalPrice).toLocaleString()}
+                              LKR{parseFloat(pricing.originalPrice).toLocaleString()}
                             </div>
                           )}
                         </TableCell>
@@ -1120,7 +1120,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                       {config.showColumns.includes("revenue") && (
                         <TableCell>
                           <div className="text-sm font-medium text-green-600">
-                            ${metrics.revenue.toLocaleString()}
+                            LKR {metrics.revenue.toLocaleString()}
                           </div>
                         </TableCell>
                       )}
@@ -1270,7 +1270,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
                       SKU: {listingToDelete.sku || listingToDelete.id}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {listingToDelete.sold || 0} sold • ${getListingPrice(listingToDelete).price || 0}
+                      {listingToDelete.sold || 0} sold • LKR {getListingPrice(listingToDelete).price || 0}
                     </p>
                   </div>
                 </div>

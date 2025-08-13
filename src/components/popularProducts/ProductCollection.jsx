@@ -996,16 +996,16 @@ const ProductCollection = () => {
                   <div className="mb-4 h-8">
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-gray-900">
-                        ${product.price}
+                        LKR {product.price}
                       </span>
                       {product.originalPrice && (
                         <span className="text-sm text-gray-500 line-through">
-                          ${product.originalPrice}
+                          LKR {product.originalPrice}
                         </span>
                       )}
                       {product.discount && (
                         <Badge variant="success" size="sm">
-                          Save $
+                          Save LKR 
                           {(product.originalPrice - product.price).toFixed(2)}
                         </Badge>
                       )}
@@ -1016,7 +1016,7 @@ const ProductCollection = () => {
                   <div className="flex-grow"></div>
 
                   {/* Action Buttons */}
-                  <div className="space-y-2 mt-auto">
+                  <div className="space-y-2 mt-4">
                     {/* Main Buy Now Button */}
                     <Button
                       variant="primary"

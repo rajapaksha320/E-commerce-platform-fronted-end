@@ -18,7 +18,7 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
     {
       id: "standard",
       name: "Standard Shipping",
-      description: "Free shipping on orders over $75",
+     
       price: 0,
       originalPrice: 9.99,
       estimatedDays: "5-7 business days",
@@ -37,7 +37,7 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
       id: "express",
       name: "Express Shipping",
       description: "Faster delivery for urgent orders",
-      price: 15.99,
+      price: 3500,
       originalPrice: null,
       estimatedDays: "2-3 business days",
       icon: Zap,
@@ -55,7 +55,7 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
       id: "overnight",
       name: "Overnight Shipping",
       description: "Next business day delivery",
-      price: 25.99,
+      price: 6500,
       originalPrice: null,
       estimatedDays: "1 business day",
       icon: Clock,
@@ -160,7 +160,7 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
                       </p>
 
                       {/* Estimated Delivery */}
-                      <div className="flex items-center mt-2 text-sm">
+                      {/* <div className="flex items-center mt-2 text-sm">
                         <Calendar className="h-4 w-4 text-gray-400 mr-1" />
                         <span className="text-gray-600">
                           Estimated delivery:{" "}
@@ -168,10 +168,10 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
                             {option.estimatedDays}
                           </span>
                         </span>
-                      </div>
+                      </div> */}
 
                       {/* Features */}
-                      <div className="mt-3">
+                      {/* <div className="mt-3">
                         <ul className="space-y-1">
                           {option.features.map((feature, index) => (
                             <li
@@ -183,7 +183,7 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
                             </li>
                           ))}
                         </ul>
-                      </div>
+                      </div> */}
                     </div>
 
                     {/* Price */}
@@ -196,13 +196,13 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
                             </span>
                             {option.originalPrice && (
                               <div className="text-sm text-gray-500 line-through">
-                                ${option.originalPrice}
+                                LKR {option.originalPrice}
                               </div>
                             )}
                           </div>
                         ) : (
                           <span className="text-lg font-bold text-gray-900">
-                            ${option.price}
+                            LKR {option.price}
                           </span>
                         )}
                       </div>
@@ -215,10 +215,10 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
               {isSelected && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center text-gray-600">
+                    {/* <div className="flex items-center text-gray-600">
                       <Truck className="h-4 w-4 mr-2 text-blue-600" />
                       <span>Tracking number provided</span>
-                    </div>
+                    </div> */}
                     <div className="flex items-center text-gray-600">
                       <Shield className="h-4 w-4 mr-2 text-green-600" />
                       <span>Package protection included</span>
@@ -245,7 +245,6 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
             </h4>
             <ul className="text-sm text-blue-800 space-y-1">
               <li>• Orders placed before 2 PM EST ship the same day</li>
-              <li>• Free standard shipping on orders over $75</li>
               <li>• Delivery estimates exclude weekends and holidays</li>
               <li>• Signature may be required for high-value items</li>
             </ul>
