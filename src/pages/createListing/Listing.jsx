@@ -252,7 +252,7 @@ const Listing = () => {
 
   // Helper function to extract image URL from different formats
   const extractImageUrl = (image) => {
-    if (typeof image === 'string') return image;
+    if (typeof image === "string") return image;
     if (image?.url) return image.url;
     return null;
   };
@@ -260,11 +260,11 @@ const Listing = () => {
   // Helper function to convert backend color format to frontend format
   const convertBackendColorToFrontend = (backendColors) => {
     if (!backendColors || !Array.isArray(backendColors)) return [];
-    
+
     return backendColors.map((colorHex, index) => ({
       id: `color_${index}`,
       hex: colorHex,
-      name: colorHex // You might want to add a color name mapping here
+      name: colorHex, // You might want to add a color name mapping here
     }));
   };
 
@@ -275,17 +275,22 @@ const Listing = () => {
     }
 
     // Find the default variation or use the first one
-    const defaultVariation = variations.find(v => v.isDefault) || variations[0];
-    
-    if (defaultVariation && defaultVariation.images && defaultVariation.images.length > 0) {
+    const defaultVariation =
+      variations.find((v) => v.isDefault) || variations[0];
+
+    if (
+      defaultVariation &&
+      defaultVariation.images &&
+      defaultVariation.images.length > 0
+    ) {
       // Use the first image from the default variation as the main product image
       const defaultImage = defaultVariation.images[0];
-      
+
       // Create an image object in the correct format
       const imageForMainProduct = {
         id: `img_main_${Date.now()}`,
         url: extractImageUrl(defaultImage) || defaultImage.url || defaultImage,
-        alt: `${formData.title || 'Product'} - Main Image`,
+        alt: `${formData.title || "Product"} - Main Image`,
         isPrimary: true,
         sortOrder: 1,
         uploadedAt: new Date().toISOString(),
@@ -301,78 +306,196 @@ const Listing = () => {
   // Load data if editing or duplicating
   useEffect(() => {
     if ((isEditing || isDuplicating) && editingProduct) {
-      console.log('Loading edit product data:', editingProduct);
-      
-      const hasExistingVariations = editingProduct.variations && editingProduct.variations.length > 0;
+      console.log("Loading edit product data:", editingProduct);
+
+      // **FIXED: Use the backend hasVariations flag to determine UI state**
+      const hasExistingVariations =
+        editingProduct.hasVariations === true &&
+        editingProduct.variations &&
+        editingProduct.variations.length > 0;
       setHasVariations(hasExistingVariations);
 
       // Extract shipping class data
       const shippingClassData = editingProduct.shippingClass || {};
-      
+
       const loadedFormData = {
         title: isDuplicating
           ? `${editingProduct.title} (Copy)`
           : editingProduct.title || "",
         brand: editingProduct.brand || "",
-        category: editingProduct.category?.main?.toLowerCase() || editingProduct.category?.toLowerCase() || "",
-        subCategory: editingProduct.category?.sub || editingProduct.subcategory || "",
+        category:
+          editingProduct.category?.main?.toLowerCase() ||
+          editingProduct.category?.toLowerCase() ||
+          "",
+        subCategory:
+          editingProduct.category?.sub || editingProduct.subcategory || "",
         description: editingProduct.description || "",
-        
-        // For non-variation products, extract price from main level
-        price: (!hasExistingVariations ? editingProduct.price?.toString() : "") || "",
-        originalPrice: (!hasExistingVariations ? editingProduct.originalPrice?.toString() : "") || "",
+
+        // **FIXED: For non-variation products, extract data from variation or main level**
+        price: (() => {
+          if (!hasExistingVariations) {
+            // Try to get from single variation first, then fallback to main level
+            const singleVariation = editingProduct.variations?.[0];
+            return (
+              singleVariation?.price?.toString() ||
+              editingProduct.price?.toString() ||
+              ""
+            );
+          }
+          return "";
+        })(),
+
+        originalPrice: (() => {
+          if (!hasExistingVariations) {
+            // Try to get from single variation first, then fallback to main level
+            const singleVariation = editingProduct.variations?.[0];
+            return (
+              singleVariation?.originalPrice?.toString() ||
+              editingProduct.originalPrice?.toString() ||
+              ""
+            );
+          }
+          return "";
+        })(),
+
         sku: isDuplicating
           ? `${editingProduct.sku || editingProduct.id}-COPY`
-          : (editingProduct.sku || editingProduct.id || ""),
-        quantity: (!hasExistingVariations ? editingProduct.quantity?.toString() : "1") || "1",
+          : editingProduct.sku || editingProduct.id || "",
+
+        quantity: (() => {
+          if (!hasExistingVariations) {
+            // Try to get from single variation first, then fallback to main level
+            const singleVariation = editingProduct.variations?.[0];
+            return (
+              singleVariation?.quantity?.toString() ||
+              editingProduct.quantity?.toString() ||
+              "1"
+            );
+          }
+          return "1";
+        })(),
+
         lowStockAlert: editingProduct.lowStockAlert?.toString() || "5",
-        
-        // Extract colors - convert from backend format
-        colors: editingProduct.colors ? convertBackendColorToFrontend(editingProduct.colors) : [],
-        sizes: editingProduct.sizes || [],
-        
-        // Physical properties
-        weight: editingProduct.weight || "",
-        dimensions: {
-          length: editingProduct.dimensions?.length || "",
-          width: editingProduct.dimensions?.width || "",
-          height: editingProduct.dimensions?.height || "",
-        },
-        
-        // Images - handle different formats
-        images: editingProduct.images?.map((img, index) => {
-          const url = extractImageUrl(img);
-          return url ? { url, name: `image_${index}.jpg` } : null;
-        }).filter(Boolean) || [],
-        
-        // Variations - handle existing variations
-        variations: hasExistingVariations ? editingProduct.variations.map(variation => ({
-          ...variation,
-          id: isDuplicating ? Date.now().toString() + Math.random().toString(36).substr(2, 9) : variation.id,
-          sku: isDuplicating ? `${variation.sku}-COPY` : variation.sku,
-          // Convert color from array format to single color object
-          color: variation.color && variation.color.length > 0 ? 
-            { hex: variation.color[0], name: variation.color[0] } : null,
-          // Convert images
-          images: variation.images?.map((img, index) => {
-            const url = extractImageUrl(img);
-            return url ? { url, name: `variation_image_${index}.jpg` } : null;
-          }).filter(Boolean) || [],
-        })) : [],
-        
+
+        // **FIXED: Extract colors and sizes from variation or main level for non-variation products**
+        colors: (() => {
+          if (!hasExistingVariations) {
+            // Try to get from single variation first, then fallback to main level
+            const singleVariation = editingProduct.variations?.[0];
+            if (singleVariation?.color?.length > 0) {
+              return convertBackendColorToFrontend(singleVariation.color);
+            }
+            return editingProduct.colors
+              ? convertBackendColorToFrontend(editingProduct.colors)
+              : [];
+          }
+          return [];
+        })(),
+
+        sizes: (() => {
+          if (!hasExistingVariations) {
+            // Try to get from single variation first, then fallback to main level
+            const singleVariation = editingProduct.variations?.[0];
+            return singleVariation?.sizes || editingProduct.sizes || [];
+          }
+          return [];
+        })(),
+
+        // **FIXED: Physical properties - check variation first for non-variation products**
+        weight: (() => {
+          if (!hasExistingVariations) {
+            const singleVariation = editingProduct.variations?.[0];
+            return singleVariation?.weight || editingProduct.weight || "";
+          }
+          return editingProduct.weight || "";
+        })(),
+
+        dimensions: (() => {
+          if (!hasExistingVariations) {
+            const singleVariation = editingProduct.variations?.[0];
+            if (singleVariation?.dimensions) {
+              return {
+                length: singleVariation.dimensions.length || "",
+                width: singleVariation.dimensions.width || "",
+                height: singleVariation.dimensions.height || "",
+              };
+            }
+          }
+          return {
+            length: editingProduct.dimensions?.length || "",
+            width: editingProduct.dimensions?.width || "",
+            height: editingProduct.dimensions?.height || "",
+          };
+        })(),
+
+        // **FIXED: Images - prioritize main product images, fallback to variation images for non-variation products**
+        images: (() => {
+          // First try main product images
+          if (editingProduct.images?.length > 0) {
+            return editingProduct.images
+              .map((img, index) => {
+                const url = extractImageUrl(img);
+                return url ? { url, name: `image_${index}.jpg` } : null;
+              })
+              .filter(Boolean);
+          }
+
+          // For non-variation products, also check single variation images
+          if (
+            !hasExistingVariations &&
+            editingProduct.variations?.[0]?.images?.length > 0
+          ) {
+            return editingProduct.variations[0].images
+              .map((img, index) => {
+                const url = extractImageUrl(img);
+                return url ? { url, name: `image_${index}.jpg` } : null;
+              })
+              .filter(Boolean);
+          }
+
+          return [];
+        })(),
+
+        // **FIXED: Only load variations if hasVariations is true**
+        variations: hasExistingVariations
+          ? editingProduct.variations.map((variation) => ({
+              ...variation,
+              id: isDuplicating
+                ? Date.now().toString() +
+                  Math.random().toString(36).substr(2, 9)
+                : variation.id,
+              sku: isDuplicating ? `${variation.sku}-COPY` : variation.sku,
+              // Convert color from array format to single color object
+              color:
+                variation.color && variation.color.length > 0
+                  ? { hex: variation.color[0], name: variation.color[0] }
+                  : null,
+              // Convert images
+              images:
+                variation.images
+                  ?.map((img, index) => {
+                    const url = extractImageUrl(img);
+                    return url
+                      ? { url, name: `variation_image_${index}.jpg` }
+                      : null;
+                  })
+                  .filter(Boolean) || [],
+            }))
+          : [],
+
         // Tags - extract from productTags
         tags: editingProduct.productTags || editingProduct.tags || [],
-        
+
         // SEO data
         metaTitle: editingProduct.metaTitle || "",
         metaDescription: editingProduct.metaDescription || "",
-        
+
         // Shipping & Policies - extract from shippingClass object
         shippingWeight: shippingClassData.shippingWeight || "",
         shippingClass: shippingClassData.shippingClass || "standard",
         returnPolicy: shippingClassData.returnPolicy || "30",
         warranty: shippingClassData.warranty || "",
-        
+
         // Status and visibility
         status: isDuplicating ? "draft" : editingProduct.status || "draft",
         visibility: editingProduct.visibility || "public",
@@ -385,11 +508,13 @@ const Listing = () => {
   // **NEW**: Update default images when variations change
   useEffect(() => {
     if (hasVariations && formData.variations.length > 0) {
-      const updatedImages = updateDefaultImagesFromVariations(formData.variations);
+      const updatedImages = updateDefaultImagesFromVariations(
+        formData.variations
+      );
       if (JSON.stringify(updatedImages) !== JSON.stringify(formData.images)) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          images: updatedImages
+          images: updatedImages,
         }));
       }
     }
@@ -411,9 +536,9 @@ const Listing = () => {
       const generatedSku = `${formData.brand
         .slice(0, 3)
         .toUpperCase()}-${formData.title
-          .slice(0, 10)
-          .replace(/\s+/g, "")
-          .toUpperCase()}-${Date.now().toString().slice(-4)}`;
+        .slice(0, 10)
+        .replace(/\s+/g, "")
+        .toUpperCase()}-${Date.now().toString().slice(-4)}`;
       setFormData((prev) => ({
         ...prev,
         sku: generatedSku,
@@ -454,7 +579,7 @@ const Listing = () => {
   // **ENHANCED**: Image upload handlers with better UI feedback
   const handleImagesChange = async (images) => {
     const uploadedImages = [];
-    setUploadingImages(new Set(['main']));
+    setUploadingImages(new Set(["main"]));
 
     try {
       for (const image of images) {
@@ -464,8 +589,10 @@ const Listing = () => {
             uploadedImages.push({
               url: uploadedUrl,
               name: image.file.name,
-              id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              alt: `${formData.title || 'Product'} - Image`,
+              id: `img_${Date.now()}_${Math.random()
+                .toString(36)
+                .substr(2, 9)}`,
+              alt: `${formData.title || "Product"} - Image`,
               isPrimary: uploadedImages.length === 0,
               sortOrder: uploadedImages.length + 1,
               uploadedAt: new Date().toISOString(),
@@ -499,7 +626,9 @@ const Listing = () => {
             uploadedImages.push({
               url: uploadedUrl,
               name: image.file.name,
-              id: `var_img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              id: `var_img_${Date.now()}_${Math.random()
+                .toString(36)
+                .substr(2, 9)}`,
               alt: `Variation Image`,
               isPrimary: uploadedImages.length === 0,
               sortOrder: uploadedImages.length + 1,
@@ -515,18 +644,19 @@ const Listing = () => {
       }
 
       updateVariation(variationId, "images", uploadedImages);
-      
+
       // **NEW**: Update default images if this is the default variation
-      const updatedVariations = formData.variations.map(v => 
+      const updatedVariations = formData.variations.map((v) =>
         v.id === variationId ? { ...v, images: uploadedImages } : v
       );
-      
+
       if (hasVariations) {
-        const updatedDefaultImages = updateDefaultImagesFromVariations(updatedVariations);
-        setFormData(prev => ({
+        const updatedDefaultImages =
+          updateDefaultImagesFromVariations(updatedVariations);
+        setFormData((prev) => ({
           ...prev,
           variations: updatedVariations,
-          images: updatedDefaultImages
+          images: updatedDefaultImages,
         }));
       }
     } finally {
@@ -542,17 +672,17 @@ const Listing = () => {
       const newVariation = createNewVariation();
       newVariation.isDefault = true;
       const newVariations = [newVariation];
-      
-      setFormData(prev => ({
+
+      setFormData((prev) => ({
         ...prev,
         variations: newVariations,
         // Update default images based on variations
-        images: updateDefaultImagesFromVariations(newVariations)
+        images: updateDefaultImagesFromVariations(newVariations),
       }));
       setExpandedVariations(new Set([newVariation.id]));
     } else if (!enabled) {
       // Clear variations when disabling
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         variations: [],
         // Keep existing images when disabling variations
@@ -564,27 +694,29 @@ const Listing = () => {
   const addVariation = () => {
     const newVariation = createNewVariation();
     const updatedVariations = [...formData.variations, newVariation];
-    
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
       variations: updatedVariations,
       // Update default images
-      images: updateDefaultImagesFromVariations(updatedVariations)
+      images: updateDefaultImagesFromVariations(updatedVariations),
     }));
-    setExpandedVariations(prev => new Set([...prev, newVariation.id]));
+    setExpandedVariations((prev) => new Set([...prev, newVariation.id]));
   };
 
   const removeVariation = (variationId) => {
-    const updatedVariations = formData.variations.filter(v => v.id !== variationId);
-    
-    setFormData(prev => ({
+    const updatedVariations = formData.variations.filter(
+      (v) => v.id !== variationId
+    );
+
+    setFormData((prev) => ({
       ...prev,
       variations: updatedVariations,
       // Update default images
-      images: updateDefaultImagesFromVariations(updatedVariations)
+      images: updateDefaultImagesFromVariations(updatedVariations),
     }));
-    
-    setExpandedVariations(prev => {
+
+    setExpandedVariations((prev) => {
       const newSet = new Set(prev);
       newSet.delete(variationId);
       return newSet;
@@ -592,7 +724,7 @@ const Listing = () => {
   };
 
   const duplicateVariation = (variationId) => {
-    const variation = formData.variations.find(v => v.id === variationId);
+    const variation = formData.variations.find((v) => v.id === variationId);
     if (variation) {
       const duplicatedVariation = {
         ...variation,
@@ -601,55 +733,58 @@ const Listing = () => {
         sku: `${variation.sku}-COPY`,
         isDefault: false,
       };
-      
+
       const updatedVariations = [...formData.variations, duplicatedVariation];
-      
-      setFormData(prev => ({
+
+      setFormData((prev) => ({
         ...prev,
         variations: updatedVariations,
         // Update default images
-        images: updateDefaultImagesFromVariations(updatedVariations)
+        images: updateDefaultImagesFromVariations(updatedVariations),
       }));
-      setExpandedVariations(prev => new Set([...prev, duplicatedVariation.id]));
+      setExpandedVariations(
+        (prev) => new Set([...prev, duplicatedVariation.id])
+      );
     }
   };
 
   const updateVariation = (variationId, field, value) => {
-    const updatedVariations = formData.variations.map(variation =>
+    const updatedVariations = formData.variations.map((variation) =>
       variation.id === variationId
         ? { ...variation, [field]: value }
         : variation
     );
-    
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
       variations: updatedVariations,
       // Update default images if the change affects images or default status
-      images: (field === 'images' || field === 'isDefault') 
-        ? updateDefaultImagesFromVariations(updatedVariations)
-        : prev.images
+      images:
+        field === "images" || field === "isDefault"
+          ? updateDefaultImagesFromVariations(updatedVariations)
+          : prev.images,
     }));
   };
 
   const updateVariationDimension = (variationId, dimension, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      variations: prev.variations.map(variation =>
+      variations: prev.variations.map((variation) =>
         variation.id === variationId
           ? {
-            ...variation,
-            dimensions: {
-              ...variation.dimensions,
-              [dimension]: value,
-            },
-          }
+              ...variation,
+              dimensions: {
+                ...variation.dimensions,
+                [dimension]: value,
+              },
+            }
           : variation
-      )
+      ),
     }));
   };
 
   const toggleVariationExpanded = (variationId) => {
-    setExpandedVariations(prev => {
+    setExpandedVariations((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(variationId)) {
         newSet.delete(variationId);
@@ -661,16 +796,16 @@ const Listing = () => {
   };
 
   const setDefaultVariation = (variationId) => {
-    const updatedVariations = formData.variations.map(variation => ({
+    const updatedVariations = formData.variations.map((variation) => ({
       ...variation,
-      isDefault: variation.id === variationId
+      isDefault: variation.id === variationId,
     }));
-    
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
       variations: updatedVariations,
       // Update default images when default variation changes
-      images: updateDefaultImagesFromVariations(updatedVariations)
+      images: updateDefaultImagesFromVariations(updatedVariations),
     }));
   };
 
@@ -725,22 +860,35 @@ const Listing = () => {
           const prefix = `variation_${index}`;
 
           if (!variation.name.trim()) {
-            newErrors[`${prefix}_name`] = `Variation ${index + 1} name is required`;
+            newErrors[`${prefix}_name`] = `Variation ${
+              index + 1
+            } name is required`;
           }
 
           if (!variation.price) {
-            newErrors[`${prefix}_price`] = `Variation ${index + 1} price is required`;
-          } else if (isNaN(variation.price) || parseFloat(variation.price) <= 0) {
-            newErrors[`${prefix}_price`] = `Variation ${index + 1} price must be a valid positive number`;
+            newErrors[`${prefix}_price`] = `Variation ${
+              index + 1
+            } price is required`;
+          } else if (
+            isNaN(variation.price) ||
+            parseFloat(variation.price) <= 0
+          ) {
+            newErrors[`${prefix}_price`] = `Variation ${
+              index + 1
+            } price must be a valid positive number`;
           }
 
           if (!variation.quantity && variation.quantity !== "0") {
-            newErrors[`${prefix}_quantity`] = `Variation ${index + 1} quantity is required`;
+            newErrors[`${prefix}_quantity`] = `Variation ${
+              index + 1
+            } quantity is required`;
           } else if (
             variation.quantity &&
             (isNaN(variation.quantity) || parseInt(variation.quantity) < 0)
           ) {
-            newErrors[`${prefix}_quantity`] = `Variation ${index + 1} quantity must be a valid number`;
+            newErrors[`${prefix}_quantity`] = `Variation ${
+              index + 1
+            } quantity must be a valid number`;
           }
 
           if (
@@ -748,16 +896,19 @@ const Listing = () => {
             variation.price &&
             parseFloat(variation.originalPrice) <= parseFloat(variation.price)
           ) {
-            newErrors[`${prefix}_originalPrice`] =
-              `Variation ${index + 1} original price should be higher than sale price`;
+            newErrors[`${prefix}_originalPrice`] = `Variation ${
+              index + 1
+            } original price should be higher than sale price`;
           }
         });
 
         // Check for duplicate SKUs only if they are provided
         const skusWithValues = formData.variations
-          .filter(v => v.sku && v.sku.trim())
-          .map(v => v.sku.trim().toLowerCase());
-        const duplicateSKUs = skusWithValues.filter((sku, index) => skusWithValues.indexOf(sku) !== index);
+          .filter((v) => v.sku && v.sku.trim())
+          .map((v) => v.sku.trim().toLowerCase());
+        const duplicateSKUs = skusWithValues.filter(
+          (sku, index) => skusWithValues.indexOf(sku) !== index
+        );
         if (duplicateSKUs.length > 0) {
           newErrors.variations = "Variation SKUs must be unique when provided";
         }
@@ -768,6 +919,7 @@ const Listing = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // **UPDATED**: Modified formatListingData function to always include variations
   const formatListingData = (formData) => {
     const baseData = {
       id: formData.sku, // SKU value
@@ -793,11 +945,12 @@ const Listing = () => {
       },
       status: formData.status,
       visibility: formData.visibility,
-      hasVariations,
+      hasVariations: hasVariations, // **FIXED: Use actual UI state, not always true**
     };
 
-    // Rest of the function remains the same...
-    if (hasVariations) {
+    // **ALWAYS send variations to API - but structure depends on UI state**
+    if (hasVariations && formData.variations.length > 0) {
+      // User has enabled variations in UI - use their variations
       baseData.variations = formData.variations.map((variation) => ({
         ...variation,
         color: variation.color ? [variation.color.hex] : [], // Convert to array of hex strings
@@ -818,12 +971,40 @@ const Listing = () => {
           : null;
         baseData.sku = defaultVariation.sku;
         baseData.quantity = parseInt(defaultVariation.quantity);
-        
-        // **UPDATED**: Use the properly formatted default images
-        baseData.images = formData.images.length > 0 ? formData.images : 
-          (defaultVariation.images.length > 0 ? defaultVariation.images : []);
+
+        // Use the properly formatted default images
+        baseData.images =
+          formData.images.length > 0
+            ? formData.images
+            : defaultVariation.images.length > 0
+            ? defaultVariation.images
+            : [];
       }
     } else {
+      // **CRITICAL**: User has NOT enabled variations in UI - create single variation from main product data
+      // This ensures API always gets variations array, but UI shows normal form
+      const singleVariation = {
+        id: `single_${Date.now()}`, // Generate unique ID for the single variation
+        name: "Default", // Default name for the single variation
+        sku: formData.sku,
+        price: parseFloat(formData.price),
+        originalPrice: formData.originalPrice
+          ? parseFloat(formData.originalPrice)
+          : null,
+        quantity: parseInt(formData.quantity),
+        color:
+          formData.colors.length > 0 ? formData.colors.map((c) => c.hex) : [], // Convert colors to hex array
+        sizes: formData.sizes,
+        weight: formData.weight,
+        dimensions: formData.dimensions,
+        images: formData.images,
+        isDefault: true, // Mark as default variation
+      };
+
+      // API gets variations array with single variation
+      baseData.variations = [singleVariation];
+
+      // Main product data is duplicate of single variation (API consistency)
       baseData.price = parseFloat(formData.price);
       baseData.originalPrice = formData.originalPrice
         ? parseFloat(formData.originalPrice)
@@ -831,7 +1012,8 @@ const Listing = () => {
       baseData.sku = formData.sku;
       baseData.quantity = parseInt(formData.quantity);
       baseData.images = formData.images;
-      baseData.colors = formData.colors;
+      baseData.colors =
+        formData.colors.length > 0 ? formData.colors.map((c) => c.hex) : []; // Convert to hex array
       baseData.sizes = formData.sizes;
     }
 
@@ -857,17 +1039,22 @@ const Listing = () => {
     try {
       const listingData = formatListingData({
         ...formData,
-        status: saveType === "publish" ? "active" : formData.status,
+        status: saveType === "publish" ? "active" : "draft",
       });
+
+      console.log("Formatted listing data being sent to API:", listingData); // Debug log
 
       let result;
       if (isEditing && !isDuplicating) {
-        result = await updateExistingListing(editingProduct._id || editingProduct.id, listingData);
+        result = await updateExistingListing(
+          editingProduct._id || editingProduct.id,
+          listingData
+        );
       } else {
         result = await createNewListing(listingData);
       }
 
-      if (result.type?.endsWith('fulfilled')) {
+      if (result.type?.endsWith("fulfilled")) {
         setSavedListingData(result.payload);
 
         // Show different modals based on save type
@@ -908,7 +1095,11 @@ const Listing = () => {
 
   const tabs = [
     { id: "basic", name: "Basic Info", icon: FileText },
-    { id: "pricing", name: hasVariations ? "Variations" : "Pricing", icon: hasVariations ? Grid3X3 : DollarSign },
+    {
+      id: "pricing",
+      name: hasVariations ? "Variations" : "Pricing",
+      icon: hasVariations ? Grid3X3 : DollarSign,
+    },
     { id: "details", name: "Details", icon: Package },
     { id: "media", name: "Images", icon: ImageIcon },
     { id: "seo", name: "Tags", icon: Settings },
@@ -930,12 +1121,16 @@ const Listing = () => {
   // Get current product data for preview (either from variations or main product)
   const getPreviewData = () => {
     if (hasVariations && formData.variations.length > 0) {
-      const defaultVariation = formData.variations.find(v => v.isDefault) || formData.variations[0];
+      const defaultVariation =
+        formData.variations.find((v) => v.isDefault) || formData.variations[0];
       return {
         ...formData,
         price: defaultVariation.price,
         originalPrice: defaultVariation.originalPrice,
-        images: formData.images.length > 0 ? formData.images : defaultVariation.images,
+        images:
+          formData.images.length > 0
+            ? formData.images
+            : defaultVariation.images,
         sku: defaultVariation.sku,
         colors: defaultVariation.color ? [defaultVariation.color] : [],
         sizes: defaultVariation.sizes,
@@ -945,7 +1140,8 @@ const Listing = () => {
   };
 
   const previewData = getPreviewData();
-  const isProcessing = isSaving || listingsLoading || isUploading || uploadingImages.size > 0;
+  const isProcessing =
+    isSaving || listingsLoading || isUploading || uploadingImages.size > 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -1224,7 +1420,7 @@ const Listing = () => {
                           >
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                                LKR 
+                                LKR
                               </span>
                               <Input
                                 data-field="price"
