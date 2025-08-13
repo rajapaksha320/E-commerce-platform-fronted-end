@@ -140,7 +140,6 @@ const Listing = () => {
 
     // Status
     status: "draft",
-    visibility: "public",
   });
 
   // Categories data
@@ -498,7 +497,6 @@ const Listing = () => {
 
         // Status and visibility
         status: isDuplicating ? "draft" : editingProduct.status || "draft",
-        visibility: editingProduct.visibility || "public",
       };
 
       setFormData(loadedFormData);
@@ -944,7 +942,6 @@ const Listing = () => {
         warranty: formData.warranty,
       },
       status: formData.status,
-      visibility: formData.visibility,
       hasVariations: hasVariations, // **FIXED: Use actual UI state, not always true**
     };
 
@@ -2468,7 +2465,7 @@ const Listing = () => {
                     </Select>
                   </FormField>
 
-                  <FormField label="Visibility">
+                  {/* <FormField label="Visibility">
                     <Select
                       value={formData.visibility}
                       onChange={(e) =>
@@ -2479,7 +2476,7 @@ const Listing = () => {
                       <option value="private">Private</option>
                       <option value="hidden">Hidden</option>
                     </Select>
-                  </FormField>
+                  </FormField> */}
 
                   <div className="pt-4 border-t">
                     <div className="flex space-x-3">
