@@ -71,11 +71,11 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
     navigator.clipboard.writeText(order.orderNumber);
   };
 
-  const handleCopyTrackingNumber = () => {
-    if (order.trackingNumber) {
-      navigator.clipboard.writeText(order.trackingNumber);
-    }
-  };
+  // const handleCopyTrackingNumber = () => {
+  //   if (order.trackingNumber) {
+  //     navigator.clipboard.writeText(order.trackingNumber);
+  //   }
+  // };
 
   return (
     <div className="fixed inset-0 bg-transparent backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -143,7 +143,8 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Total Amount:</span>
                       <span className="text-lg font-bold text-gray-900">
-                        ${order.total.toFixed(2)}
+                        <span className="mr-1">LKR</span>
+                        {order.total.toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -165,7 +166,7 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                         </p>
                       </div>
                     </div>
-                    {order.trackingNumber && (
+                    {/* {order.trackingNumber && (
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Tracking Number:</span>
                         <div className="flex items-center space-x-2">
@@ -182,8 +183,8 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                           </Button>
                         </div>
                       </div>
-                    )}
-                    {order.estimatedDelivery && (
+                    )} */}
+                    {/* {order.estimatedDelivery && (
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">
                           Estimated Delivery:
@@ -200,7 +201,7 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                           {formatDate(order.actualDelivery)}
                         </span>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </div>
               </div>
@@ -233,11 +234,13 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                             Quantity: {item.quantity}
                           </span>
                           <span className="text-sm text-gray-600">
-                            Unit Price: ${item.price.toFixed(2)}
+                            Unit Price: <span className="mr-1">LKR</span>
+                            {item.price.toFixed(2)}
                           </span>
                         </div>
                         <span className="text-lg font-semibold text-gray-900">
-                          ${(item.price * item.quantity).toFixed(2)}
+                          <span className="mr-1">LKR</span>
+                          {(item.price * item.quantity).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -254,22 +257,32 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Subtotal:</span>
-                  <span className="text-gray-900">${subtotal.toFixed(2)}</span>
+                  <span className="text-gray-900">
+                    <span className="mr-1">LKR</span>
+                    {subtotal.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Shipping:</span>
-                  <span className="text-gray-900">${shipping.toFixed(2)}</span>
+                  <span className="text-gray-900">
+                    <span className="mr-1">LKR</span>
+                    {shipping.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Tax:</span>
-                  <span className="text-gray-900">${tax.toFixed(2)}</span>
+                  <span className="text-gray-900">
+                    <span className="mr-1">LKR</span>
+                    {tax.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-gray-300">
                   <span className="text-lg font-semibold text-gray-900">
                     Total:
                   </span>
                   <span className="text-lg font-bold text-gray-900">
-                    ${total.toFixed(2)}
+                    <span className="mr-1">LKR</span>
+                    {total.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -304,7 +317,7 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
             )}
 
             {/* Customer Service */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h4 className="font-semibold text-blue-900 mb-3">
                 Need Help with Your Order?
               </h4>
@@ -334,7 +347,7 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                   Live Chat
                 </Button>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Modal Footer */}
@@ -343,31 +356,31 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
               <Button variant="ghost" onClick={onClose}>
                 Close
               </Button>
-              <Button variant="outline" className="flex items-center">
+              {/* <Button variant="outline" className="flex items-center">
                 <Download className="h-4 w-4 mr-2" />
                 Download Invoice
-              </Button>
+              </Button> */}
               {order.status === "delivered" && (
                 <>
-                  <Button variant="outline" className="flex items-center">
+                  {/* <Button variant="outline" className="flex items-center">
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Reorder
-                  </Button>
+                  </Button> */}
                   <Button
                     variant="outline"
-                    className="flex items-center text-yellow-600 hover:text-yellow-700"
+                    className="flex items-center text-yellow-600 hover:text-yellow-700 border-yellow-300 hover:border-yellow-400 hover:bg-yellow-50"
                   >
                     <Star className="h-4 w-4 mr-2" />
                     Leave Review
                   </Button>
                 </>
               )}
-              {order.trackingNumber && order.status !== "delivered" && (
+              {/* {order.trackingNumber && order.status !== "delivered" && (
                 <Button variant="primary" className="flex items-center">
                   <Truck className="h-4 w-4 mr-2" />
                   Track Package
                 </Button>
-              )}
+              )} */}
             </div>
           </div>
         </div>

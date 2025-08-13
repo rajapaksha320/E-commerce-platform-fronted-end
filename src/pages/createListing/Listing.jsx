@@ -30,7 +30,7 @@ import {
   useListings,
   useImageUpload,
   useListingDetails,
-} from "../../hooks/useSellerData";
+} from "../../hooks/useSellerListingData";
 
 import {
   Button,
@@ -952,11 +952,7 @@ const Listing = () => {
       {/* Success/Error Messages */}
       {(listingsError || uploadError) && (
         <div className="fixed top-4 right-4 z-50 max-w-md">
-          <Alert
-            variant="danger"
-            title="Error"
-            onClose={clearListingsMessages}
-          >
+          <Alert variant="danger" title="Error" onClose={clearListingsMessages}>
             {listingsError || uploadError}
           </Alert>
         </div>
@@ -965,13 +961,13 @@ const Listing = () => {
       {/* Upload Progress Indicator */}
       {uploadingImages.size > 0 && (
         <div className="fixed top-4 left-4 z-50 max-w-md">
-          <Alert
-            variant="info"
-            title="Uploading Images"
-          >
+          <Alert variant="info" title="Uploading Images">
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Uploading {uploadingImages.size} image{uploadingImages.size > 1 ? 's' : ''}...</span>
+              <span>
+                Uploading {uploadingImages.size} image
+                {uploadingImages.size > 1 ? "s" : ""}...
+              </span>
             </div>
           </Alert>
         </div>
@@ -1181,18 +1177,36 @@ const Listing = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
-                      <span>{hasVariations ? "Product Variations" : "Pricing & Inventory"}</span>
+                      <span>
+                        {hasVariations
+                          ? "Product Variations"
+                          : "Pricing & Inventory"}
+                      </span>
                       <div className="flex items-center space-x-3">
-                        <span className="text-sm font-normal text-gray-600">Enable Variations</span>
+                        <span className="text-sm font-normal text-gray-600">
+                          Enable Variations
+                        </span>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
                             type="checkbox"
                             checked={hasVariations}
-                            onChange={(e) => handleVariationToggle(e.target.checked)}
+                            onChange={(e) =>
+                              handleVariationToggle(e.target.checked)
+                            }
                             className="sr-only"
                           />
-                          <div className={`w-11 h-6 rounded-full transition-colors ${hasVariations ? 'bg-blue-600' : 'bg-gray-200'}`}>
-                            <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${hasVariations ? 'translate-x-5' : 'translate-x-0'} mt-0.5 ml-0.5`} />
+                          <div
+                            className={`w-11 h-6 rounded-full transition-colors ${
+                              hasVariations ? "bg-blue-600" : "bg-gray-200"
+                            }`}
+                          >
+                            <div
+                              className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
+                                hasVariations
+                                  ? "translate-x-5"
+                                  : "translate-x-0"
+                              } mt-0.5 ml-0.5`}
+                            />
                           </div>
                         </label>
                       </div>
@@ -1210,7 +1224,7 @@ const Listing = () => {
                           >
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                                $
+                                LKR 
                               </span>
                               <Input
                                 data-field="price"
@@ -1221,7 +1235,7 @@ const Listing = () => {
                                   handleInputChange("price", e.target.value)
                                 }
                                 placeholder="0.00"
-                                className="pl-8"
+                                className="pl-10"
                               />
                             </div>
                           </FormField>
@@ -1232,17 +1246,20 @@ const Listing = () => {
                           >
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                                $
+                                LKR
                               </span>
                               <Input
                                 type="number"
                                 step="0.01"
                                 value={formData.originalPrice}
                                 onChange={(e) =>
-                                  handleInputChange("originalPrice", e.target.value)
+                                  handleInputChange(
+                                    "originalPrice",
+                                    e.target.value
+                                  )
                                 }
                                 placeholder="0.00"
-                                className="pl-8"
+                                className="pl-10"
                               />
                             </div>
                             <p className="text-xs text-gray-500 mt-1">
@@ -1258,15 +1275,15 @@ const Listing = () => {
                                 {Math.round(
                                   ((formData.originalPrice - formData.price) /
                                     formData.originalPrice) *
-                                  100
+                                    100
                                 )}
                                 % OFF
                               </Badge>
                               <span className="text-sm text-green-700">
-                                Customers save $
-                                {(formData.originalPrice - formData.price).toFixed(
-                                  2
-                                )}
+                                Customers save LKR
+                                {(
+                                  formData.originalPrice - formData.price
+                                ).toFixed(2)}
                               </span>
                             </div>
                           </div>
@@ -1291,7 +1308,10 @@ const Listing = () => {
                               min="1"
                               value={formData.lowStockAlert}
                               onChange={(e) =>
-                                handleInputChange("lowStockAlert", e.target.value)
+                                handleInputChange(
+                                  "lowStockAlert",
+                                  e.target.value
+                                )
                               }
                               placeholder="Alert when stock is low"
                             />
@@ -1307,10 +1327,15 @@ const Listing = () => {
                             <div className="flex items-start gap-3">
                               <Info className="h-5 w-5 text-blue-600 mt-0.5" />
                               <div>
-                                <h4 className="font-medium text-blue-900 mb-1">Automatic Default Image</h4>
+                                <h4 className="font-medium text-blue-900 mb-1">
+                                  Automatic Default Image
+                                </h4>
                                 <p className="text-sm text-blue-700">
-                                  The first image from your default variation will automatically become the main product image. 
-                                  Change the default variation or update variation images to update the main product image.
+                                  The first image from your default variation
+                                  will automatically become the main product
+                                  image. Change the default variation or update
+                                  variation images to update the main product
+                                  image.
                                 </p>
                               </div>
                             </div>
@@ -1334,7 +1359,9 @@ const Listing = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => toggleVariationExpanded(variation.id)}
+                                  onClick={() =>
+                                    toggleVariationExpanded(variation.id)
+                                  }
                                   className="p-1"
                                 >
                                   {expandedVariations.has(variation.id) ? (
@@ -1364,7 +1391,9 @@ const Listing = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => duplicateVariation(variation.id)}
+                                  onClick={() =>
+                                    duplicateVariation(variation.id)
+                                  }
                                   className="text-gray-500 hover:text-gray-700"
                                 >
                                   <Copy className="h-4 w-4" />
@@ -1373,7 +1402,9 @@ const Listing = () => {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => setDefaultVariation(variation.id)}
+                                    onClick={() =>
+                                      setDefaultVariation(variation.id)
+                                    }
                                     className="text-blue-600 hover:text-blue-700 text-xs"
                                   >
                                     Set as Default
@@ -1383,7 +1414,9 @@ const Listing = () => {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => removeVariation(variation.id)}
+                                    onClick={() =>
+                                      removeVariation(variation.id)
+                                    }
                                     className="text-red-500 hover:text-red-700"
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -1405,7 +1438,11 @@ const Listing = () => {
                                     <Input
                                       value={variation.name}
                                       onChange={(e) =>
-                                        updateVariation(variation.id, "name", e.target.value)
+                                        updateVariation(
+                                          variation.id,
+                                          "name",
+                                          e.target.value
+                                        )
                                       }
                                       placeholder="e.g., Red - Large, Black - Medium"
                                     />
@@ -1418,7 +1455,11 @@ const Listing = () => {
                                     <Input
                                       value={variation.sku}
                                       onChange={(e) =>
-                                        updateVariation(variation.id, "sku", e.target.value)
+                                        updateVariation(
+                                          variation.id,
+                                          "sku",
+                                          e.target.value
+                                        )
                                       }
                                       placeholder="Unique SKU for this variation"
                                     />
@@ -1434,38 +1475,48 @@ const Listing = () => {
                                   >
                                     <div className="relative">
                                       <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                                        $
+                                        LKR <span className="mr-2"></span>
                                       </span>
                                       <Input
                                         type="number"
                                         step="0.01"
                                         value={variation.price}
                                         onChange={(e) =>
-                                          updateVariation(variation.id, "price", e.target.value)
+                                          updateVariation(
+                                            variation.id,
+                                            "price",
+                                            e.target.value
+                                          )
                                         }
                                         placeholder="0.00"
-                                        className="pl-8"
+                                        className="pl-10"
                                       />
                                     </div>
                                   </FormField>
 
                                   <FormField
                                     label="Original Price"
-                                    error={errors[`variation_${index}_originalPrice`]}
+                                    error={
+                                      errors[`variation_${index}_originalPrice`]
+                                    }
                                   >
                                     <div className="relative">
                                       <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                                        $
+                                        LKR <span className="mr-2"></span>
                                       </span>
                                       <Input
                                         type="number"
                                         step="0.01"
                                         value={variation.originalPrice}
                                         onChange={(e) =>
-                                          updateVariation(variation.id, "originalPrice", e.target.value)
+                                          updateVariation(
+                                            variation.id,
+                                            "originalPrice",
+                                            e.target.value
+                                          )
                                         }
                                         placeholder="0.00"
-                                        className="pl-8"
+                                        className="pl-10"
                                       />
                                     </div>
                                   </FormField>
@@ -1476,14 +1527,20 @@ const Listing = () => {
                                   <FormField
                                     label="Quantity"
                                     required
-                                    error={errors[`variation_${index}_quantity`]}
+                                    error={
+                                      errors[`variation_${index}_quantity`]
+                                    }
                                   >
                                     <Input
                                       type="number"
                                       min="0"
                                       value={variation.quantity}
                                       onChange={(e) =>
-                                        updateVariation(variation.id, "quantity", e.target.value)
+                                        updateVariation(
+                                          variation.id,
+                                          "quantity",
+                                          e.target.value
+                                        )
                                       }
                                       placeholder="Available quantity"
                                     />
@@ -1494,9 +1551,15 @@ const Listing = () => {
                                 <div>
                                   <MultiColorPicker
                                     label="Variation Color (Optional)"
-                                    colors={variation.color ? [variation.color] : []}
+                                    colors={
+                                      variation.color ? [variation.color] : []
+                                    }
                                     onChange={(colors) =>
-                                      updateVariation(variation.id, "color", colors[0] || null)
+                                      updateVariation(
+                                        variation.id,
+                                        "color",
+                                        colors[0] || null
+                                      )
                                     }
                                     maxColors={1}
                                     className="mb-4"
@@ -1509,7 +1572,11 @@ const Listing = () => {
                                     <TagInput
                                       tags={variation.sizes}
                                       onTagsChange={(sizes) =>
-                                        updateVariation(variation.id, "sizes", sizes)
+                                        updateVariation(
+                                          variation.id,
+                                          "sizes",
+                                          sizes
+                                        )
                                       }
                                       placeholder="Add size (e.g., S, M, L, XL)..."
                                       maxTags={10}
@@ -1519,7 +1586,9 @@ const Listing = () => {
 
                                 {/* Physical Properties */}
                                 <div className="space-y-4">
-                                  <h4 className="font-medium text-gray-900">Physical Properties (Optional)</h4>
+                                  <h4 className="font-medium text-gray-900">
+                                    Physical Properties (Optional)
+                                  </h4>
 
                                   <FormField label="Weight (Optional)">
                                     <div className="flex space-x-2">
@@ -1528,7 +1597,11 @@ const Listing = () => {
                                         step="0.1"
                                         value={variation.weight}
                                         onChange={(e) =>
-                                          updateVariation(variation.id, "weight", e.target.value)
+                                          updateVariation(
+                                            variation.id,
+                                            "weight",
+                                            e.target.value
+                                          )
                                         }
                                         placeholder="0.0"
                                         className="flex-1"
@@ -1551,7 +1624,11 @@ const Listing = () => {
                                           step="0.1"
                                           value={variation.dimensions.length}
                                           onChange={(e) =>
-                                            updateVariationDimension(variation.id, "length", e.target.value)
+                                            updateVariationDimension(
+                                              variation.id,
+                                              "length",
+                                              e.target.value
+                                            )
                                           }
                                           placeholder="0.0"
                                         />
@@ -1562,7 +1639,11 @@ const Listing = () => {
                                           step="0.1"
                                           value={variation.dimensions.width}
                                           onChange={(e) =>
-                                            updateVariationDimension(variation.id, "width", e.target.value)
+                                            updateVariationDimension(
+                                              variation.id,
+                                              "width",
+                                              e.target.value
+                                            )
                                           }
                                           placeholder="0.0"
                                         />
@@ -1573,7 +1654,11 @@ const Listing = () => {
                                           step="0.1"
                                           value={variation.dimensions.height}
                                           onChange={(e) =>
-                                            updateVariationDimension(variation.id, "height", e.target.value)
+                                            updateVariationDimension(
+                                              variation.id,
+                                              "height",
+                                              e.target.value
+                                            )
                                           }
                                           placeholder="0.0"
                                         />
@@ -1591,10 +1676,15 @@ const Listing = () => {
                                     <ImageUpload
                                       images={variation.images}
                                       onImagesChange={(images) =>
-                                        handleVariationImagesChange(variation.id, images)
+                                        handleVariationImagesChange(
+                                          variation.id,
+                                          images
+                                        )
                                       }
                                       maxImages={5}
-                                      disabled={uploadingImages.has(variation.id)}
+                                      disabled={uploadingImages.has(
+                                        variation.id
+                                      )}
                                     />
                                     {uploadingImages.has(variation.id) && (
                                       <div className="flex items-center gap-2 mt-2 text-sm text-blue-600">
@@ -1603,8 +1693,9 @@ const Listing = () => {
                                       </div>
                                     )}
                                     <p className="text-xs text-gray-500 mt-2">
-                                      Upload up to 5 images for this variation. 
-                                      {variation.isDefault && " The first image will become the main product image."}
+                                      Upload up to 5 images for this variation.
+                                      {variation.isDefault &&
+                                        " The first image will become the main product image."}
                                     </p>
                                   </FormField>
                                 </div>
@@ -1703,11 +1794,14 @@ const Listing = () => {
                   <Card>
                     <CardHeader>
                       <CardTitle>
-                        {hasVariations ? "Default Physical Properties" : "Physical Properties"}
+                        {hasVariations
+                          ? "Default Physical Properties"
+                          : "Physical Properties"}
                       </CardTitle>
                       {hasVariations && (
                         <p className="text-sm text-gray-600">
-                          These settings apply to all variations unless overridden individually
+                          These settings apply to all variations unless
+                          overridden individually
                         </p>
                       )}
                     </CardHeader>
@@ -1781,18 +1875,24 @@ const Listing = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle>
-                      {hasVariations ? "Default Product Images" : "Product Images"}
+                      {hasVariations
+                        ? "Default Product Images"
+                        : "Product Images"}
                     </CardTitle>
                     {hasVariations ? (
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                         <p className="text-sm text-blue-700">
-                          <strong>Auto-generated from variations:</strong> These images are automatically set based on your default variation's images. 
-                          To change these images, update the default variation or switch which variation is set as default.
+                          <strong>Auto-generated from variations:</strong> These
+                          images are automatically set based on your default
+                          variation's images. To change these images, update the
+                          default variation or switch which variation is set as
+                          default.
                         </p>
                       </div>
                     ) : (
                       <p className="text-sm text-gray-600">
-                        Upload high-quality images of your product. The first image will be the main product image.
+                        Upload high-quality images of your product. The first
+                        image will be the main product image.
                       </p>
                     )}
                   </CardHeader>
@@ -1803,22 +1903,21 @@ const Listing = () => {
                         images={formData.images}
                         onImagesChange={handleImagesChange}
                         maxImages={10}
-                        disabled={uploadingImages.has('main') || hasVariations}
+                        disabled={uploadingImages.has("main") || hasVariations}
                         readOnly={hasVariations}
                       />
-                      {uploadingImages.has('main') && (
+                      {uploadingImages.has("main") && (
                         <div className="flex items-center gap-2 mt-2 text-sm text-blue-600">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           <span>Uploading images...</span>
                         </div>
                       )}
                       <p className="text-xs text-gray-500 mt-2">
-                        {hasVariations ? (
-                          "These images are managed through your product variations. Edit the default variation to change the main product image."
-                        ) : (
-                          "Upload up to 10 high-quality images. First image will be the main product image."
-                        )}
-                        {(uploadingImages.has('main') || isUploading) && " Please wait while images are being uploaded..."}
+                        {hasVariations
+                          ? "These images are managed through your product variations. Edit the default variation to change the main product image."
+                          : "Upload up to 10 high-quality images. First image will be the main product image."}
+                        {(uploadingImages.has("main") || isUploading) &&
+                          " Please wait while images are being uploaded..."}
                       </p>
                     </FormField>
                   </CardContent>
@@ -1840,14 +1939,20 @@ const Listing = () => {
                         maxTags={20}
                       />
                       <p className="text-xs text-gray-500 mt-2">
-                        Add relevant tags to help customers find your product. Current tags: {formData.tags.length}
+                        Add relevant tags to help customers find your product.
+                        Current tags: {formData.tags.length}
                       </p>
                       {formData.tags.length > 0 && (
                         <div className="mt-3 p-3 bg-blue-50 rounded border">
-                          <p className="text-sm font-medium text-blue-900 mb-2">Preview:</p>
+                          <p className="text-sm font-medium text-blue-900 mb-2">
+                            Preview:
+                          </p>
                           <div className="flex flex-wrap gap-2">
                             {formData.tags.map((tag, index) => (
-                              <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                              <span
+                                key={index}
+                                className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                              >
                                 {tag}
                               </span>
                             ))}
@@ -1923,26 +2028,44 @@ const Listing = () => {
 
                     {hasVariations && (
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <h4 className="font-medium text-blue-900 mb-2">Variation Shipping</h4>
+                        <h4 className="font-medium text-blue-900 mb-2">
+                          Variation Shipping
+                        </h4>
                         <p className="text-sm text-blue-700">
-                          When using variations, shipping calculations will use each variation's individual weight and dimensions if specified,
-                          otherwise falling back to the default values above.
+                          When using variations, shipping calculations will use
+                          each variation's individual weight and dimensions if
+                          specified, otherwise falling back to the default
+                          values above.
                         </p>
                       </div>
                     )}
 
                     {/* Preview shipping data if editing */}
-                    {(isEditing || isDuplicating) && editingProduct?.shippingClass && (
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <h4 className="font-medium text-gray-900 mb-2">Current Shipping Settings:</h4>
-                        <div className="text-sm space-y-1">
-                          <p><strong>Weight:</strong> {formData.shippingWeight || 'Not set'} lbs</p>
-                          <p><strong>Class:</strong> {formData.shippingClass}</p>
-                          <p><strong>Return Policy:</strong> {formData.returnPolicy} days</p>
-                          <p><strong>Warranty:</strong> {formData.warranty || 'Not set'}</p>
+                    {(isEditing || isDuplicating) &&
+                      editingProduct?.shippingClass && (
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          <h4 className="font-medium text-gray-900 mb-2">
+                            Current Shipping Settings:
+                          </h4>
+                          <div className="text-sm space-y-1">
+                            <p>
+                              <strong>Weight:</strong>{" "}
+                              {formData.shippingWeight || "Not set"} lbs
+                            </p>
+                            <p>
+                              <strong>Class:</strong> {formData.shippingClass}
+                            </p>
+                            <p>
+                              <strong>Return Policy:</strong>{" "}
+                              {formData.returnPolicy} days
+                            </p>
+                            <p>
+                              <strong>Warranty:</strong>{" "}
+                              {formData.warranty || "Not set"}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -1960,7 +2083,11 @@ const Listing = () => {
                     <span>Preview</span>
                     {hasVariations && (
                       <Badge variant="secondary" size="sm">
-                        {previewData === formData.variations.find(v => v.isDefault) || formData.variations[0] ? 'Default Variation' : 'Base Product'}
+                        {previewData ===
+                          formData.variations.find((v) => v.isDefault) ||
+                        formData.variations[0]
+                          ? "Default Variation"
+                          : "Base Product"}
                       </Badge>
                     )}
                   </CardTitle>
@@ -1992,18 +2119,19 @@ const Listing = () => {
 
                     <div className="flex items-baseline space-x-2">
                       <span className="text-lg font-bold text-gray-900">
-                        ${previewData.price || "0.00"}
+                        LKR {previewData.price || "0.00"}
                       </span>
                       {previewData.originalPrice && (
                         <span className="text-sm text-gray-500 line-through">
-                          ${previewData.originalPrice}
+                          LKR {previewData.originalPrice}
                         </span>
                       )}
                     </div>
 
                     {hasVariations && (
                       <div className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded p-2">
-                        {formData.variations.length} variation{formData.variations.length !== 1 ? 's' : ''} available
+                        {formData.variations.length} variation
+                        {formData.variations.length !== 1 ? "s" : ""} available
                       </div>
                     )}
 
@@ -2104,12 +2232,14 @@ const Listing = () => {
                               {variation.color && (
                                 <div
                                   className="w-4 h-4 rounded border border-gray-300"
-                                  style={{ backgroundColor: variation.color.hex }}
+                                  style={{
+                                    backgroundColor: variation.color.hex,
+                                  }}
                                   title={variation.color.name}
                                 />
                               )}
                               <span className="text-sm font-semibold text-gray-700">
-                                ${variation.price || "0.00"}
+                                LKR {variation.price || "0.00"}
                               </span>
                               <span className="text-xs text-gray-500">
                                 Qty: {variation.quantity || "0"}
@@ -2164,7 +2294,9 @@ const Listing = () => {
                         className="flex-1"
                       >
                         Save Draft
-                        {isProcessing && <LoadingSpinner size="sm" className="ml-2" />}
+                        {isProcessing && (
+                          <LoadingSpinner size="sm" className="ml-2" />
+                        )}
                       </Button>
                       <Button
                         onClick={() => handleSave("publish")}
@@ -2172,7 +2304,9 @@ const Listing = () => {
                         className="flex-1"
                       >
                         {isEditing && !isDuplicating ? "Update" : "Publish"}
-                        {isProcessing && <LoadingSpinner size="sm" className="ml-2" />}
+                        {isProcessing && (
+                          <LoadingSpinner size="sm" className="ml-2" />
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -2212,15 +2346,15 @@ const Listing = () => {
           isDuplicating
             ? "Listing Duplicated!"
             : isEditing
-              ? "Listing Updated!"
-              : "Draft Saved!"
+            ? "Listing Updated!"
+            : "Draft Saved!"
         }
         message={
           isDuplicating
             ? "Your product listing has been successfully duplicated."
             : isEditing
-              ? "Your product listing has been successfully updated."
-              : "Your draft has been saved successfully."
+            ? "Your product listing has been successfully updated."
+            : "Your draft has been saved successfully."
         }
         actionLabel="View Listings"
         onAction={handleSuccessAction}
@@ -2233,12 +2367,24 @@ const Listing = () => {
             <div className="p-6">
               <div className="text-center mb-6">
                 <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                  <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  <svg
+                    className="h-6 w-6 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M5 13l4 4L19 7"
+                    ></path>
                   </svg>
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {isEditing && !isDuplicating ? "Listing Updated Successfully!" : "Listing Published Successfully!"}
+                  {isEditing && !isDuplicating
+                    ? "Listing Updated Successfully!"
+                    : "Listing Published Successfully!"}
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
                   Your product listing is now live and visible to customers.
@@ -2247,27 +2393,36 @@ const Listing = () => {
 
               {/* Quick Summary */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h4 className="font-medium text-gray-900 mb-3">Quick Summary</h4>
+                <h4 className="font-medium text-gray-900 mb-3">
+                  Quick Summary
+                </h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Product:</span>
-                    <span className="font-medium">{savedListingData.title}</span>
+                    <span className="font-medium">
+                      {savedListingData.title}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Category:</span>
                     <span className="font-medium">
-                      {categories[savedListingData.category?.main]?.name || savedListingData.category}
+                      {categories[savedListingData.category?.main]?.name ||
+                        savedListingData.category}
                     </span>
                   </div>
                   {hasVariations ? (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Variations:</span>
-                      <span className="font-medium">{savedListingData.variations?.length || 0} variations</span>
+                      <span className="font-medium">
+                        {savedListingData.variations?.length || 0} variations
+                      </span>
                     </div>
                   ) : (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Price:</span>
-                      <span className="font-medium">${savedListingData.price}</span>
+                      <span className="font-medium">
+                        LKR {savedListingData.price}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between">
@@ -2288,10 +2443,7 @@ const Listing = () => {
                 >
                   Create New Listing
                 </Button>
-                <Button
-                  onClick={handleSummaryGoToListings}
-                  className="flex-1"
-                >
+                <Button onClick={handleSummaryGoToListings} className="flex-1">
                   View All Listings
                 </Button>
               </div>

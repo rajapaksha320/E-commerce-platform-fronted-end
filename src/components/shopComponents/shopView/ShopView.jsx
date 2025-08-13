@@ -698,18 +698,18 @@ const ShopView = () => {
           <div className="flex flex-col">
             <div className="flex items-baseline gap-2">
               <span className="text-base sm:text-lg font-bold text-gray-900">
-                ${product.price}
+                LKR {product.price}
               </span>
               {product.originalPrice && (
                 <span className="text-xs sm:text-sm text-gray-500 line-through">
-                  ${product.originalPrice}
+                  LKR {product.originalPrice}
                 </span>
               )}
             </div>
           </div>
           {product.discount && (
             <Badge variant="success" size="sm">
-              Save ${(product.originalPrice - product.price).toFixed(2)}
+              Save LKR {(product.originalPrice - product.price).toFixed(2)}
             </Badge>
           )}
         </div>

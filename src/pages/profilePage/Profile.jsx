@@ -83,8 +83,8 @@ const Profile = () => {
 
   const tabs = [
     { id: "personal", label: "Personal Info", icon: User },
-    { id: "security", label: "Security", icon: Shield },
-    { id: "preferences", label: "Preferences", icon: Settings },
+    // { id: "security", label: "Security", icon: Shield },
+    // { id: "preferences", label: "Preferences", icon: Settings },
     { id: "account", label: "Account", icon: UserCheck },
   ];
 
@@ -727,7 +727,7 @@ const Profile = () => {
             )}
 
             {/* Preferences Tab */}
-            {activeTab === "preferences" && (
+            {/* {activeTab === "preferences" && (
               <Card className="p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
                   <Settings className="h-5 w-5 text-blue-600 mr-2" />
@@ -789,77 +789,12 @@ const Profile = () => {
                   ))}
                 </div>
               </Card>
-            )}
+            )} */}
 
             {/* Account Tab */}
             {activeTab === "account" && (
               <div className="space-y-6">
-                <Card className="p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <UserCheck className="h-5 w-5 text-blue-600 mr-2" />
-                    Account Management
-                  </h2>
-
-                  <div className="space-y-6">
-                    {/* Account Actions */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Button
-                        variant="outline"
-                        className="flex items-center justify-center p-4 h-auto"
-                        onClick={() => navigate("/orders")}
-                      >
-                        <div className="text-center">
-                          <Download className="h-6 w-6 mx-auto mb-2 text-blue-600" />
-                          <h3 className="font-medium">Download Data</h3>
-                          <p className="text-sm text-gray-600">
-                            Export your account data
-                          </p>
-                        </div>
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        className="flex items-center justify-center p-4 h-auto"
-                        onClick={() => navigate("/addresses")}
-                      >
-                        <div className="text-center">
-                          <MapPin className="h-6 w-6 mx-auto mb-2 text-green-600" />
-                          <h3 className="font-medium">Manage Addresses</h3>
-                          <p className="text-sm text-gray-600">
-                            Update delivery addresses
-                          </p>
-                        </div>
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        className="flex items-center justify-center p-4 h-auto"
-                        onClick={() => navigate("/payment-methods")}
-                      >
-                        <div className="text-center">
-                          <CreditCard className="h-6 w-6 mx-auto mb-2 text-purple-600" />
-                          <h3 className="font-medium">Payment Methods</h3>
-                          <p className="text-sm text-gray-600">
-                            Manage saved cards
-                          </p>
-                        </div>
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        className="flex items-center justify-center p-4 h-auto"
-                      >
-                        <div className="text-center">
-                          <Upload className="h-6 w-6 mx-auto mb-2 text-orange-600" />
-                          <h3 className="font-medium">Import Data</h3>
-                          <p className="text-sm text-gray-600">
-                            Import preferences
-                          </p>
-                        </div>
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
+             
 
                 {/* Delete Account */}
                 <Card className="p-6 border-red-200 bg-red-50">

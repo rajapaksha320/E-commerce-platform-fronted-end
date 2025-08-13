@@ -431,17 +431,18 @@ const ShopProducts = () => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <span className="text-xl font-bold text-gray-900">
-              ${product.price}
+              LKR {product.price}
             </span>
+            <br />
             {product.originalPrice && (
-              <span className="text-sm text-gray-500 line-through ml-2">
-                ${product.originalPrice}
+              <span className="text-sm text-gray-500 line-through ">
+                LKR {product.originalPrice}
               </span>
             )}
           </div>
           {product.discount && (
             <Badge variant="success" size="sm">
-              Save ${(product.originalPrice - product.price).toFixed(2)}
+              Save <span className="m-1">LKR</span> {(product.originalPrice - product.price).toFixed(2)}
             </Badge>
           )}
         </div>

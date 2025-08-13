@@ -702,7 +702,7 @@ const WishList = () => {
                   {displayProducts.map((product) => (
                     <Card
                       key={product.id}
-                      className={`group hover:shadow-lg transition-all duration-300 ${
+                      className={`group hover:shadow-lg transition-all duration-300  ${
                         viewMode === "list" ? "lg:flex lg:space-x-4" : ""
                       }`}
                     >
@@ -769,18 +769,20 @@ const WishList = () => {
 
                         <div className="flex items-baseline space-x-1 sm:space-x-2">
                           <span className="font-bold text-gray-900 text-sm sm:text-base">
-                            ${product.price}
+                            <span>LKR</span>
+                            {product.price}
                           </span>
                           {product.originalPrice && (
                             <span className="text-xs sm:text-sm text-gray-500 line-through">
-                              ${product.originalPrice}
+                              <span>LKR</span>
+                              {product.originalPrice}
                             </span>
                           )}
                           {product.discount && (
                             <Badge
                               variant="danger"
                               size="sm"
-                              className="text-xs"
+                              className="text-xs "
                             >
                               -{product.discount}%
                             </Badge>
@@ -812,7 +814,7 @@ const WishList = () => {
                               {product.inStock ? "Add" : "Notify"}
                             </span>
                           </Button>
-                          <Button
+                          {/* <Button
                             onClick={() => handleShare("product", product)}
                             size="sm"
                             variant="outline"
@@ -820,7 +822,7 @@ const WishList = () => {
                             title="Share product"
                           >
                             <Share2 className="h-3 w-3" />
-                          </Button>
+                          </Button> */}
                         </div>
                       </div>
                     </Card>

@@ -304,7 +304,7 @@ const ShippingInfo = () => {
             </p>
 
             {/* Track Order */}
-            <div className="max-w-2xl mx-auto">
+            {/* <div className="max-w-2xl mx-auto">
               <div className="flex flex-col sm:flex-row gap-4">
                 <Input
                   placeholder="Enter tracking number..."
@@ -324,7 +324,7 @@ const ShippingInfo = () => {
                   <span>Track Order</span>
                 </Button>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

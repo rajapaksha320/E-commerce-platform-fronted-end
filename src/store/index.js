@@ -1,7 +1,7 @@
 // store/index.js
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
-import sellerReducer from './slices/sellerSlice';
+import sellerReducer from './slices/sellerListingSlice';
 import { setupInterceptors } from '../services/axiosInstance';
 
 export const store = configureStore({

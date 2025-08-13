@@ -606,18 +606,18 @@ const MainSearchResult = () => {
           <div className="flex flex-col">
             <div className="flex items-baseline gap-2">
               <span className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
-                ${product.price}
+                LKR {product.price}
               </span>
               {product.originalPrice && (
                 <span className="text-sm sm:text-base text-gray-500 line-through">
-                  ${product.originalPrice}
+                  LKR {product.originalPrice}
                 </span>
               )}
             </div>
           </div>
           {product.discount && (
             <Badge variant="success" size="sm">
-              Save ${(product.originalPrice - product.price).toFixed(2)}
+              Save <span className="m-1">LKR</span> {(product.originalPrice - product.price).toFixed(2)}
             </Badge>
           )}
         </div>

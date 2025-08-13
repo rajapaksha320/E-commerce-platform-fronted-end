@@ -50,7 +50,7 @@ import {
 import {
   useListingDetails,
   useListings,
-} from "../../../../hooks/useSellerData";
+} from "../../../../hooks/useSellerListingData";
 
 // Import UI components
 import {
@@ -483,7 +483,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
               <div className="text-center">
                 <p className="text-xl lg:text-2xl font-bold text-green-600">
-                  ${parseFloat(pricingInfo.price || 0).toLocaleString()}
+                  LKR {parseFloat(pricingInfo.price || 0).toLocaleString()}
                 </p>
                 <p className="text-xs text-gray-500">Current Price</p>
               </div>
@@ -661,14 +661,14 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                             <div>
                               <label className="text-sm font-medium text-gray-700">Current Price</label>
                               <p className="text-xl lg:text-2xl font-bold text-green-600">
-                                ${parseFloat(pricingInfo.price || 0).toLocaleString()}
+                                LKR {parseFloat(pricingInfo.price || 0).toLocaleString()}
                               </p>
                             </div>
                             {pricingInfo.originalPrice && pricingInfo.originalPrice > pricingInfo.price && (
                               <div>
                                 <label className="text-sm font-medium text-gray-700">Original Price</label>
                                 <p className="text-lg text-gray-500 line-through">
-                                  ${parseFloat(pricingInfo.originalPrice).toLocaleString()}
+                                  LKR {parseFloat(pricingInfo.originalPrice).toLocaleString()}
                                 </p>
                                 <div className="text-xs text-green-600 font-medium">
                                   {Math.round(((pricingInfo.originalPrice - pricingInfo.price) / pricingInfo.originalPrice) * 100)}% OFF
@@ -738,7 +738,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                                     <div>
                                       <span className="text-gray-500 font-medium">Price:</span>
                                       <span className="ml-2 font-semibold text-green-600">
-                                        ${parseFloat(variation.price || 0).toLocaleString()}
+                                        LKR {parseFloat(variation.price || 0).toLocaleString()}
                                       </span>
                                     </div>
                                     <div>
@@ -870,7 +870,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                           <div className="text-center p-4 bg-purple-50 rounded-lg">
                             <DollarSign className="h-6 lg:h-8 w-6 lg:w-8 text-purple-600 mx-auto mb-2" />
                             <p className="text-xl lg:text-2xl font-bold text-purple-900">
-                              ${metrics.revenue.toLocaleString()}
+                              LKR {metrics.revenue.toLocaleString()}
                             </p>
                             <p className="text-sm text-purple-700">Total Revenue</p>
                           </div>
@@ -893,7 +893,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                             <div>
                               <label className="text-sm font-medium text-gray-700">Total Revenue</label>
                               <p className="text-2xl lg:text-3xl font-bold text-green-600">
-                                ${metrics.revenue.toLocaleString()}
+                                LKR {metrics.revenue.toLocaleString()}
                               </p>
                             </div>
                             <div>
@@ -1089,7 +1089,7 @@ const ListingDetails = ({ listing, onClose, onListingUpdate }) => {
                   <h4 className="font-medium text-gray-900 truncate">{listing.title}</h4>
                   <p className="text-sm text-gray-500">SKU: {pricingInfo.sku}</p>
                   <p className="text-sm text-gray-500">
-                    {listing.sold || 0} sold • ${pricingInfo.price || 0} • {listing.views || 0} views
+                    {listing.sold || 0} sold • LRK {pricingInfo.price || 0} • {listing.views || 0} views
                   </p>
                 </div>
               </div>

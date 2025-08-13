@@ -24,7 +24,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import AddressModal from "./AddressModal";
 import ShippingOptions from "./ShippingOptions";
-import PaymentSection from "./PaymentSection";
 import OrderSummary from "./OrderSummary";
 import SuccessModal from "./SuccessModal";
 import {
@@ -39,12 +38,10 @@ const CheckoutPage = () => {
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
   const [selectedShipping, setSelectedShipping] = useState("standard");
-  const [selectedPayment, setSelectedPayment] = useState("card");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [orderData, setOrderData] = useState(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
-  // Sample cart items (you can pass this as props or get from context)
   const [cartItems] = useState([
     {
       id: 1,
@@ -111,8 +108,7 @@ const CheckoutPage = () => {
 
   const steps = [
     { id: 1, name: "Shipping", completed: currentStep > 1 },
-    { id: 2, name: "Payment", completed: currentStep > 2 },
-    { id: 3, name: "Review", completed: false },
+    { id: 2, name: "Review", completed: false },
   ];
 
   const handleAddressEdit = (address) => {
@@ -127,12 +123,10 @@ const CheckoutPage = () => {
 
   const handleAddressSave = (addressData) => {
     if (addressData.id) {
-      // Edit existing
       setAddresses((prev) =>
         prev.map((addr) => (addr.id === addressData.id ? addressData : addr))
       );
     } else {
-      // Add new
       const newAddress = { ...addressData, id: Date.now() };
       setAddresses((prev) => [...prev, newAddress]);
     }
@@ -144,7 +138,7 @@ const CheckoutPage = () => {
   };
 
   const handleNextStep = () => {
-    if (currentStep < 3) {
+    if (currentStep < 2) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -157,12 +151,8 @@ const CheckoutPage = () => {
 
   const handlePlaceOrder = async () => {
     setIsPlacingOrder(true);
-
     try {
-      // Simulate API call to place order
       await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Create order data
       const newOrderData = {
         orderId: "ORD-" + Date.now(),
         itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
@@ -173,25 +163,18 @@ const CheckoutPage = () => {
             : selectedShipping === "express"
             ? "2-3 business days"
             : "5-7 business days",
-        paymentMethod: selectedPayment,
         shippingAddress: selectedAddress,
         items: cartItems,
       };
-
       setOrderData(newOrderData);
       setShowSuccessModal(true);
-
-      // Optional: Clear cart or redirect after successful order
-      // clearCart();
     } catch (error) {
       console.error("Error placing order:", error);
-      // Handle error - show error message
     } finally {
       setIsPlacingOrder(false);
     }
   };
 
-  // Calculate totals
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
@@ -223,18 +206,17 @@ const CheckoutPage = () => {
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center">
                   <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 mr-2" />
-                  <span className="hidden sm:inline">Checkout</span>
-                  <span className="sm:hidden">Checkout</span>
+                  Checkout
                 </h1>
                 <p className="text-xs sm:text-sm text-gray-600">
-                  Step {currentStep} of 3
+                  Step {currentStep} of 2
                 </p>
               </div>
             </div>
             <div className="hidden sm:block">
               <div className="text-right">
                 <p className="text-lg font-bold text-blue-600">
-                  ${total.toFixed(2)}
+                  LKR {total.toFixed(2)}
                 </p>
                 <p className="text-xs text-gray-500">Total</p>
               </div>
@@ -244,13 +226,13 @@ const CheckoutPage = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-        {/* Progress Steps */}
+        {/* Steps */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
                 <div
-                  className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors duration-200 ${
+                  className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
                     step.completed
                       ? "bg-green-600 border-green-600 text-white"
                       : currentStep === step.id
@@ -286,9 +268,7 @@ const CheckoutPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Step 1: Shipping */}
             {currentStep === 1 && (
               <div className="space-y-6">
                 {/* Shipping Address */}
@@ -308,12 +288,11 @@ const CheckoutPage = () => {
                       Add New
                     </Button>
                   </div>
-
                   <div className="space-y-4">
                     {addresses.map((address) => (
                       <div
                         key={address.id}
-                        className={`p-4 rounded-lg border-2 cursor-pointer transition-colors duration-200 ${
+                        className={`p-4 rounded-lg border-2 cursor-pointer ${
                           selectedAddress?.id === address.id
                             ? "border-blue-500 bg-blue-50"
                             : "border-gray-200 hover:border-gray-300"
@@ -383,24 +362,13 @@ const CheckoutPage = () => {
               </div>
             )}
 
-            {/* Step 2: Payment */}
             {currentStep === 2 && (
-              <PaymentSection
-                selectedPayment={selectedPayment}
-                onPaymentChange={setSelectedPayment}
-              />
-            )}
-
-            {/* Step 3: Review */}
-            {currentStep === 3 && (
               <div className="space-y-6">
-                {/* Order Review */}
                 <Card>
                   <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
                     <Package className="h-5 w-5 text-blue-600 mr-2" />
                     Order Review
                   </h2>
-
                   <div className="space-y-4">
                     {cartItems.map((item) => (
                       <div
@@ -423,7 +391,7 @@ const CheckoutPage = () => {
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-gray-900">
-                            ${(item.price * item.quantity).toFixed(2)}
+                            LKR {(item.price * item.quantity).toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -431,39 +399,25 @@ const CheckoutPage = () => {
                   </div>
                 </Card>
 
-                {/* Shipping & Payment Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
-                    <h3 className="font-bold text-gray-900 mb-4">
-                      Shipping Address
-                    </h3>
-                    <div className="text-sm text-gray-600">
-                      <p className="font-semibold text-gray-900">
-                        {selectedAddress.firstName} {selectedAddress.lastName}
-                      </p>
-                      <p>{selectedAddress.address}</p>
-                      <p>
-                        {selectedAddress.city}, {selectedAddress.state}{" "}
-                        {selectedAddress.zipCode}
-                      </p>
-                      <p>{selectedAddress.phone}</p>
-                    </div>
-                  </Card>
-
-                  <Card>
-                    <h3 className="font-bold text-gray-900 mb-4">
-                      Payment Method
-                    </h3>
-                    <div className="text-sm text-gray-600">
-                      <p>Credit Card ending in ****1234</p>
-                      <p>Visa</p>
-                    </div>
-                  </Card>
-                </div>
+                <Card>
+                  <h3 className="font-bold text-gray-900 mb-4">
+                    Shipping Address
+                  </h3>
+                  <div className="text-sm text-gray-600">
+                    <p className="font-semibold text-gray-900">
+                      {selectedAddress.firstName} {selectedAddress.lastName}
+                    </p>
+                    <p>{selectedAddress.address}</p>
+                    <p>
+                      {selectedAddress.city}, {selectedAddress.state}{" "}
+                      {selectedAddress.zipCode}
+                    </p>
+                    <p>{selectedAddress.phone}</p>
+                  </div>
+                </Card>
               </div>
             )}
 
-            {/* Navigation Buttons */}
             <div className="flex justify-between pt-6">
               <Button
                 onClick={handlePreviousStep}
@@ -475,7 +429,7 @@ const CheckoutPage = () => {
                 Previous
               </Button>
 
-              {currentStep < 3 ? (
+              {currentStep < 2 ? (
                 <Button
                   onClick={handleNextStep}
                   className="flex items-center"
@@ -506,7 +460,6 @@ const CheckoutPage = () => {
             </div>
           </div>
 
-          {/* Order Summary Sidebar */}
           <div className="lg:col-span-1">
             <OrderSummary
               cartItems={cartItems}
@@ -520,21 +473,16 @@ const CheckoutPage = () => {
         </div>
       </div>
 
-      {/* Address Modal */}
       <AddressModal
         isOpen={showAddressModal}
         onClose={() => setShowAddressModal(false)}
         onSave={handleAddressSave}
         editingAddress={editingAddress}
       />
-      {/* Success Modal */}
+
       <SuccessModal
         isOpen={showSuccessModal}
-        onClose={() => {
-          setShowSuccessModal(false);
-          // Optional: Navigate to home or orders page
-          // navigate('/');
-        }}
+        onClose={() => setShowSuccessModal(false)}
         orderData={orderData}
         type="order"
       />
