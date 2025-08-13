@@ -351,7 +351,7 @@ const SearchFilters = ({
       </FilterSection>
 
       {/* Shipping & Availability */}
-      <FilterSection
+      {/* <FilterSection
         title="Shipping & Availability"
         icon={Truck}
         sectionKey="shipping"
@@ -404,7 +404,7 @@ const SearchFilters = ({
             <span className="text-sm text-gray-700">Verified Sellers</span>
           </label>
         </div>
-      </FilterSection>
+      </FilterSection> */}
 
       {/* Brands */}
       <FilterSection title="Brands" icon={Package} sectionKey="brand">
@@ -464,87 +464,6 @@ const SearchFilters = ({
                 )}
               </div>
               <span className="text-xs text-gray-600 mt-1">{color.name}</span>
-            </label>
-          ))}
-        </div>
-      </FilterSection>
-
-      {/* Sizes */}
-      <FilterSection title="Sizes" icon={Package} sectionKey="size">
-        <div className="grid grid-cols-3 gap-2">
-          {sizes.map((size) => (
-            <label key={size.id} className="cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filters.sizes?.includes(size.id) || false}
-                onChange={(e) => {
-                  updateFilter("sizes", size.id, e.target.checked);
-                }}
-                className="sr-only"
-              />
-              <div
-                className={`border-2 rounded-md p-2 text-center text-sm font-medium transition-all duration-200 hover:bg-gray-50 ${
-                  filters.sizes?.includes(size.id)
-                    ? "border-blue-600 bg-blue-50 text-blue-600"
-                    : "border-gray-300 hover:border-gray-400 text-gray-700"
-                }`}
-              >
-                {size.name}
-              </div>
-            </label>
-          ))}
-        </div>
-      </FilterSection>
-
-      {/* Location */}
-      <FilterSection
-        title="Seller Location"
-        icon={MapPin}
-        sectionKey="location"
-      >
-        <div className="space-y-2">
-          {locations.map((location) => (
-            <label
-              key={location.id}
-              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-md p-1 -m-1 transition-colors"
-            >
-              <input
-                type="checkbox"
-                checked={filters.locations?.includes(location.id) || false}
-                onChange={(e) => {
-                  updateFilter("locations", location.id, e.target.checked);
-                }}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700 flex-1">
-                {location.name}
-              </span>
-              <span className="text-xs text-gray-500">({location.count})</span>
-            </label>
-          ))}
-        </div>
-      </FilterSection>
-
-      {/* Condition */}
-      <FilterSection title="Condition" icon={Shield} sectionKey="condition">
-        <div className="space-y-2">
-          {conditions.map((condition) => (
-            <label
-              key={condition.id}
-              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-md p-1 -m-1 transition-colors"
-            >
-              <input
-                type="checkbox"
-                checked={filters.conditions?.includes(condition.id) || false}
-                onChange={(e) => {
-                  updateFilter("conditions", condition.id, e.target.checked);
-                }}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700 flex-1">
-                {condition.name}
-              </span>
-              <span className="text-xs text-gray-500">({condition.count})</span>
             </label>
           ))}
         </div>
