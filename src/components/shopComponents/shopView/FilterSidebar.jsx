@@ -305,7 +305,7 @@ const FilterSidebar = ({
       </FilterSection>
 
       {/* Shipping & Availability */}
-      <FilterSection
+      {/* <FilterSection
         title="Shipping & Availability"
         icon={Truck}
         sectionKey="shipping"
@@ -347,7 +347,7 @@ const FilterSidebar = ({
             </span>
           </label>
         </div>
-      </FilterSection>
+      </FilterSection> */}
 
       {/* Brands */}
       <FilterSection title="Brands" icon={Package} sectionKey="brand">
@@ -413,7 +413,7 @@ const FilterSidebar = ({
       </FilterSection>
 
       {/* Sizes */}
-      <FilterSection title="Sizes" icon={Package} sectionKey="size">
+      {/* <FilterSection title="Sizes" icon={Package} sectionKey="size">
         <div className="grid grid-cols-3 gap-2">
           {sizes.map((size) => (
             <label key={size.id} className="cursor-pointer">
@@ -437,7 +437,7 @@ const FilterSidebar = ({
             </label>
           ))}
         </div>
-      </FilterSection>
+      </FilterSection> */}
     </div>
   );
 };
