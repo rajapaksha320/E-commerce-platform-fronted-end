@@ -209,6 +209,13 @@ const userService = {
     );
   },
 
+  // 👤 GET USER PROFILE SERVICE
+
+  // Get user profile
+  getUserProfile: async (userId) => {
+    return await axiosInstance.get(`/api/v1/auth/get-buyer-profile/${userId}`);
+  },
+
   // 🔍 SEARCH AND FILTER HELPERS
 
   // Search stores by name or location

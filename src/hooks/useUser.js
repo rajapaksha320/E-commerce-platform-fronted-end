@@ -22,6 +22,7 @@ import {
   deleteAddress,
   updateUserProfile,
   deleteUserAccount,
+  getUserProfile,
   clearError,
   clearSuccess,
   clearStores,
@@ -29,6 +30,7 @@ import {
   clearWishlist,
   clearOrders,
   clearAddresses,
+  clearUserProfile,
 
   // Selectors
   selectStores,
@@ -60,6 +62,9 @@ import {
   selectDefaultAddress,
   selectAddressesLoading,
   selectAddressesError,
+  selectUserProfile,
+  selectProfileLoading,
+  selectProfileError,
   selectUserLoading,
   selectUserError,
   selectUserSuccess,
@@ -109,6 +114,11 @@ const useUser = () => {
   const defaultAddress = useSelector(selectDefaultAddress);
   const addressesLoading = useSelector(selectAddressesLoading);
   const addressesError = useSelector(selectAddressesError);
+
+  // 👤 PROFILE STATE
+  const userProfile = useSelector(selectUserProfile);
+  const profileLoading = useSelector(selectProfileLoading);
+  const profileError = useSelector(selectProfileError);
 
   // 🔄 GENERAL STATE
   const loading = useSelector(selectUserLoading);
@@ -262,6 +272,14 @@ const useUser = () => {
     [dispatch]
   );
 
+  // 👤 PROFILE ACTIONS
+  const fetchUserProfile = useCallback(
+    (userId) => {
+      return dispatch(getUserProfile(userId));
+    },
+    [dispatch]
+  );
+
   // 🔄 UTILITY ACTIONS
   const clearErrors = useCallback(() => {
     dispatch(clearError());
@@ -289,6 +307,10 @@ const useUser = () => {
 
   const resetAddresses = useCallback(() => {
     dispatch(clearAddresses());
+  }, [dispatch]);
+
+  const resetUserProfile = useCallback(() => {
+    dispatch(clearUserProfile());
   }, [dispatch]);
 
   // 🔍 HELPER FUNCTIONS
@@ -493,6 +515,9 @@ const useUser = () => {
     defaultAddress,
     addressesLoading,
     addressesError,
+    userProfile,
+    profileLoading,
+    profileError,
     loading,
     error,
     success,
@@ -519,6 +544,7 @@ const useUser = () => {
     removeAddress,
     updateProfile,
     deleteAccount,
+    fetchUserProfile,
     clearErrors,
     clearSuccessState,
     resetStores,
@@ -526,6 +552,7 @@ const useUser = () => {
     resetWishlist,
     resetOrders,
     resetAddresses,
+    resetUserProfile,
 
     // 🔍 HELPERS
     isItemInCart,

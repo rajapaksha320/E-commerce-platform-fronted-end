@@ -30,6 +30,9 @@ const initialState = {
   shopReviews: [],
   reviewsPagination: null,
 
+  // User Profile
+  userProfile: null,
+
   // Loading states
   loading: false,
   storesLoading: false,
@@ -38,6 +41,7 @@ const initialState = {
   ordersLoading: false,
   addressesLoading: false,
   reviewsLoading: false,
+  profileLoading: false,
 
   // Error states
   error: null,
@@ -47,6 +51,7 @@ const initialState = {
   ordersError: null,
   addressesError: null,
   reviewsError: null,
+  profileError: null,
 
   // Success states
   success: false,
@@ -357,6 +362,21 @@ export const deleteUserAccount = createAsyncThunk(
   }
 );
 
+// 👤 GET USER PROFILE ASYNC THUNK
+export const getUserProfile = createAsyncThunk(
+  "user/getUserProfile",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const response = await userService.getUserProfile(userId);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch user profile"
+      );
+    }
+  }
+);
+
 // User slice
 const userSlice = createSlice({
   name: "user",
@@ -397,6 +417,9 @@ const userSlice = createSlice({
     },
     clearAddresses: (state) => {
       state.addresses = [];
+    },
+    clearUserProfile: (state) => {
+      state.userProfile = null;
     },
   },
   extraReducers: (builder) => {
@@ -744,6 +767,21 @@ const userSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       });
+
+    // 👤 USER PROFILE
+    builder
+      .addCase(getUserProfile.pending, (state) => {
+        state.profileLoading = true;
+        state.profileError = null;
+      })
+      .addCase(getUserProfile.fulfilled, (state, action) => {
+        state.profileLoading = false;
+        state.userProfile = action.payload.data;
+      })
+      .addCase(getUserProfile.rejected, (state, action) => {
+        state.profileLoading = false;
+        state.profileError = action.payload;
+      });
   },
 });
 
@@ -755,6 +793,7 @@ export const {
   clearWishlist,
   clearOrders,
   clearAddresses,
+  clearUserProfile,
 } = userSlice.actions;
 
 // Selectors
@@ -807,6 +846,11 @@ export const selectDefaultAddress = (state) =>
   state.user.addresses.find((addr) => addr.isDefault);
 export const selectAddressesLoading = (state) => state.user.addressesLoading;
 export const selectAddressesError = (state) => state.user.addressesError;
+
+// Profile selectors
+export const selectUserProfile = (state) => state.user.userProfile;
+export const selectProfileLoading = (state) => state.user.profileLoading;
+export const selectProfileError = (state) => state.user.profileError;
 
 // General selectors
 export const selectUserLoading = (state) => state.user.loading;
