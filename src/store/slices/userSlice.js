@@ -33,6 +33,14 @@ const initialState = {
   // User Profile
   userProfile: null,
 
+  // Search & Filter
+  searchResults: [],
+  storeSearchResults: [],
+  searchPagination: null,
+  storeSearchPagination: null,
+  lastSearchParams: null,
+  lastStoreSearchParams: null,
+
   // Loading states
   loading: false,
   storesLoading: false,
@@ -42,6 +50,8 @@ const initialState = {
   addressesLoading: false,
   reviewsLoading: false,
   profileLoading: false,
+  searchLoading: false,
+  storeSearchLoading: false,
 
   // Error states
   error: null,
@@ -52,6 +62,8 @@ const initialState = {
   addressesError: null,
   reviewsError: null,
   profileError: null,
+  searchError: null,
+  storeSearchError: null,
 
   // Success states
   success: false,
@@ -377,6 +389,47 @@ export const getUserProfile = createAsyncThunk(
   }
 );
 
+// 🔍 SEARCH & FILTER ASYNC THUNKS
+export const searchProducts = createAsyncThunk(
+  "user/searchProducts",
+  async ({ searchParams, page = 1, pageSize = 10 }, { rejectWithValue }) => {
+    try {
+      const response = await userService.searchProducts(
+        searchParams,
+        page,
+        pageSize
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to search products"
+      );
+    }
+  }
+);
+
+export const searchStoreProducts = createAsyncThunk(
+  "user/searchStoreProducts",
+  async (
+    { sellerId, searchParams, page = 1, pageSize = 10 },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await userService.searchStoreProducts(
+        sellerId,
+        searchParams,
+        page,
+        pageSize
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to search store products"
+      );
+    }
+  }
+);
+
 // User slice
 const userSlice = createSlice({
   name: "user",
@@ -420,6 +473,16 @@ const userSlice = createSlice({
     },
     clearUserProfile: (state) => {
       state.userProfile = null;
+    },
+    clearSearchResults: (state) => {
+      state.searchResults = [];
+      state.searchPagination = null;
+      state.lastSearchParams = null;
+    },
+    clearStoreSearchResults: (state) => {
+      state.storeSearchResults = [];
+      state.storeSearchPagination = null;
+      state.lastStoreSearchParams = null;
     },
   },
   extraReducers: (builder) => {
@@ -782,6 +845,44 @@ const userSlice = createSlice({
         state.profileLoading = false;
         state.profileError = action.payload;
       });
+
+    // 🔍 SEARCH & FILTER
+    builder
+      .addCase(searchProducts.pending, (state) => {
+        state.searchLoading = true;
+        state.searchError = null;
+      })
+      .addCase(searchProducts.fulfilled, (state, action) => {
+        state.searchLoading = false;
+        state.searchResults = action.payload.data;
+        state.searchPagination = action.payload.pagination;
+        // Store the search parameters for reference
+        state.lastSearchParams = action.meta.arg.searchParams;
+      })
+      .addCase(searchProducts.rejected, (state, action) => {
+        state.searchLoading = false;
+        state.searchError = action.payload;
+      });
+
+    builder
+      .addCase(searchStoreProducts.pending, (state) => {
+        state.storeSearchLoading = true;
+        state.storeSearchError = null;
+      })
+      .addCase(searchStoreProducts.fulfilled, (state, action) => {
+        state.storeSearchLoading = false;
+        state.storeSearchResults = action.payload.data;
+        state.storeSearchPagination = action.payload.pagination;
+        // Store the search parameters for reference
+        state.lastStoreSearchParams = {
+          sellerId: action.meta.arg.sellerId,
+          searchParams: action.meta.arg.searchParams,
+        };
+      })
+      .addCase(searchStoreProducts.rejected, (state, action) => {
+        state.storeSearchLoading = false;
+        state.storeSearchError = action.payload;
+      });
   },
 });
 
@@ -794,6 +895,8 @@ export const {
   clearOrders,
   clearAddresses,
   clearUserProfile,
+  clearSearchResults,
+  clearStoreSearchResults,
 } = userSlice.actions;
 
 // Selectors
@@ -851,6 +954,24 @@ export const selectAddressesError = (state) => state.user.addressesError;
 export const selectUserProfile = (state) => state.user.userProfile;
 export const selectProfileLoading = (state) => state.user.profileLoading;
 export const selectProfileError = (state) => state.user.profileError;
+
+// Search selectors
+export const selectSearchResults = (state) => state.user.searchResults;
+export const selectSearchPagination = (state) => state.user.searchPagination;
+export const selectSearchLoading = (state) => state.user.searchLoading;
+export const selectSearchError = (state) => state.user.searchError;
+export const selectLastSearchParams = (state) => state.user.lastSearchParams;
+
+// Store search selectors
+export const selectStoreSearchResults = (state) =>
+  state.user.storeSearchResults;
+export const selectStoreSearchPagination = (state) =>
+  state.user.storeSearchPagination;
+export const selectStoreSearchLoading = (state) =>
+  state.user.storeSearchLoading;
+export const selectStoreSearchError = (state) => state.user.storeSearchError;
+export const selectLastStoreSearchParams = (state) =>
+  state.user.lastStoreSearchParams;
 
 // General selectors
 export const selectUserLoading = (state) => state.user.loading;

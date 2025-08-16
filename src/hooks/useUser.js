@@ -23,6 +23,8 @@ import {
   updateUserProfile,
   deleteUserAccount,
   getUserProfile,
+  searchProducts,
+  searchStoreProducts,
   clearError,
   clearSuccess,
   clearStores,
@@ -31,6 +33,8 @@ import {
   clearOrders,
   clearAddresses,
   clearUserProfile,
+  clearSearchResults,
+  clearStoreSearchResults,
 
   // Selectors
   selectStores,
@@ -65,6 +69,16 @@ import {
   selectUserProfile,
   selectProfileLoading,
   selectProfileError,
+  selectSearchResults,
+  selectSearchPagination,
+  selectSearchLoading,
+  selectSearchError,
+  selectLastSearchParams,
+  selectStoreSearchResults,
+  selectStoreSearchPagination,
+  selectStoreSearchLoading,
+  selectStoreSearchError,
+  selectLastStoreSearchParams,
   selectUserLoading,
   selectUserError,
   selectUserSuccess,
@@ -119,6 +133,20 @@ const useUser = () => {
   const userProfile = useSelector(selectUserProfile);
   const profileLoading = useSelector(selectProfileLoading);
   const profileError = useSelector(selectProfileError);
+
+  // 🔍 SEARCH STATE
+  const searchResults = useSelector(selectSearchResults);
+  const searchPagination = useSelector(selectSearchPagination);
+  const searchLoading = useSelector(selectSearchLoading);
+  const searchError = useSelector(selectSearchError);
+  const lastSearchParams = useSelector(selectLastSearchParams);
+
+  // 🏪 STORE SEARCH STATE
+  const storeSearchResults = useSelector(selectStoreSearchResults);
+  const storeSearchPagination = useSelector(selectStoreSearchPagination);
+  const storeSearchLoading = useSelector(selectStoreSearchLoading);
+  const storeSearchError = useSelector(selectStoreSearchError);
+  const lastStoreSearchParams = useSelector(selectLastStoreSearchParams);
 
   // 🔄 GENERAL STATE
   const loading = useSelector(selectUserLoading);
@@ -272,10 +300,26 @@ const useUser = () => {
     [dispatch]
   );
 
-  // 👤 PROFILE ACTIONS
   const fetchUserProfile = useCallback(
     (userId) => {
       return dispatch(getUserProfile(userId));
+    },
+    [dispatch]
+  );
+
+  // 🔍 SEARCH ACTIONS
+  const searchAllProducts = useCallback(
+    (searchParams, page = 1, pageSize = 10) => {
+      return dispatch(searchProducts({ searchParams, page, pageSize }));
+    },
+    [dispatch]
+  );
+
+  const searchProductsInStore = useCallback(
+    (sellerId, searchParams, page = 1, pageSize = 10) => {
+      return dispatch(
+        searchStoreProducts({ sellerId, searchParams, page, pageSize })
+      );
     },
     [dispatch]
   );
@@ -311,6 +355,14 @@ const useUser = () => {
 
   const resetUserProfile = useCallback(() => {
     dispatch(clearUserProfile());
+  }, [dispatch]);
+
+  const resetSearchResults = useCallback(() => {
+    dispatch(clearSearchResults());
+  }, [dispatch]);
+
+  const resetStoreSearchResults = useCallback(() => {
+    dispatch(clearStoreSearchResults());
   }, [dispatch]);
 
   // 🔍 HELPER FUNCTIONS
@@ -364,38 +416,61 @@ const useUser = () => {
     [orders]
   );
 
-  // 📊 COMPUTED VALUES
-  const cartSummary = {
-    itemCount: cartItemCount,
-    total: cartTotal,
-    isEmpty: cartItemCount === 0,
-  };
+  // 🔍 SEARCH HELPER FUNCTIONS
+  const performSearch = useCallback(
+    (filters = {}, page = 1, pageSize = 10) => {
+      const searchParams = {
+        categoryMain: filters.category || "",
+        PriceRange: filters.priceRange || "",
+        CustomerRating: filters.rating || 0,
+        color: filters.color || "",
+        brandName: filters.brand || "",
+      };
 
-  const wishlistSummary = {
-    productCount: productWishlist.reduce(
-      (total, list) => total + list.items.length,
-      0
-    ),
-    shopCount: shopWishlist.reduce(
-      (total, list) => total + list.items.length,
-      0
-    ),
-    isEmpty: productWishlist.length === 0 && shopWishlist.length === 0,
-  };
+      return searchAllProducts(searchParams, page, pageSize);
+    },
+    [searchAllProducts]
+  );
 
-  const ordersSummary = {
-    total: orders.length,
-    pending: getOrdersByStatus("pending").length,
-    completed: getOrdersByStatus("completed").length,
-    cancelled: getOrdersByStatus("cancelled").length,
-    pendingReviews: getPendingReviewOrders().length,
-  };
+  const performStoreSearch = useCallback(
+    (sellerId, filters = {}, page = 1, pageSize = 10) => {
+      const searchParams = {
+        categoryMain: filters.category || "",
+        PriceRange: filters.priceRange || "",
+        CustomerRating: filters.rating || 0,
+        color: filters.color || "",
+        brandName: filters.brand || "",
+      };
 
-  const addressesSummary = {
-    total: addresses.length,
-    hasDefault: !!defaultAddress,
-    maxReached: addresses.length >= 5, // API limit
-  };
+      return searchProductsInStore(sellerId, searchParams, page, pageSize);
+    },
+    [searchProductsInStore]
+  );
+
+  const getSearchFilters = useCallback(() => {
+    if (!lastSearchParams) return null;
+
+    return {
+      category: lastSearchParams.categoryMain,
+      priceRange: lastSearchParams.PriceRange,
+      rating: lastSearchParams.CustomerRating,
+      color: lastSearchParams.color,
+      brand: lastSearchParams.brandName,
+    };
+  }, [lastSearchParams]);
+
+  const getStoreSearchFilters = useCallback(() => {
+    if (!lastStoreSearchParams) return null;
+
+    return {
+      sellerId: lastStoreSearchParams.sellerId,
+      category: lastStoreSearchParams.searchParams.categoryMain,
+      priceRange: lastStoreSearchParams.searchParams.PriceRange,
+      rating: lastStoreSearchParams.searchParams.CustomerRating,
+      color: lastStoreSearchParams.searchParams.color,
+      brand: lastStoreSearchParams.searchParams.brandName,
+    };
+  }, [lastStoreSearchParams]);
 
   // 🚀 BULK OPERATIONS
   const bulkAddToCart = useCallback(
@@ -484,6 +559,57 @@ const useUser = () => {
     [createOrder]
   );
 
+  // 📊 COMPUTED VALUES
+  const cartSummary = {
+    itemCount: cartItemCount,
+    total: cartTotal,
+    isEmpty: cartItemCount === 0,
+  };
+
+  const wishlistSummary = {
+    productCount: productWishlist.reduce(
+      (total, list) => total + list.items.length,
+      0
+    ),
+    shopCount: shopWishlist.reduce(
+      (total, list) => total + list.items.length,
+      0
+    ),
+    isEmpty: productWishlist.length === 0 && shopWishlist.length === 0,
+  };
+
+  const ordersSummary = {
+    total: orders.length,
+    pending: getOrdersByStatus("pending").length,
+    completed: getOrdersByStatus("completed").length,
+    cancelled: getOrdersByStatus("cancelled").length,
+    pendingReviews: getPendingReviewOrders().length,
+  };
+
+  const addressesSummary = {
+    total: addresses.length,
+    hasDefault: !!defaultAddress,
+    maxReached: addresses.length >= 5, // API limit
+  };
+
+  const searchSummary = {
+    hasResults: searchResults.length > 0,
+    totalResults: searchPagination?.totalItems || 0,
+    currentPage: searchPagination?.currentPage || 1,
+    totalPages: searchPagination?.totalPages || 0,
+    isLoading: searchLoading,
+    hasError: !!searchError,
+  };
+
+  const storeSearchSummary = {
+    hasResults: storeSearchResults.length > 0,
+    totalResults: storeSearchPagination?.totalItems || 0,
+    currentPage: storeSearchPagination?.currentPage || 1,
+    totalPages: storeSearchPagination?.totalPages || 0,
+    isLoading: storeSearchLoading,
+    hasError: !!storeSearchError,
+  };
+
   return {
     // 📊 STATE
     stores,
@@ -518,6 +644,16 @@ const useUser = () => {
     userProfile,
     profileLoading,
     profileError,
+    searchResults,
+    searchPagination,
+    searchLoading,
+    searchError,
+    lastSearchParams,
+    storeSearchResults,
+    storeSearchPagination,
+    storeSearchLoading,
+    storeSearchError,
+    lastStoreSearchParams,
     loading,
     error,
     success,
@@ -545,6 +681,8 @@ const useUser = () => {
     updateProfile,
     deleteAccount,
     fetchUserProfile,
+    searchAllProducts,
+    searchProductsInStore,
     clearErrors,
     clearSuccessState,
     resetStores,
@@ -553,6 +691,8 @@ const useUser = () => {
     resetOrders,
     resetAddresses,
     resetUserProfile,
+    resetSearchResults,
+    resetStoreSearchResults,
 
     // 🔍 HELPERS
     isItemInCart,
@@ -568,6 +708,8 @@ const useUser = () => {
     wishlistSummary,
     ordersSummary,
     addressesSummary,
+    searchSummary,
+    storeSearchSummary,
 
     // 🚀 BULK OPERATIONS
     bulkAddToCart,
@@ -578,6 +720,12 @@ const useUser = () => {
     quickAddToCart,
     quickToggleWishlist,
     quickReorder,
+
+    // 🔍 SEARCH HELPERS
+    performSearch,
+    performStoreSearch,
+    getSearchFilters,
+    getStoreSearchFilters,
   };
 };
 

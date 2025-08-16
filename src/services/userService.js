@@ -216,6 +216,49 @@ const userService = {
     return await axiosInstance.get(`/api/v1/auth/get-buyer-profile/${userId}`);
   },
 
+  // 🔍 SEARCH & FILTER SERVICES
+
+  // Main search/filter across all stores
+  searchProducts: async (searchParams, page = 1, pageSize = 10) => {
+    const payload = {
+      categoryMain: searchParams.categoryMain,
+      PriceRange: searchParams.PriceRange,
+      CustomerRating: searchParams.CustomerRating,
+      color: searchParams.color,
+      brandName: searchParams.brandName,
+      page,
+      pageSize,
+    };
+
+    return await axiosInstance.post(
+      `/api/v1/category/main-filter?&page=${page}&pageSize=${pageSize}`,
+      payload
+    );
+  },
+
+  // Search products in a specific store
+  searchStoreProducts: async (
+    sellerId,
+    searchParams,
+    page = 1,
+    pageSize = 10
+  ) => {
+    const payload = {
+      categoryMain: searchParams.categoryMain,
+      PriceRange: searchParams.PriceRange,
+      CustomerRating: searchParams.CustomerRating,
+      color: searchParams.color,
+      brandName: searchParams.brandName,
+      page,
+      pageSize,
+    };
+
+    return await axiosInstance.post(
+      `/api/v1/category/main-filter?sellerId=${sellerId}&page=${page}&pageSize=${pageSize}`,
+      payload
+    );
+  },
+
   // 🔍 SEARCH AND FILTER HELPERS
 
   // Search stores by name or location
