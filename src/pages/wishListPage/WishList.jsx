@@ -38,10 +38,16 @@ import {
 import useUser from "../../hooks/useUser";
 import { selectUser as selectAuthUser } from "../../store/slices/authSlice";
 import Pagination from "../../components/ui/Pagination";
+import ToastNotification, {
+  useToast,
+} from "../../components/ui/ToastNotification"; // Import the new component
 
 const WishList = () => {
   const navigate = useNavigate();
   const authUser = useSelector(selectAuthUser);
+
+  // Toast notification hook
+  const { toastRef, showToast } = useToast();
 
   // User hook for wishlist management
   const {
@@ -66,7 +72,6 @@ const WishList = () => {
 
   // Cart operation states
   const [addingToCart, setAddingToCart] = useState(new Set());
-  const [notifications, setNotifications] = useState([]);
 
   // Pagination states
   const [productsPage, setProductsPage] = useState(1);
@@ -195,43 +200,16 @@ const WishList = () => {
 
     try {
       await removeFromWishlist(authUser._id, itemId);
-      showNotification(`Item removed from wishlist`, "success");
+      showToast.success("Item removed from wishlist");
     } catch (error) {
       console.error("Failed to remove from wishlist:", error);
-      showNotification(
-        "Failed to remove from wishlist. Please try again.",
-        "error"
-      );
+      showToast.error("Failed to remove from wishlist. Please try again.");
     }
   };
 
   // Check if product is in cart
   const isProductInCart = (productId) => {
     return isItemInCart(productId);
-  };
-
-  // Show professional notification
-  const showNotification = (message, type = "success", action = null) => {
-    const id = Date.now();
-    const notification = {
-      id,
-      message,
-      type,
-      action,
-      timestamp: Date.now(),
-    };
-
-    setNotifications((prev) => [...prev, notification]);
-
-    // Auto-dismiss after 4 seconds
-    setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-    }, 4000);
-  };
-
-  // Remove notification manually
-  const removeNotification = (id) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   // Handle add to cart
@@ -243,7 +221,7 @@ const WishList = () => {
 
     // Check if already in cart
     if (isProductInCart(product._id)) {
-      showNotification("Item is already in your cart", "info", {
+      showToast.cart("Item is already in your cart", {
         text: "View Cart",
         action: () => navigate("/shopping-cart"),
       });
@@ -259,17 +237,17 @@ const WishList = () => {
       // Refresh cart items to update status
       await fetchCartItems(authUser._id, 1, 100);
 
-      showNotification(
-        `"${product.title}" added to cart successfully!`,
-        "success",
-        {
-          text: "View Cart",
-          action: () => navigate("/shopping-cart"),
-        }
-      );
+      // Get product name with fallbacks
+      const productName =
+        product.title || product.name || product.productName || "Item";
+
+      showToast.success(`"${productName}" added to cart successfully!`, {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
     } catch (error) {
       console.error("Failed to add to cart:", error);
-      showNotification("Failed to add to cart. Please try again.", "error", {
+      showToast.error("Failed to add to cart. Please try again.", {
         text: "Retry",
         action: () => handleAddToCart(product),
       });
@@ -300,8 +278,12 @@ const WishList = () => {
 
     const title =
       type === "shop"
-        ? `Check out ${item.basicInformation?.storeName || item.name}`
-        : `Check out ${item.title}`;
+        ? `Check out ${
+            item.basicInformation?.storeName || item.name || "this shop"
+          }`
+        : `Check out ${
+            item.title || item.name || item.productName || "this product"
+          }`;
 
     try {
       if (navigator.share) {
@@ -309,19 +291,17 @@ const WishList = () => {
           title: title,
           url: url,
         });
-        setShareMessage("Shared successfully!");
+        showToast.success("Shared successfully!");
       } else {
         await navigator.clipboard.writeText(url);
-        setShareMessage("Link copied to clipboard!");
+        showToast.success("Link copied to clipboard!");
       }
     } catch (error) {
       if (error.name !== "AbortError") {
         prompt("Copy this link to share:", url);
-        setShareMessage("Link ready to copy!");
+        showToast.info("Link ready to copy!");
       }
     }
-
-    setTimeout(() => setShareMessage(""), 3000);
   };
 
   const getBadgeVariant = (status) => {
@@ -418,173 +398,15 @@ const WishList = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Share Success Message */}
+      {/* Toast Notification Component */}
+      <ToastNotification ref={toastRef} />
+
+      {/* Share Success Message (keeping the old one for share functionality) */}
       {shareMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg animate-pulse">
+        <div className="fixed top-4 right-4 z-40 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg animate-pulse">
           {shareMessage}
         </div>
       )}
-
-      {/* Professional Mobile-Responsive Toast Notifications */}
-      <div className="fixed top-16 sm:top-20 left-2 right-2 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 z-50 space-y-2 sm:w-full sm:max-w-md">
-        {notifications.map((notification) => (
-          <div
-            key={notification.id}
-            className={`
-              relative overflow-hidden rounded-lg sm:rounded-xl shadow-lg sm:shadow-2xl border backdrop-blur-sm
-              transform transition-all duration-500 ease-out
-              translate-y-0 opacity-100 scale-100
-              ${
-                notification.type === "success"
-                  ? "bg-white border-green-200 text-gray-800"
-                  : notification.type === "error"
-                  ? "bg-white border-red-200 text-gray-800"
-                  : "bg-white border-blue-200 text-gray-800"
-              }
-            `}
-            style={{
-              animation: "slideDown 0.5s ease-out",
-            }}
-          >
-            {/* Progress bar */}
-            <div
-              className={`absolute top-0 left-0 h-0.5 sm:h-1 ${
-                notification.type === "success"
-                  ? "bg-green-500"
-                  : notification.type === "error"
-                  ? "bg-red-500"
-                  : "bg-blue-500"
-              }`}
-              style={{
-                width: "100%",
-                animation: "progress 4s linear",
-              }}
-            />
-
-            <div className="p-3 sm:p-4">
-              <div className="flex items-start space-x-2 sm:space-x-3">
-                {/* Icon */}
-                <div
-                  className={`flex-shrink-0 p-1 sm:p-1.5 rounded-full ${
-                    notification.type === "success"
-                      ? "bg-green-100"
-                      : notification.type === "error"
-                      ? "bg-red-100"
-                      : "bg-blue-100"
-                  }`}
-                >
-                  {notification.type === "success" && (
-                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                  )}
-                  {notification.type === "error" && (
-                    <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
-                  )}
-                  {notification.type === "info" && (
-                    <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-900 leading-relaxed line-clamp-2">
-                    {notification.message}
-                  </p>
-
-                  {/* Action button */}
-                  {notification.action && (
-                    <button
-                      onClick={() => {
-                        notification.action.action();
-                        removeNotification(notification.id);
-                      }}
-                      className={`mt-1.5 sm:mt-2 text-xs sm:text-sm font-semibold underline-offset-2 hover:underline active:scale-95 transition-all duration-200 ${
-                        notification.type === "success"
-                          ? "text-green-700 hover:text-green-800 active:text-green-900"
-                          : notification.type === "error"
-                          ? "text-red-700 hover:text-red-800 active:text-red-900"
-                          : "text-blue-700 hover:text-blue-800 active:text-blue-900"
-                      }`}
-                    >
-                      {notification.action.text}
-                    </button>
-                  )}
-                </div>
-
-                {/* Close button */}
-                <button
-                  onClick={() => removeNotification(notification.id)}
-                  className="flex-shrink-0 p-1.5 sm:p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 active:bg-gray-200 active:scale-95 transition-all duration-200 touch-manipulation"
-                  aria-label="Close notification"
-                >
-                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <style jsx>{`
-        @keyframes slideDown {
-          from {
-            transform: translateY(-100%);
-            opacity: 0;
-            scale: 0.95;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-            scale: 1;
-          }
-        }
-
-        @keyframes progress {
-          from {
-            width: 100%;
-          }
-          to {
-            width: 0%;
-          }
-        }
-
-        /* Mobile-specific optimizations */
-        @media (max-width: 640px) {
-          @keyframes slideDown {
-            from {
-              transform: translateY(-100%);
-              opacity: 0;
-              scale: 0.98;
-            }
-            to {
-              transform: translateY(0);
-              opacity: 1;
-              scale: 1;
-            }
-          }
-        }
-
-        /* Ensure proper line clamping */
-        .line-clamp-2 {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        /* Touch-friendly interactions */
-        .touch-manipulation {
-          touch-action: manipulation;
-          -webkit-tap-highlight-color: transparent;
-        }
-
-        /* Prevent text selection on notification */
-        .notification-content {
-          -webkit-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
-          user-select: none;
-        }
-      `}</style>
 
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
@@ -966,10 +788,15 @@ const WishList = () => {
                         >
                           <div>
                             <p className="text-xs text-blue-600 font-medium">
-                              {product.brand}
+                              {product.brand ||
+                                product.brandName ||
+                                "Unknown Brand"}
                             </p>
                             <h3 className="font-medium text-gray-900 text-xs sm:text-sm line-clamp-2">
-                              {product.title}
+                              {product.title ||
+                                product.name ||
+                                product.productName ||
+                                "Unknown Product"}
                             </h3>
                           </div>
 
