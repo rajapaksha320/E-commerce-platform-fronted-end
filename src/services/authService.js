@@ -106,7 +106,7 @@ const authService = {
   },
 };
 
-// Helper function to generate tenant ID
+// Helper function to generate tenant id
 function generateTenantId() {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
   let tenantId = '';
