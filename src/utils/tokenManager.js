@@ -10,7 +10,8 @@ export const setAuthToken = (accessToken, refreshToken) => {
   
   if (refreshToken) {
     // Set refresh token in cookie
-    setCookie('refreshToken', refreshToken, 7); // 7 days expiry
+    // 7 Days expiery
+    setCookie('refreshToken', refreshToken, 7); 
   }
 };
 
