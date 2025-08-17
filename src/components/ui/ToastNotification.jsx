@@ -224,8 +224,8 @@ const ToastNotification = forwardRef((props, ref) => {
         ))}
       </div>
 
-      {/* Styles */}
-      <style jsx>{`
+      {/* Styles - Using regular style tag instead of styled-jsx */}
+      <style>{`
         @keyframes slideDown {
           from {
             transform: translateY(-100%);
