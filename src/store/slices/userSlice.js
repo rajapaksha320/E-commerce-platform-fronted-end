@@ -70,7 +70,7 @@ const initialState = {
   message: "",
 };
 
-// 🏪 STORE ASYNC THUNKS
+// STORE ASYNC THUNKS
 export const getAllStores = createAsyncThunk(
   "user/getAllStores",
   async ({ page = 1, pageSize = 10 }, { rejectWithValue }) => {
@@ -121,7 +121,7 @@ export const getShopListings = createAsyncThunk(
   }
 );
 
-// 🛒 CART ASYNC THUNKS
+// CART ASYNC THUNKS
 export const addToCart = createAsyncThunk(
   "user/addToCart",
   async ({ buyerId, listingId, quantity }, { rejectWithValue }) => {
@@ -185,7 +185,7 @@ export const deleteCartItem = createAsyncThunk(
   }
 );
 
-// ❤️ WISHLIST ASYNC THUNKS
+// WISHLIST ASYNC THUNKS
 export const getWishlist = createAsyncThunk(
   "user/getWishlist",
   async (userId, { rejectWithValue }) => {
@@ -673,7 +673,6 @@ const userSlice = createSlice({
         state.ordersLoading = false;
         state.success = true;
         state.message = action.payload.message;
-        // Add new order to the beginning of orders array
         state.orders.unshift(action.payload.order);
       })
       .addCase(placeOrder.rejected, (state, action) => {
