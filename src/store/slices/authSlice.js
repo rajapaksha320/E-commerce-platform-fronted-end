@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import authService from "../../services/authService";
 import { setAuthToken, removeAuthToken } from "../../utils/tokenManager";
 
-// 🏢 PROFESSIONAL: Safe localStorage utility functions
+// localStorage utility functions
 const storage = {
   get: (key, defaultValue = null) => {
     try {
@@ -62,7 +62,7 @@ const storage = {
   },
 };
 
-// 🏢 PROFESSIONAL: Initialize state from localStorage (Industry Standard)
+// Initialize state from localStorage
 const getInitialAuthState = () => {
   const accessToken = storage.get("accessToken");
   const userData = storage.get("userData");
@@ -86,10 +86,10 @@ const getInitialAuthState = () => {
   };
 };
 
-// 🏢 PROFESSIONAL: Initial state with complete restoration
+//  Initial state with complete restoration
 const initialState = getInitialAuthState();
 
-// 🏢 PROFESSIONAL: Helper to persist auth data
+// Helper to persist auth data
 const persistAuthData = (authData) => {
   storage.set("userData", authData.user);
   storage.set("userRole", authData.userRole);
@@ -199,7 +199,7 @@ export const refreshAccessToken = createAsyncThunk(
   }
 );
 
-// 🏢 PROFESSIONAL: Auth slice with complete persistence
+// Auth slice with complete persistence
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -208,7 +208,7 @@ const authSlice = createSlice({
       // Clear tokens (your existing logic)
       removeAuthToken();
 
-      // 🏢 PROFESSIONAL: Clear all auth data from localStorage
+      // Clear all auth data from localStorage
       storage.clear();
 
       // Reset state to initial values
@@ -259,7 +259,7 @@ const authSlice = createSlice({
         state.error = action.payload;
       });
 
-    // 🏢 PROFESSIONAL: Seller Registration with complete persistence
+    // Seller Registration with complete persistence
     builder
       .addCase(sellerRegistration.pending, (state) => {
         state.loading = true;
@@ -278,7 +278,7 @@ const authSlice = createSlice({
         state.emailVerified = action.payload.user.emailVerified;
         state.isAuthenticated = true;
 
-        // 🏢 PROFESSIONAL: Persist complete auth data
+        // Persist complete auth data
         persistAuthData({
           user: action.payload.user,
           userRole: action.payload.user.userRole,
@@ -293,7 +293,7 @@ const authSlice = createSlice({
         state.error = action.payload;
       });
 
-    // 🏢 PROFESSIONAL: Login with UPDATED response structure
+    // Login with UPDATED response structure
     builder
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
@@ -304,10 +304,10 @@ const authSlice = createSlice({
         state.success = true;
         state.message = action.payload.message;
 
-        // Extract data from the updated profile structure
+        // Extract data from profile structure
         const profile = action.payload.profile;
 
-        // Build complete user object with UPDATED structure including all new fields
+        // user object structure 
         const userData = {
           _id: profile._id,
           userId: action.payload.userId,
@@ -318,27 +318,16 @@ const authSlice = createSlice({
           firstName: profile.firstName,
           lastName: profile.lastName,
           agreeTerms: profile.agreeTerms,
-
-          // 🆕 NEW PROFILE FIELDS from updated response
           bio: profile.bio || "",
           dateOfBirth: profile.dateOfBirth || null,
           gender: profile.gender || null,
           phoneNumber: profile.phoneNumber || null,
           isActive: profile.isActive || true,
-
-          // Business info (for sellers)
           businessInfo: profile.businessInfo || null,
-          // Contact info
           contactInfo: profile.contactInfo || null,
-
-          // Wishlist arrays
           productWishlists: profile.productWishlists || [],
           shopWishlists: profile.shopWishlists || [],
-
-          // Legacy wishlist for backwards compatibility
           userWishlist: profile.userWishlist || [],
-
-          // System fields
           otp: profile.otp || null,
           otpExpires: profile.otpExpires || null,
           createdAt: profile.createdAt,
@@ -353,7 +342,7 @@ const authSlice = createSlice({
         state.emailVerified = action.payload.emailVerified;
         state.isAuthenticated = true;
 
-        // 🏢 PROFESSIONAL: Persist complete auth data
+        // Persist complete auth data
         persistAuthData({
           user: userData,
           userRole: action.payload.userRole,
@@ -363,7 +352,7 @@ const authSlice = createSlice({
 
         setAuthToken(action.payload.access_token, action.payload.refresh_token);
 
-        console.log("✅ Professional auth persistence complete:", {
+        console.log("Professional auth persistence complete:", {
           userRole: action.payload.userRole,
           isAuthenticated: true,
           hasUserData: true,
@@ -437,7 +426,7 @@ const authSlice = createSlice({
         state.error = action.payload;
       });
 
-    // 🏢 PROFESSIONAL: Refresh Token handling
+    // Refresh Token handling
     builder
       .addCase(refreshAccessToken.pending, (state) => {
         state.loading = true;
@@ -456,7 +445,7 @@ const authSlice = createSlice({
         state.tenantId = null;
         state.emailVerified = false;
 
-        // 🏢 PROFESSIONAL: Clear all data on token refresh failure
+        // Clear all data on token refresh failure
         removeAuthToken();
         storage.clear();
       });
@@ -466,7 +455,7 @@ const authSlice = createSlice({
 export const { logout, clearError, clearSuccess, setTokens, setResetEmail } =
   authSlice.actions;
 
-// 🆕 ENHANCED SELECTORS: For UI display purposes
+// Selectors
 export const selectAuth = (state) => state.auth;
 export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
 export const selectUserRole = (state) => state.auth.userRole;
@@ -478,7 +467,7 @@ export const selectMessage = (state) => state.auth.message;
 export const selectResetEmail = (state) => state.auth.resetEmail;
 export const selectOtpVerified = (state) => state.auth.otpVerified;
 
-// 🆕 NEW SELECTORS: For navbar and profile display
+// For navbar and profile display
 export const selectUserFirstName = (state) => state.auth.user?.firstName || "";
 export const selectUserLastName = (state) => state.auth.user?.lastName || "";
 export const selectUserFullName = (state) => {
@@ -495,7 +484,7 @@ export const selectUserInitials = (state) => {
   return `${firstInitial}${lastInitial}`;
 };
 
-// 🆕 UPDATED PROFILE SELECTORS: For the new profile fields
+// For the  profile fields
 export const selectUserBio = (state) => state.auth.user?.bio || "";
 export const selectUserDateOfBirth = (state) =>
   state.auth.user?.dateOfBirth || null;
@@ -504,7 +493,7 @@ export const selectUserPhoneNumber = (state) =>
   state.auth.user?.phoneNumber || null;
 export const selectUserIsActive = (state) => state.auth.user?.isActive || false;
 
-// 🆕 WISHLIST SELECTORS: For the new wishlist structure
+// wishlist structure
 export const selectProductWishlists = (state) =>
   state.auth.user?.productWishlists || [];
 export const selectShopWishlists = (state) =>
@@ -512,7 +501,7 @@ export const selectShopWishlists = (state) =>
 export const selectLegacyUserWishlist = (state) =>
   state.auth.user?.userWishlist || [];
 
-// 🆕 BUSINESS SELECTORS: For seller-specific information
+// seller-specific information
 export const selectBusinessInfo = (state) =>
   state.auth.user?.businessInfo || null;
 export const selectBusinessName = (state) =>
@@ -524,7 +513,7 @@ export const selectBusinessWebsite = (state) =>
 export const selectTaxId = (state) =>
   state.auth.user?.businessInfo?.taxIdOrEIN || "";
 
-// 🆕 CONTACT SELECTORS: For contact information
+// For contact information
 export const selectContactInfo = (state) =>
   state.auth.user?.contactInfo || null;
 export const selectUserAddress = (state) => {
@@ -546,11 +535,11 @@ export const selectUserPhone = (state) =>
   state.auth.user?.phoneNumber ||
   "";
 
-// 🆕 ROLE-BASED SELECTORS: For conditional rendering
+// For conditional rendering
 export const selectIsSeller = (state) => state.auth.userRole === "seller";
 export const selectIsBuyer = (state) => state.auth.userRole === "buyer";
 
-// 🆕 DISPLAY HELPERS: For common UI patterns
+// For common UI patterns
 export const selectDisplayName = (state) => {
   const user = state.auth.user;
   if (!user) return "User";
@@ -575,7 +564,6 @@ export const selectProfileDisplayInfo = (state) => {
     role: state.auth.userRole,
     businessName: user.businessInfo?.businessName || null,
     displayName: selectDisplayName(state),
-    // New profile fields
     bio: user.bio,
     dateOfBirth: user.dateOfBirth,
     gender: user.gender,
@@ -584,7 +572,7 @@ export const selectProfileDisplayInfo = (state) => {
   };
 };
 
-// 🆕 PROFILE COMPLETION HELPER
+// helper to check if profile is complete
 export const selectProfileCompleteness = (state) => {
   const user = state.auth.user;
   if (!user) return { percentage: 0, missingFields: [] };
