@@ -663,7 +663,7 @@ const userSlice = createSlice({
         state.wishlistError = action.payload;
       });
 
-    // 📦 ORDERS
+    // ORDERS
     builder
       .addCase(placeOrder.pending, (state) => {
         state.ordersLoading = true;
@@ -725,7 +725,7 @@ const userSlice = createSlice({
         state.reviewsError = action.payload;
       });
 
-    // 🏠 ADDRESSES
+    // ADDRESSES
     builder
       .addCase(getBuyerAddresses.pending, (state) => {
         state.addressesLoading = true;
@@ -765,7 +765,7 @@ const userSlice = createSlice({
         state.addressesLoading = false;
         state.success = true;
         state.message = action.payload.message;
-        // Update the specific address
+        // Update the specific address of user
         const index = state.addresses.findIndex(
           (addr) => addr._id === action.payload.data._id
         );
@@ -787,7 +787,7 @@ const userSlice = createSlice({
         state.addressesLoading = false;
         state.success = true;
         state.message = "Address deleted successfully";
-        // Remove the deleted address
+        // Remove the deleted address of user
         state.addresses = state.addresses.filter(
           (addr) => addr._id !== action.payload.addressId
         );
@@ -797,7 +797,7 @@ const userSlice = createSlice({
         state.addressesError = action.payload;
       });
 
-    // 👤 PROFILE
+    // PROFILE
     builder
       .addCase(updateUserProfile.pending, (state) => {
         state.loading = true;
@@ -830,7 +830,7 @@ const userSlice = createSlice({
         state.error = action.payload;
       });
 
-    // 👤 USER PROFILE
+    // USER PROFILE
     builder
       .addCase(getUserProfile.pending, (state) => {
         state.profileLoading = true;
