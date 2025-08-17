@@ -16,29 +16,47 @@ import {
   UserCircle,
   ChevronDown,
   Star,
+  Bell,
 } from "lucide-react";
 
 import { Button, Input } from "../../ui/ContactUis/Uis";
 import AuthModal from "../../authComponents/AuthModal";
 import SearchDropdown from "./SearchDropdown";
 import { useNavigate } from "react-router-dom";
+import useUser from "../../../hooks/useUser"; // Import the useUser hook
 
-// 🏢 PROFESSIONAL: Redux selectors
-import { 
+// Redux selectors
+import {
   logout,
   selectIsAuthenticated,
   selectUser,
-  selectUserRole
+  selectUserRole,
 } from "../../../store/slices/authSlice";
 
 const NavBar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
-  // 🏢 PROFESSIONAL: Redux state
+
+  // Redux state
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const user = useSelector(selectUser);
   const userRole = useSelector(selectUserRole);
+
+  // Cart & Wishlist Redux integration
+  const {
+    // Cart data
+    cartItemCount,
+    cartLoading,
+    cartSummary,
+
+    // Wishlist data
+    wishlistSummary,
+    wishlistLoading,
+
+    // Actions
+    fetchCartItems,
+    fetchWishlist,
+  } = useUser();
 
   // Local state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -51,11 +69,30 @@ const NavBar = () => {
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  // Cart state (you can move this to global state management)
-  const [cartItemsCount, setCartItemsCount] = useState(3);
-
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
+
+  // Get user ID for fetching cart and wishlist
+  const userId = user?._id || user?.userId;
+  const buyerId = userId;
+
+  // Fetch cart and wishlist data when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && buyerId) {
+      // Fetch cart items (first page with small limit for count)
+      fetchCartItems(buyerId, 1, 10);
+
+      // Fetch wishlist data
+      fetchWishlist(buyerId);
+    }
+  }, [isAuthenticated, buyerId, fetchCartItems, fetchWishlist]);
+
+  // Get real cart count
+  const realCartItemsCount = cartSummary?.itemCount || cartItemCount || 0;
+
+  // Get real wishlist count
+  const realWishlistCount =
+    (wishlistSummary?.productCount || 0) + (wishlistSummary?.shopCount || 0);
 
   const navItems = [
     { name: "Home", href: "/" },
@@ -161,7 +198,7 @@ const NavBar = () => {
     navigate("/seller-registration");
   };
 
-  // 🏢 PROFESSIONAL: Logout handler
+  // Logout handler
   const handleLogout = () => {
     dispatch(logout());
     setIsProfileMenuOpen(false);
@@ -176,22 +213,30 @@ const NavBar = () => {
     setIsMenuOpen(false);
   };
 
-  // 🏢 PROFESSIONAL: Helper function to get user display info
+  // Helper function to get user display info
   const getUserInfo = () => {
     if (!user) return null;
-    
+
     return {
-      name: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 
-            user.email ? user.email.split("@")[0] : 'User',
-      email: user.email || '',
-      avatar: user.avatar || null
+      name: user.firstName
+        ? `${user.firstName} ${user.lastName || ""}`.trim()
+        : user.email
+        ? user.email.split("@")[0]
+        : "User",
+      email: user.email || "",
+      avatar: user.avatar || null,
     };
   };
 
-  // 🏢 PROFESSIONAL: Generate user initials
+  // Generate user initials
   const getInitials = (name, email) => {
     if (name && name !== email?.split("@")[0]) {
-      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+      return name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
     }
     return email ? email.charAt(0).toUpperCase() : "U";
   };
@@ -265,33 +310,35 @@ const NavBar = () => {
                     </span>
                   </Button> */}
 
-                  {/* Wishlist - Mobile and up */}
+                  {/* Wishlist: Updated with real count */}
                   <Button
                     variant="ghost"
                     onClick={handleWishlistClick}
                     className="relative p-2 xl:p-2.5 text-gray-600 hover:text-pink-600 transition-all duration-200 rounded-xl hover:bg-pink-50 group"
                   >
                     <Heart className="h-4 w-4 xl:h-5 xl:w-5 group-hover:fill-pink-100" />
-                    <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs rounded-full h-3 w-3 xl:h-4 xl:w-4 flex items-center justify-center text-[10px] xl:text-xs">
-                      2
-                    </span>
+                    {realWishlistCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs rounded-full h-3 w-3 xl:h-4 xl:w-4 flex items-center justify-center text-[10px] xl:text-xs">
+                        {realWishlistCount > 99 ? "99+" : realWishlistCount}
+                      </span>
+                    )}
                   </Button>
 
-                  {/* Shopping Cart with Navigation */}
+                  {/* Shopping Cart: Updated with real count */}
                   <Button
                     variant="ghost"
                     onClick={handleShoppingCartClick}
                     className="relative p-2 xl:p-2.5 text-gray-600 hover:text-blue-600 transition-all duration-200 rounded-xl hover:bg-blue-50 group"
                   >
                     <ShoppingCart className="h-4 w-4 xl:h-5 xl:w-5" />
-                    {cartItemsCount > 0 && (
+                    {realCartItemsCount > 0 && (
                       <span className="absolute -top-1 -right-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs rounded-full h-4 w-4 xl:h-5 xl:w-5 flex items-center justify-center font-medium shadow-lg text-[10px] xl:text-xs">
-                        {cartItemsCount > 99 ? "99+" : cartItemsCount}
+                        {realCartItemsCount > 99 ? "99+" : realCartItemsCount}
                       </span>
                     )}
                   </Button>
 
-                  {/* 🏢 PROFESSIONAL: User Profile - Tablet and Desktop */}
+                  {/* User Profile - Tablet and Desktop */}
                   <div className="hidden md:block relative ml-1 xl:ml-2 profile-menu-container">
                     {!isAuthenticated ? (
                       <div className="flex space-x-2 xl:space-x-3">
@@ -326,10 +373,10 @@ const NavBar = () => {
                             <img
                               src={userInfo.avatar}
                               alt="Profile"
-                              className="w-7 h-7 xl:w-9 xl:h-9 rounded-full ring-2 ring-blue-100"
+                              className="w-7 h-7 xl:w-9 xl:h-9 rounded-full ring-2 ring-blue-100 object-cover"
                             />
                           ) : (
-                            <div className="w-7 h-7 xl:w-9 xl:h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-xs xl:text-sm shadow-inner">
+                            <div className="w-7 h-7 xl:w-9 xl:h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-xs xl:text-sm shadow-inner border-0">
                               {getInitials(userInfo?.name, userInfo?.email)}
                             </div>
                           )}
@@ -346,12 +393,12 @@ const NavBar = () => {
                           <ChevronDown className="h-3 w-3 xl:h-4 xl:w-4 text-gray-400 hidden lg:block" />
                         </Button>
 
-                        {/* 🏢 PROFESSIONAL: Enhanced Profile Dropdown */}
+                        {/* Enhanced Profile Dropdown */}
                         {isProfileMenuOpen && (
                           <div className="absolute right-0 mt-2 w-56 xl:w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50 backdrop-blur-sm">
                             <div className="px-4 xl:px-6 py-3 xl:py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-2xl">
                               <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 xl:w-12 xl:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg text-sm xl:text-base">
+                                <div className="w-10 h-10 xl:w-12 xl:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg text-sm xl:text-base border-0 overflow-hidden">
                                   {getInitials(userInfo?.name, userInfo?.email)}
                                 </div>
                                 <div>
@@ -396,6 +443,20 @@ const NavBar = () => {
                               <Button
                                 variant="ghost"
                                 onClick={() => {
+                                  handleShoppingCartClick();
+                                  setIsProfileMenuOpen(false);
+                                }}
+                                className="flex items-center w-full px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 justify-start"
+                              >
+                                <ShoppingCart className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
+                                Shopping Cart
+                                <span className="ml-auto bg-blue-100 text-blue-600 text-xs px-2 py-0.5 rounded-full font-medium">
+                                  {realCartItemsCount || 0}
+                                </span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                onClick={() => {
                                   handleWishlistClick();
                                   setIsProfileMenuOpen(false);
                                 }}
@@ -403,6 +464,9 @@ const NavBar = () => {
                               >
                                 <Heart className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
                                 Wishlist
+                                <span className="ml-auto bg-pink-100 text-pink-600 text-xs px-2 py-0.5 rounded-full font-medium">
+                                  {realWishlistCount || 0}
+                                </span>
                               </Button>
                               {/* <Button
                                 variant="ghost"
@@ -427,8 +491,8 @@ const NavBar = () => {
                                 Settings
                               </Button> */}
 
-                              {/* 🏢 PROFESSIONAL: Seller-specific menu item */}
-                              {userRole === 'seller' && (
+                              {/* Seller-specific menu item */}
+                              {userRole === "seller" && (
                                 <>
                                   <div className="border-t border-gray-100 my-2"></div>
                                   <Button
@@ -549,14 +613,14 @@ const NavBar = () => {
           </div>
         </div>
 
-        {/* 🏢 PROFESSIONAL: Enhanced Mobile Menu */}
+        {/* Enhanced Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden border-t border-gray-200 bg-white shadow-lg">
             <div className="px-3 sm:px-4 pt-4 pb-6 space-y-4 max-h-[calc(100vh-120px)] overflow-y-auto">
               {/* User Section - Mobile */}
               {isAuthenticated && userInfo && (
                 <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100 mb-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg border-0 overflow-hidden">
                     {getInitials(userInfo.name, userInfo.email)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -604,6 +668,7 @@ const NavBar = () => {
                 </Button>
 
                 <div className="grid grid-cols-3 gap-2.5">
+                  {/* Wishlist: Updated mobile count */}
                   <Button
                     variant="ghost"
                     className="flex flex-col items-center justify-center space-y-1 p-3.5 border border-gray-200 rounded-lg hover:bg-pink-50 hover:border-pink-200 transition-all duration-200 group active:bg-pink-100"
@@ -614,9 +679,11 @@ const NavBar = () => {
                   >
                     <div className="relative">
                       <Heart className="h-5 w-5 text-pink-600 group-hover:fill-pink-100" />
-                      <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                        2
-                      </span>
+                      {realWishlistCount > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                          {realWishlistCount > 9 ? "9+" : realWishlistCount}
+                        </span>
+                      )}
                     </div>
                     <span className="text-xs font-medium">Wishlist</span>
                   </Button>
@@ -635,6 +702,7 @@ const NavBar = () => {
                     <span className="text-xs font-medium">Alerts</span>
                   </Button>
 
+                  {/* Cart: Updated mobile count */}
                   <Button
                     variant="ghost"
                     className="flex flex-col items-center justify-center space-y-1 p-3.5 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-all duration-200 active:bg-blue-100"
@@ -645,9 +713,9 @@ const NavBar = () => {
                   >
                     <div className="relative">
                       <ShoppingCart className="h-5 w-5 text-blue-600" />
-                      {cartItemsCount > 0 && (
+                      {realCartItemsCount > 0 && (
                         <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                          {cartItemsCount > 9 ? "9+" : cartItemsCount}
+                          {realCartItemsCount > 9 ? "9+" : realCartItemsCount}
                         </span>
                       )}
                     </div>
@@ -655,7 +723,7 @@ const NavBar = () => {
                   </Button>
                 </div>
 
-                {/* 🏢 PROFESSIONAL: Auth section */}
+                {/* Auth section */}
                 {!isAuthenticated ? (
                   <div className="space-y-3 pt-2">
                     <Button
@@ -708,6 +776,20 @@ const NavBar = () => {
                       <Button
                         variant="ghost"
                         onClick={() => {
+                          handleShoppingCartClick();
+                          setIsMenuOpen(false);
+                        }}
+                        className="flex items-center w-full px-4 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 active:bg-blue-100 justify-start"
+                      >
+                        <ShoppingCart className="h-5 w-5 mr-3" />
+                        <span className="text-base">Shopping Cart</span>
+                        <span className="ml-auto bg-blue-100 text-blue-600 text-xs px-2 py-0.5 rounded-full font-medium">
+                          {realCartItemsCount || 0}
+                        </span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
                           navigate("/profile");
                           setIsMenuOpen(false);
                         }}
@@ -718,7 +800,7 @@ const NavBar = () => {
                       </Button>
 
                       {/* Seller Dashboard for mobile */}
-                      {userRole === 'seller' && (
+                      {userRole === "seller" && (
                         <Button
                           variant="ghost"
                           onClick={() => {

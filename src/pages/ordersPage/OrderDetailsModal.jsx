@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   X,
   Package,
@@ -18,21 +18,34 @@ import {
   RotateCcw,
   MessageCircle,
   AlertCircle,
+  CheckSquare,
 } from "lucide-react";
 import { Button, Badge } from "../../components/ui/ContactUis/Uis";
+import ProductReviewModal from "./ProductReviewModal";
 
-const OrderDetailsModal = ({ isOpen, onClose, order }) => {
+const OrderDetailsModal = ({
+  isOpen,
+  onClose,
+  order,
+  onSubmitReview,
+  fetchOrders,
+}) => {
+  // Review modal state
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
   if (!isOpen || !order) return null;
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      processing: { variant: "warning", icon: Clock, label: "Processing" },
+      pending: { variant: "warning", icon: Clock, label: "Pending" },
+      confirmed: { variant: "success", icon: CheckSquare, label: "Confirmed" },
       shipped: { variant: "primary", icon: Truck, label: "Shipped" },
       delivered: { variant: "success", icon: CheckCircle, label: "Delivered" },
       cancelled: { variant: "danger", icon: XCircle, label: "Cancelled" },
     };
 
-    const config = statusConfig[status] || statusConfig.processing;
+    const config = statusConfig[status] || statusConfig.pending;
     const Icon = config.icon;
 
     return (
@@ -53,11 +66,26 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
     });
   };
 
+  // Get product details
+  const getProductImage = (item) => {
+    if (!item?.images?.length) return "/placehold.png";
+    const primaryImage = item.images.find((img) => img.isPrimary);
+    return primaryImage?.url || item.images[0]?.url || "/placehold.png";
+  };
+
+  const getProductPrice = (item) => {
+    if (!item?.variations?.length) return 0;
+    const defaultVariation =
+      item.variations.find((v) => v.isDefault) || item.variations[0];
+    return defaultVariation?.price || 0;
+  };
+
   const calculateTotal = () => {
-    const subtotal = order.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
+    const subtotal =
+      order.listingIds?.reduce((sum, item) => sum + getProductPrice(item), 0) ||
+      order.totalAmount ||
+      0;
+
     const shipping = 9.99;
     const tax = subtotal * 0.08; // 8% tax
     const total = subtotal + shipping + tax;
@@ -68,14 +96,46 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
   const { subtotal, shipping, tax, total } = calculateTotal();
 
   const handleCopyOrderNumber = () => {
-    navigator.clipboard.writeText(order.orderNumber);
+    const orderNumber = order.orderNumber || `#ORD-${order._id.slice(-6)}`;
+    navigator.clipboard.writeText(orderNumber);
   };
 
-  // const handleCopyTrackingNumber = () => {
-  //   if (order.trackingNumber) {
-  //     navigator.clipboard.writeText(order.trackingNumber);
-  //   }
-  // };
+  // Review handling functions
+  const handleReviewProduct = (product) => {
+    setSelectedProduct(product);
+    setIsReviewModalOpen(true);
+  };
+
+  const handleCloseReviewModal = () => {
+    setIsReviewModalOpen(false);
+    setSelectedProduct(null);
+  };
+
+  const handleSubmitProductReview = async (reviewData) => {
+    try {
+      if (onSubmitReview) {
+        await onSubmitReview(reviewData);
+      }
+
+      // Refresh orders if callback provided
+      if (fetchOrders) {
+        fetchOrders();
+      }
+
+      handleCloseReviewModal();
+    } catch (error) {
+      console.error("Failed to submit review:", error);
+    }
+  };
+
+  // Format shipping address
+  const formatShippingAddress = () => {
+    if (!order.shippingAddress) return "No shipping address";
+    const addr = order.shippingAddress;
+    return `${addr.streetAddress}, ${addr.city}, ${addr.state} ${addr.zipCode}`;
+  };
+
+  const orderNumber = order.orderNumber || `#ORD-${order._id.slice(-6)}`;
 
   return (
     <div className="fixed inset-0 bg-transparent backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -118,7 +178,7 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                       <span className="text-gray-600">Order Number:</span>
                       <div className="flex items-center space-x-2">
                         <span className="font-mono text-gray-900">
-                          {order.orderNumber}
+                          {orderNumber}
                         </span>
                         <Button
                           variant="ghost"
@@ -133,20 +193,43 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Order Date:</span>
                       <span className="text-gray-900">
-                        {formatDate(order.date)}
+                        {formatDate(order.createdAt || order.orderDate)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Status:</span>
-                      {getStatusBadge(order.status)}
+                      {getStatusBadge(order.orderStatus)}
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Total Amount:</span>
                       <span className="text-lg font-bold text-gray-900">
                         <span className="mr-1">LKR</span>
-                        {order.total.toFixed(2)}
+                        {(order.totalAmount || total).toFixed(2)}
                       </span>
                     </div>
+                    {/* Review Status */}
+                    {order.orderStatus === "delivered" && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Review Status:</span>
+                        {order.isReviewed ? (
+                          <Badge
+                            variant="success"
+                            className="flex items-center"
+                          >
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Reviewed
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="warning"
+                            className="flex items-center"
+                          >
+                            <Clock className="h-3 w-3 mr-1" />
+                            Pending Review
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -162,11 +245,11 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                           Delivery Address
                         </p>
                         <p className="text-gray-600 text-sm">
-                          {order.shippingAddress}
+                          {formatShippingAddress()}
                         </p>
                       </div>
                     </div>
-                    {/* {order.trackingNumber && (
+                    {order.trackingNumber && (
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Tracking Number:</span>
                         <div className="flex items-center space-x-2">
@@ -176,15 +259,19 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={handleCopyTrackingNumber}
+                            onClick={() =>
+                              navigator.clipboard.writeText(
+                                order.trackingNumber
+                              )
+                            }
                             className="p-1"
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
-                    )} */}
-                    {/* {order.estimatedDelivery && (
+                    )}
+                    {order.estimatedDelivery && (
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">
                           Estimated Delivery:
@@ -201,7 +288,7 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                           {formatDate(order.actualDelivery)}
                         </span>
                       </div>
-                    )} */}
+                    )}
                   </div>
                 </div>
               </div>
@@ -210,38 +297,59 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
             {/* Order Items */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Order Items ({order.items.length})
+                Order Items ({order.listingIds?.length || 0})
               </h3>
               <div className="space-y-4">
-                {order.items.map((item) => (
+                {(order.listingIds || []).map((item, index) => (
                   <div
-                    key={item.id}
+                    key={item._id || index}
                     className="flex space-x-4 p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
                   >
                     <img
-                      src={item.image}
-                      alt={item.name}
+                      src={getProductImage(item)}
+                      alt={item.title || "Product"}
                       className="w-20 h-20 object-cover rounded-lg"
+                      onError={(e) => {
+                        e.target.src = "/placehold.png";
+                      }}
                     />
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900 mb-1">
-                        {item.name}
+                        {item.title || "Unknown Product"}
                       </h4>
-                      <p className="text-sm text-gray-600 mb-2">{item.brand}</p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {item.brandName || "Unknown Brand"}
+                      </p>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <span className="text-sm text-gray-600">
-                            Quantity: {item.quantity}
+                            Quantity: 1
                           </span>
                           <span className="text-sm text-gray-600">
                             Unit Price: <span className="mr-1">LKR</span>
-                            {item.price.toFixed(2)}
+                            {getProductPrice(item).toFixed(2)}
                           </span>
                         </div>
-                        <span className="text-lg font-semibold text-gray-900">
-                          <span className="mr-1">LKR</span>
-                          {(item.price * item.quantity).toFixed(2)}
-                        </span>
+                        <div className="flex items-center space-x-3">
+                          <span className="text-lg font-semibold text-gray-900">
+                            <span className="mr-1">LKR</span>
+                            {getProductPrice(item).toFixed(2)}
+                          </span>
+
+                          {/* Individual Product Review Button */}
+                          {order.orderStatus === "delivered" &&
+                            !order.isReviewed && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleReviewProduct(item)}
+                                className="flex items-center text-yellow-600 hover:text-yellow-700 border-yellow-300 hover:border-yellow-400 hover:bg-yellow-50"
+                              >
+                                <Star className="h-3 w-3 mr-1" />
+                                Review
+                              </Button>
+                            )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -282,14 +390,14 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                   </span>
                   <span className="text-lg font-bold text-gray-900">
                     <span className="mr-1">LKR</span>
-                    {total.toFixed(2)}
+                    {(order.totalAmount || total).toFixed(2)}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Status Specific Information */}
-            {order.status === "cancelled" && order.cancelReason && (
+            {order.orderStatus === "cancelled" && order.cancelReason && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="flex items-center space-x-2 text-red-800">
                   <AlertCircle className="h-5 w-5" />
@@ -301,7 +409,7 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
               </div>
             )}
 
-            {order.status === "delivered" && (
+            {order.orderStatus === "delivered" && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-center space-x-2 text-green-800">
                   <CheckCircle className="h-5 w-5" />
@@ -311,43 +419,39 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                 </div>
                 <p className="text-green-700 mt-2">
                   Your order was delivered on{" "}
-                  {formatDate(order.actualDelivery || order.estimatedDelivery)}
+                  {formatDate(
+                    order.actualDelivery ||
+                      order.estimatedDelivery ||
+                      order.createdAt
+                  )}
                 </p>
+                {!order.isReviewed && (
+                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-center space-x-2 text-yellow-800">
+                      <Star className="h-4 w-4" />
+                      <span className="font-medium">Review Reminder</span>
+                    </div>
+                    <p className="text-yellow-700 text-sm mt-1">
+                      Don't forget to review this order and help other
+                      customers!
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Customer Service */}
-            {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 mb-3">
-                Need Help with Your Order?
-              </h4>
-              <div className="grid md:grid-cols-3 gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center justify-center text-blue-700 border-blue-300 hover:bg-blue-100"
-                >
-                  <Phone className="h-4 w-4 mr-2" />
-                  Call Support
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center justify-center text-blue-700 border-blue-300 hover:bg-blue-100"
-                >
-                  <Mail className="h-4 w-4 mr-2" />
-                  Email Us
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center justify-center text-blue-700 border-blue-300 hover:bg-blue-100"
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Live Chat
-                </Button>
+            {order.orderStatus === "confirmed" && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center space-x-2 text-blue-800">
+                  <CheckSquare className="h-5 w-5" />
+                  <span className="font-medium">Order Confirmed</span>
+                </div>
+                <p className="text-blue-700 mt-2">
+                  Your order has been confirmed and is being prepared for
+                  shipping.
+                </p>
               </div>
-            </div> */}
+            )}
           </div>
 
           {/* Modal Footer */}
@@ -356,35 +460,31 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
               <Button variant="ghost" onClick={onClose}>
                 Close
               </Button>
-              {/* <Button variant="outline" className="flex items-center">
-                <Download className="h-4 w-4 mr-2" />
-                Download Invoice
-              </Button> */}
-              {order.status === "delivered" && (
-                <>
-                  {/* <Button variant="outline" className="flex items-center">
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Reorder
-                  </Button> */}
-                  <Button
-                    variant="outline"
-                    className="flex items-center text-yellow-600 hover:text-yellow-700 border-yellow-300 hover:border-yellow-400 hover:bg-yellow-50"
-                  >
-                    <Star className="h-4 w-4 mr-2" />
-                    Leave Review
-                  </Button>
-                </>
+              {order.orderStatus === "delivered" && (
+                <Button variant="outline" className="flex items-center">
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Reorder
+                </Button>
               )}
-              {/* {order.trackingNumber && order.status !== "delivered" && (
+              {order.trackingNumber && order.orderStatus !== "delivered" && (
                 <Button variant="primary" className="flex items-center">
                   <Truck className="h-4 w-4 mr-2" />
                   Track Package
                 </Button>
-              )} */}
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Product Review Modal */}
+      <ProductReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={handleCloseReviewModal}
+        product={selectedProduct}
+        order={order}
+        onSubmitReview={handleSubmitProductReview}
+      />
     </div>
   );
 };
