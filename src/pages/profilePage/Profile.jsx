@@ -483,38 +483,42 @@ const Profile = () => {
   };
 
   // Validate and save profile
-  const handleSaveProfile = async () => {
-    const newErrors = {};
+ const handleSaveProfile = async () => {
+   const newErrors = {};
 
-    if (!profileData.firstName.trim())
-      newErrors.firstName = "First name is required";
-    if (!profileData.lastName.trim())
-      newErrors.lastName = "Last name is required";
-    if (!validateEmail(profileData.email))
-      newErrors.email = "Invalid email address";
-    if (profileData.phone && !validatePhone(profileData.phone))
-      newErrors.phone = "Invalid phone number";
+   // Validate required fields including firstName and lastName
+   if (!profileData.firstName.trim())
+     newErrors.firstName = "First name is required";
+   if (!profileData.lastName.trim())
+     newErrors.lastName = "Last name is required";
+   if (!validateEmail(profileData.email))
+     newErrors.email = "Invalid email address";
+   if (profileData.phone && !validatePhone(profileData.phone))
+     newErrors.phone = "Invalid phone number";
 
-    setErrors(newErrors);
+   setErrors(newErrors);
 
-    if (Object.keys(newErrors).length === 0) {
-      try {
-        const updateData = {
-          userId: authUser._id,
-          phoneNumber: profileData.phone,
-          dateOfBirth: profileData.dateOfBirth,
-          gender: profileData.gender,
-          bio: profileData.bio,
-          isActive: true,
-        };
+   if (Object.keys(newErrors).length === 0) {
+     try {
+       // Updated payload to include firstName and lastName
+       const updateData = {
+         userId: authUser._id,
+         firstName: profileData.firstName.trim(),
+         lastName: profileData.lastName.trim(),
+         phoneNumber: profileData.phone.trim(),
+         dateOfBirth: profileData.dateOfBirth,
+         gender: profileData.gender,
+         bio: profileData.bio.trim(),
+         isActive: true,
+       };
 
-        await updateProfile(updateData);
-        setIsEditing(false);
-      } catch (error) {
-        setErrors({ general: "Failed to update profile. Please try again." });
-      }
-    }
-  };
+       await updateProfile(updateData);
+       setIsEditing(false);
+     } catch (error) {
+       setErrors({ general: "Failed to update profile. Please try again." });
+     }
+   }
+ };
 
   // Handle account deletion
   const handleDeleteAccount = async () => {
@@ -815,11 +819,11 @@ const Profile = () => {
                         onChange={(e) =>
                           handleProfileChange("email", e.target.value)
                         }
-                        disabled={true} // Email typically can't be changed
-                        className="bg-gray-50"
+                        disabled={true} // Email cannot be changed
+                        className="bg-gray-50 cursor-not-allowed"
                       />
                       <p className="mt-1 text-xs text-gray-500">
-                        Email cannot be changed
+                        Email address cannot be changed for security reasons
                       </p>
                     </div>
 
@@ -833,7 +837,7 @@ const Profile = () => {
                         onChange={(e) =>
                           handleProfileChange("phone", e.target.value)
                         }
-                        disabled={!isEditing}
+                        disabled={!isEditing} // Make sure this is properly controlled by isEditing
                         className={errors.phone ? "border-red-500" : ""}
                         placeholder="+94771234567"
                       />

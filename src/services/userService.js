@@ -202,6 +202,8 @@ const userService = {
   updateUserProfile: async (profileData) => {
     const payload = {
       userId: profileData.userId,
+      firstName: profileData.firstName, // Added
+      lastName: profileData.lastName, // Added
       phoneNumber: profileData.phoneNumber,
       dateOfBirth: profileData.dateOfBirth,
       gender: profileData.gender,
