@@ -29,6 +29,7 @@ import FilterSidebar from "./FilterSidebar";
 import ShopHeader from "./ShopHeader";
 import ReviewsSection from "./ReviewsSection";
 import Pagination from "../../ui/ContactUis/Pagination";
+import ToastNotification, { useToast } from "../../ui/ToastNotification";
 import useUser from "../../../hooks/useUser";
 import { useSelector } from "react-redux";
 import { selectUser as selectAuthUser } from "../../../store/slices/authSlice";
@@ -37,6 +38,9 @@ const ShopView = () => {
   const { shopId } = useParams();
   const navigate = useNavigate();
   const authUser = useSelector(selectAuthUser);
+
+  // Toast notification hook
+  const { toastRef, showToast } = useToast();
 
   // Redux hooks
   const {
@@ -50,6 +54,10 @@ const ShopView = () => {
     storeSearchLoading,
     storeSearchError,
     lastStoreSearchParams,
+    shopReviews,
+    storesPagination,
+    fetchWishlist,
+    storeSearchPagination,
     fetchShopDetailsById,
     fetchShopListings,
     searchProductsInStore,
@@ -58,7 +66,10 @@ const ShopView = () => {
     cartLoading,
     quickToggleWishlist,
     isItemInProductWishlist,
+    isItemInShopWishlist,
     isItemInCart,
+    fetchShopReviews,
+    removeFromWishlist,
   } = useUser();
 
   // Component state
@@ -81,50 +92,54 @@ const ShopView = () => {
   // Get seller ID from shop details for listings
   const sellerId = currentShopDetails?.sellerId;
 
-  // Determine which products to show based on active filters/search
-  const currentProducts = useMemo(() => {
-    // If there's an active search or filters, show search results
-    if (
+  // Get review count from shop reviews
+  const reviewCount = shopReviews?.length || 0;
+
+  // Determine which products to show and pagination info
+  const { currentProducts, pagination, isSearchMode } = useMemo(() => {
+    const hasActiveFilters =
       searchQuery ||
       filters.categoryMain ||
       filters.PriceRange ||
       filters.CustomerRating ||
       filters.color ||
-      filters.brandName
-    ) {
-      return storeSearchResults || [];
+      filters.brandName;
+
+    if (hasActiveFilters) {
+      return {
+        currentProducts: storeSearchResults || [],
+        pagination: storeSearchPagination,
+        isSearchMode: true,
+      };
+    } else {
+      return {
+        currentProducts: storeListings || [],
+        pagination: storesPagination,
+        isSearchMode: false,
+      };
     }
-    // Otherwise show regular shop listings
-    return storeListings || [];
-  }, [storeSearchResults, storeListings, searchQuery, filters]);
+  }, [
+    storeSearchResults,
+    storeListings,
+    storeSearchPagination,
+    storesPagination,
+    searchQuery,
+    filters,
+  ]);
 
   const isLoading = useMemo(() => {
-    if (
-      searchQuery ||
-      filters.categoryMain ||
-      filters.PriceRange ||
-      filters.CustomerRating ||
-      filters.color ||
-      filters.brandName
-    ) {
+    if (isSearchMode) {
       return storeSearchLoading;
     }
     return storesLoading;
-  }, [storeSearchLoading, storesLoading, searchQuery, filters]);
+  }, [storeSearchLoading, storesLoading, isSearchMode]);
 
   const error = useMemo(() => {
-    if (
-      searchQuery ||
-      filters.categoryMain ||
-      filters.PriceRange ||
-      filters.CustomerRating ||
-      filters.color ||
-      filters.brandName
-    ) {
+    if (isSearchMode) {
       return storeSearchError;
     }
     return storesError;
-  }, [storeSearchError, storesError, searchQuery, filters]);
+  }, [storeSearchError, storesError, isSearchMode]);
 
   // Fetch shop data
   useEffect(() => {
@@ -143,6 +158,13 @@ const ShopView = () => {
       fetchShopListings(sellerId, currentPage, itemsPerPage);
     }
   }, [sellerId, activeTab, fetchShopListings, currentPage, itemsPerPage]);
+
+  // Fetch shop reviews for count
+  useEffect(() => {
+    if (shopId && activeTab === "feedback") {
+      fetchShopReviews(shopId, 1, 10);
+    }
+  }, [shopId, activeTab, fetchShopReviews]);
 
   // Handle search and filters
   useEffect(() => {
@@ -179,6 +201,7 @@ const ShopView = () => {
     setCurrentPage(1);
   }, [filters, searchQuery, sortBy]);
 
+  // Define tabs with proper counts from backend
   const tabs = [
     { id: "home", name: "Shop Home", icon: Home },
     {
@@ -191,7 +214,7 @@ const ShopView = () => {
       id: "feedback",
       name: "Reviews",
       icon: MessageSquare,
-      count: 0, // Will be updated by ReviewsSection
+      count: reviewCount,
     },
   ];
 
@@ -245,8 +268,14 @@ const ShopView = () => {
 
     try {
       await addItemToCart(authUser._id, product._id, 1);
+      const productName = product.title || product.name || "Product";
+      showToast.success(`"${productName}" added to cart successfully!`, {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
     } catch (error) {
       console.error("Error adding to cart:", error);
+      showToast.error("Failed to add to cart. Please try again.");
     }
   };
 
@@ -257,11 +286,31 @@ const ShopView = () => {
     }
 
     try {
-      await quickToggleWishlist(authUser._id, product._id, "product");
+      const productName = product.title || product.name || "Product";
+      const productId = product._id;
+      const wasInWishlist = isItemInProductWishlist(productId);
+
+      if (wasInWishlist) {
+        // ✅ Use direct removeFromWishlist for removal
+        await removeFromWishlist(authUser._id, productId);
+        showToast.success(`"${productName}" removed from wishlist`);
+      } else {
+        // ✅ Use quickToggleWishlist for adding
+        await quickToggleWishlist(authUser._id, productId, "product");
+        showToast.success(`"${productName}" added to wishlist!`, {
+          text: "View Wishlist",
+          action: () => navigate("/wishlist"),
+        });
+      }
+
+      // ✅ Force refresh wishlist data after operation
+      await fetchWishlist(authUser._id);
     } catch (error) {
       console.error("Error toggling wishlist:", error);
+      showToast.error("Failed to update wishlist. Please try again.");
     }
   };
+
 
   const handleProductClick = (product) => {
     navigate(`/product/${product._id}`);
@@ -682,6 +731,9 @@ const ShopView = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Toast Notification Component */}
+      <ToastNotification ref={toastRef} />
+
       {/* Back Button */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
@@ -700,7 +752,17 @@ const ShopView = () => {
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Shop Header */}
-        <ShopHeader shop={currentShopDetails} className="mb-6 sm:mb-8" />
+        <ShopHeader
+          shop={currentShopDetails}
+          className="mb-6 sm:mb-8"
+          onWishlistUpdate={(message, type, action) => {
+            if (type === "success") {
+              showToast.success(message, action);
+            } else if (type === "error") {
+              showToast.error(message, action);
+            }
+          }}
+        />
 
         {/* Tabs */}
         <div className="mb-6 sm:mb-8">
@@ -732,7 +794,7 @@ const ShopView = () => {
               </Card>
               <Card className="text-center p-4 sm:p-6">
                 <div className="text-2xl sm:text-3xl font-bold text-purple-600 mb-1 sm:mb-2">
-                  0
+                  {reviewCount}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600">Reviews</div>
               </Card>
@@ -876,7 +938,18 @@ const ShopView = () => {
                   {/* Results Info */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-gray-200">
                     <div className="text-sm text-gray-600">
-                      Showing {currentProducts.length} products
+                      {pagination ? (
+                        <>
+                          Showing {(currentPage - 1) * itemsPerPage + 1}-
+                          {Math.min(
+                            currentPage * itemsPerPage,
+                            pagination.totalItems
+                          )}
+                          of {pagination.totalItems} products
+                        </>
+                      ) : (
+                        `Showing ${currentProducts.length} products`
+                      )}
                     </div>
 
                     {/* Active Filters Indicator */}
@@ -950,15 +1023,30 @@ const ShopView = () => {
                   </Button>
                 </Card>
               ) : currentProducts.length > 0 ? (
-                <div
-                  className={`grid gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8 ${
-                    viewMode === "grid"
-                      ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
-                      : "grid-cols-1"
-                  }`}
-                >
-                  {currentProducts.map(renderProductCard)}
-                </div>
+                <>
+                  <div
+                    className={`grid gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8 ${
+                      viewMode === "grid"
+                        ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
+                        : "grid-cols-1"
+                    }`}
+                  >
+                    {currentProducts.map(renderProductCard)}
+                  </div>
+
+                  {/* Pagination - Only show if we have backend pagination data */}
+                  {pagination && pagination.totalPages > 1 && (
+                    <div className="flex justify-center">
+                      <Pagination
+                        currentPage={pagination.currentPage}
+                        totalPages={pagination.totalPages}
+                        onPageChange={handlePageChange}
+                        itemsPerPage={itemsPerPage}
+                        totalItems={pagination.totalItems}
+                      />
+                    </div>
+                  )}
+                </>
               ) : (
                 <Card className="text-center p-8 sm:p-12">
                   <Package className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />

@@ -19,20 +19,62 @@ import {
   Building,
 } from "lucide-react";
 import { Button, Badge, ContactCard as Card } from "../../ui/ContactUis/Uis";
+import useUser from "../../../hooks/useUser";
+import { useSelector } from "react-redux";
+import { selectUser as selectAuthUser } from "../../../store/slices/authSlice";
 
-const ShopHeader = ({ shop, className = "" }) => {
+const ShopHeader = ({ shop, className = "", onWishlistUpdate }) => {
   const navigate = useNavigate();
+  const authUser = useSelector(selectAuthUser);
+
+  // Redux hooks for wishlist management
+  const {
+    quickToggleWishlist,
+    isItemInShopWishlist,
+    fetchWishlist, // Add this to refresh wishlist after action
+  } = useUser();
 
   if (!shop) return null;
 
-  const handleViewAllProducts = () => {
-    // This will be handled by the parent component tab switching
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // Check if shop is in wishlist
+  const isInWishlist = authUser ? isItemInShopWishlist(shop._id) : false;
 
-  const handleContactShop = () => {
-    // You can implement contact functionality here
-    console.log("Contact shop:", shop._id);
+  const handleWishlistToggle = async () => {
+    if (!authUser?._id) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      // Store the current state before toggle
+      const wasInWishlist = isInWishlist;
+
+      await quickToggleWishlist(authUser._id, shop._id, "shop");
+
+      // Refresh wishlist to ensure state is updated immediately
+      await fetchWishlist(authUser._id);
+
+      // Call the callback to show toast notification in parent component
+      if (onWishlistUpdate) {
+        const shopName = shop.basicInformation?.storeName || "Shop";
+        if (wasInWishlist) {
+          onWishlistUpdate(`"${shopName}" removed from wishlist`, "success");
+        } else {
+          onWishlistUpdate(`"${shopName}" added to wishlist!`, "success", {
+            text: "View Wishlist",
+            action: () => navigate("/wishlist"),
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error toggling wishlist:", error);
+      if (onWishlistUpdate) {
+        onWishlistUpdate(
+          "Failed to update wishlist. Please try again.",
+          "error"
+        );
+      }
+    }
   };
 
   const renderRatingStars = (rating) => {
@@ -97,17 +139,28 @@ const ShopHeader = ({ shop, className = "" }) => {
           <Button
             variant="outline"
             size="sm"
-            className="bg-white/90 backdrop-blur-sm border-white/20 hover:bg-white"
+            onClick={handleWishlistToggle}
+            className={`bg-white/90 backdrop-blur-sm border-white/20 transition-all duration-200 hover:!bg-white hover:!border-red-300 ${
+              isInWishlist
+                ? "text-red-600 border-red-200 bg-red-50/90 hover:!text-red-500"
+                : "text-gray-600 hover:!text-red-500"
+            }`}
           >
-            <Heart className="h-4 w-4 mr-1" />
-            Follow
+            <Heart
+              className={`h-4 w-4 mr-1 transition-all duration-200 ${
+                isInWishlist ? "fill-current scale-110" : ""
+              }`}
+            />
+            <span className="font-medium">
+              {isInWishlist ? "Saved" : "Save"}
+            </span>
           </Button>
           <Button
             variant="outline"
             size="sm"
-            className="bg-white/90 backdrop-blur-sm border-white/20 hover:bg-white"
+            className="bg-white/90 backdrop-blur-sm border-white/20 text-gray-600 hover:bg-white hover:border-gray-300 transition-all duration-200 group"
           >
-            <Share2 className="h-4 w-4" />
+            <Share2 className="h-4 w-4 group-hover:text-blue-500 transition-colors duration-200" />
           </Button>
         </div>
       </div>
@@ -247,28 +300,6 @@ const ShopHeader = ({ shop, className = "" }) => {
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col space-y-2 mt-4 md:mt-0 md:ml-4 w-full md:w-auto">
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={handleContactShop}
-                  className="w-full md:w-auto"
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Contact Shop
-                </Button>
-                <Button
-                  variant="outline"
-                  size="md"
-                  onClick={handleViewAllProducts}
-                  className="w-full md:w-auto"
-                >
-                  <Package className="h-4 w-4 mr-2" />
-                  View Products
-                </Button>
               </div>
             </div>
           </div>
