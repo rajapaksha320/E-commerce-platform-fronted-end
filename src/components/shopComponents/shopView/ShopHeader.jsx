@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -13,6 +14,9 @@ import {
   Heart,
   Share2,
   MessageCircle,
+  ShoppingBag,
+  Calendar,
+  Building,
 } from "lucide-react";
 import { Button, Badge, ContactCard as Card } from "../../ui/ContactUis/Uis";
 
@@ -22,19 +26,22 @@ const ShopHeader = ({ shop, className = "" }) => {
   if (!shop) return null;
 
   const handleViewAllProducts = () => {
-    navigate(`/shop-products/${shop.id}`);
+    // This will be handled by the parent component tab switching
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleContactShop = () => {
-    navigate(`/contact-shop/${shop.id}`);
+    // You can implement contact functionality here
+    console.log("Contact shop:", shop._id);
   };
 
   const renderRatingStars = (rating) => {
+    const numRating = parseFloat(rating || 0);
     return [...Array(5)].map((_, i) => (
       <Star
         key={i}
         className={`h-4 w-4 ${
-          i < Math.floor(rating)
+          i < Math.floor(numRating)
             ? "text-yellow-400 fill-current"
             : "text-gray-300"
         }`}
@@ -42,18 +49,48 @@ const ShopHeader = ({ shop, className = "" }) => {
     ));
   };
 
+  // Format business hours
+  const formatBusinessHours = (hours) => {
+    if (!hours) return "Contact for hours";
+    return hours;
+  };
+
+  // Get shop status badge
+  const getStatusBadge = () => {
+    if (shop.status === "active") {
+      return { variant: "success", text: "Active" };
+    } else {
+      return { variant: "danger", text: "Inactive" };
+    }
+  };
+
+  const statusBadge = getStatusBadge();
+
   return (
     <div
       className={`bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden ${className}`}
     >
       {/* Cover Image */}
-      <div className="relative h-48 md:h-64">
-        <img
-          src={shop.coverImage}
-          alt={`${shop.name} cover`}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+      <div className="relative h-48 md:h-64 bg-gradient-to-r from-blue-600 to-purple-600">
+        {shop.shopMedia?.bannerImage ? (
+          <>
+            <img
+              src={shop.shopMedia.bannerImage}
+              alt={`${shop.basicInformation?.storeName} cover`}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          </>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-center text-white">
+              <Building className="h-16 w-16 mx-auto mb-4 opacity-70" />
+              <h2 className="text-2xl font-bold opacity-90">
+                {shop.basicInformation?.storeName || "Shop"}
+              </h2>
+            </div>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="absolute top-4 right-4 flex space-x-2">
@@ -81,13 +118,23 @@ const ShopHeader = ({ shop, className = "" }) => {
           {/* Shop Logo */}
           <div className="flex-shrink-0 -mt-12 md:-mt-16 mb-4 md:mb-0">
             <div className="relative">
-              <img
-                src={shop.logo}
-                alt={shop.name}
-                className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white shadow-lg object-cover"
-              />
-              {shop.verified && (
-                <div className="absolute -bottom-1 -right-1 bg-blue-600 rounded-full p-1.5">
+              {shop.shopMedia?.storeLogo ? (
+                <img
+                  src={shop.shopMedia.storeLogo}
+                  alt={shop.basicInformation?.storeName}
+                  className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white shadow-lg object-cover"
+                />
+              ) : (
+                <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white shadow-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                  <span className="text-white font-bold text-xl md:text-2xl">
+                    {shop.basicInformation?.storeName
+                      ?.charAt(0)
+                      ?.toUpperCase() || "S"}
+                  </span>
+                </div>
+              )}
+              {shop.status === "active" && (
+                <div className="absolute -bottom-1 -right-1 bg-green-600 rounded-full p-1.5">
                   <Verified className="h-4 w-4 text-white" />
                 </div>
               )}
@@ -98,24 +145,23 @@ const ShopHeader = ({ shop, className = "" }) => {
           <div className="flex-1">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between">
               <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3 mb-2">
                   <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                    {shop.name}
+                    {shop.basicInformation?.storeName || "Unnamed Shop"}
                   </h1>
-                  {shop.verified && (
-                    <Badge variant="success" size="sm">
+                  <div className="flex items-center space-x-2 mt-2 sm:mt-0">
+                    <Badge variant={statusBadge.variant} size="sm">
                       <Verified className="h-3 w-3 mr-1" />
-                      Verified
+                      {statusBadge.text}
                     </Badge>
-                  )}
-                  {shop.badge && (
-                    <Badge variant="primary" size="sm">
-                      {shop.badge}
-                    </Badge>
-                  )}
+                  </div>
                 </div>
 
-                <p className="text-gray-600 text-lg mb-4">{shop.tagline}</p>
+                {shop.basicInformation?.storeTagLine && (
+                  <p className="text-gray-600 text-lg mb-4">
+                    {shop.basicInformation.storeTagLine}
+                  </p>
+                )}
 
                 {/* Rating and Stats */}
                 <div className="flex flex-wrap items-center gap-6 mb-6">
@@ -124,60 +170,79 @@ const ShopHeader = ({ shop, className = "" }) => {
                       {renderRatingStars(shop.rating)}
                     </div>
                     <span className="font-semibold text-gray-900">
-                      {shop.rating}
+                      {shop.rating || 0}
                     </span>
-                    <span className="text-gray-600">
-                      ({shop.reviews} reviews)
-                    </span>
-                  </div>
-
-                  <div className="flex items-center space-x-1 text-gray-600">
-                    <Users className="h-4 w-4" />
-                    <span className="text-sm">{shop.followers} followers</span>
+                    <span className="text-gray-600">(0 reviews)</span>
                   </div>
 
                   <div className="flex items-center space-x-1 text-gray-600">
                     <Package className="h-4 w-4" />
                     <span className="text-sm">
-                      {shop.totalProducts} products
+                      {shop.totalProducts || 0} products
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-1 text-gray-600">
+                    <ShoppingBag className="h-4 w-4" />
+                    <span className="text-sm">
+                      {shop.totalSales || 0} sales
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-1 text-gray-600">
+                    <Calendar className="h-4 w-4" />
+                    <span className="text-sm">
+                      Since {new Date(shop.createdAt).getFullYear()}
                     </span>
                   </div>
                 </div>
 
                 {/* Contact Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-                  {shop.location && (
+                  {shop.contactDetails?.storeLocation && (
                     <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4" />
-                      <span>{shop.location}</span>
+                      <MapPin className="h-4 w-4 flex-shrink-0" />
+                      <span>{shop.contactDetails.storeLocation}</span>
                     </div>
                   )}
-                  {shop.businessHours && (
+                  {shop.contactDetails?.storeBusinessHours && (
                     <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4" />
-                      <span>{shop.businessHours}</span>
+                      <Clock className="h-4 w-4 flex-shrink-0" />
+                      <span>
+                        {formatBusinessHours(
+                          shop.contactDetails.storeBusinessHours
+                        )}
+                      </span>
                     </div>
                   )}
-                  {shop.phone && (
+                  {shop.contactDetails?.storeContactNumber && (
                     <div className="flex items-center space-x-2">
-                      <Phone className="h-4 w-4" />
-                      <span>{shop.phone}</span>
+                      <Phone className="h-4 w-4 flex-shrink-0" />
+                      <span>{shop.contactDetails.storeContactNumber}</span>
                     </div>
                   )}
-                  {shop.email && (
+                  {shop.contactDetails?.storeEmail && (
                     <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4" />
-                      <span>{shop.email}</span>
+                      <Mail className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">
+                        {shop.contactDetails.storeEmail}
+                      </span>
                     </div>
                   )}
-                  {shop.website && (
-                    <div className="flex items-center space-x-2">
-                      <Globe className="h-4 w-4" />
+                  {shop.contactDetails?.storeWebsite && (
+                    <div className="flex items-center space-x-2 md:col-span-2">
+                      <Globe className="h-4 w-4 flex-shrink-0" />
                       <a
-                        href={shop.website}
-                        className="text-blue-600 hover:underline"
+                        href={
+                          shop.contactDetails.storeWebsite.startsWith("http")
+                            ? shop.contactDetails.storeWebsite
+                            : `https://${shop.contactDetails.storeWebsite}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline truncate"
                       >
-                        Visit Website
+                        {shop.contactDetails.storeWebsite}
                       </a>
                     </div>
                   )}
@@ -185,8 +250,13 @@ const ShopHeader = ({ shop, className = "" }) => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col space-y-2 mt-4 md:mt-0 md:ml-4">
-                <Button variant="primary" size="md" onClick={handleContactShop}>
+              <div className="flex flex-col space-y-2 mt-4 md:mt-0 md:ml-4 w-full md:w-auto">
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={handleContactShop}
+                  className="w-full md:w-auto"
+                >
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Contact Shop
                 </Button>
@@ -194,9 +264,10 @@ const ShopHeader = ({ shop, className = "" }) => {
                   variant="outline"
                   size="md"
                   onClick={handleViewAllProducts}
+                  className="w-full md:w-auto"
                 >
                   <Package className="h-4 w-4 mr-2" />
-                  View All Products
+                  View Products
                 </Button>
               </div>
             </div>
@@ -204,42 +275,79 @@ const ShopHeader = ({ shop, className = "" }) => {
         </div>
 
         {/* Shop Description */}
-        {shop.description && (
+        {shop.basicInformation?.storeDescription && (
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
               About This Shop
             </h3>
-            <p className="text-gray-600 leading-relaxed">{shop.description}</p>
+            <p className="text-gray-600 leading-relaxed">
+              {shop.basicInformation.storeDescription}
+            </p>
           </div>
         )}
 
-        {/* Shop Policies */}
-        {shop.policies && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Shop Policies
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {shop.policies.map((policy, index) => (
-                <Card key={index} className="p-4 bg-gray-50 border-0">
-                  <div className="flex items-start space-x-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <policy.icon className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-1">
-                        {policy.title}
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        {policy.description}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+        {/* Shop Quick Stats */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Shop Information
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-blue-50 p-4 rounded-lg text-center">
+              <Package className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <div className="text-xl font-bold text-blue-600">
+                {shop.totalProducts || 0}
+              </div>
+              <div className="text-sm text-blue-700">Total Products</div>
+            </div>
+
+            <div className="bg-green-50 p-4 rounded-lg text-center">
+              <ShoppingBag className="h-6 w-6 text-green-600 mx-auto mb-2" />
+              <div className="text-xl font-bold text-green-600">
+                {shop.totalSales || 0}
+              </div>
+              <div className="text-sm text-green-700">Total Sales</div>
+            </div>
+
+            <div className="bg-yellow-50 p-4 rounded-lg text-center">
+              <Star className="h-6 w-6 text-yellow-600 mx-auto mb-2" />
+              <div className="text-xl font-bold text-yellow-600">
+                {shop.rating || 0}
+              </div>
+              <div className="text-sm text-yellow-700">Shop Rating</div>
+            </div>
+
+            <div className="bg-purple-50 p-4 rounded-lg text-center">
+              <Calendar className="h-6 w-6 text-purple-600 mx-auto mb-2" />
+              <div className="text-xl font-bold text-purple-600">
+                {new Date(shop.createdAt).getFullYear()}
+              </div>
+              <div className="text-sm text-purple-700">Established</div>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Shop Status and Store ID */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center space-x-4 text-sm text-gray-600">
+              <span>Store ID: {shop.storeId}</span>
+              <span>•</span>
+              <span>
+                Last updated: {new Date(shop.updatedAt).toLocaleDateString()}
+              </span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  shop.status === "active" ? "bg-green-500" : "bg-red-500"
+                }`}
+              ></div>
+              <span className="text-sm text-gray-600 capitalize">
+                {shop.status || "unknown"} Status
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

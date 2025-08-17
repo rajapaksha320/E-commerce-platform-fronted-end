@@ -13,17 +13,68 @@ import {
   ChevronDown,
   ChevronUp,
   Package,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  Bell,
+  Truck,
+  Shield,
+  Tag,
+  MapPin,
 } from "lucide-react";
 
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   Button,
   Badge,
   ContactCard as Card,
 } from "../../components/ui/ContactUis/Uis";
 import Pagination from "../../components/ui/ContactUis/Pagination";
+import useUser from "../../hooks/useUser";
+import { selectUser as selectAuthUser } from "../../store/slices/authSlice";
+import ToastNotification, {
+  useToast,
+} from "../../components/ui/ToastNotification";
 
 const ProductCollection = () => {
+  const navigate = useNavigate();
+  const authUser = useSelector(selectAuthUser);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Toast notification hook
+  const { toastRef, showToast } = useToast();
+
+  // Redux state and actions from useUser hook
+  const {
+    searchResults,
+    searchPagination,
+    searchLoading,
+    searchError,
+    searchAllProducts,
+    fetchStoresByCategory,
+    addItemToCart,
+    cartItems,
+    fetchCartItems,
+    isItemInCart,
+    clearErrors,
+    // Wishlist functions
+    wishlist,
+    wishlistLoading,
+    fetchWishlist,
+    addToWishlist,
+    removeFromWishlist,
+    isItemInProductWishlist,
+  } = useUser();
+
+  // Safely get clearSearchResults with fallback
+  const clearSearchResults =
+    useUser().clearSearchResults ||
+    (() => {
+      console.warn("clearSearchResults function not available");
+    });
+
+  // UI States
   const [viewMode, setViewMode] = useState("grid");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -32,29 +83,37 @@ const ProductCollection = () => {
   const [sortBy, setSortBy] = useState("featured");
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [likedProducts, setLikedProducts] = useState(new Set());
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Cart and wishlist operation states
+  const [addingToCart, setAddingToCart] = useState(new Set());
+  const [addingToWishlist, setAddingToWishlist] = useState(new Set());
+
+  // Category and shop data states
+  const [categoryData, setCategoryData] = useState(null);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [shopsData, setShopsData] = useState([]);
 
   const itemsPerPage = 12;
 
-  const categories = [
-    { id: "all", name: "All Categories", count: 48 },
-    { id: "electronics", name: "Electronics", count: 12 },
-    { id: "fashion", name: "Fashion", count: 8 },
-    { id: "home", name: "Home & Garden", count: 6 },
-    { id: "beauty", name: "Beauty", count: 5 },
-    { id: "sports", name: "Sports", count: 4 },
-    { id: "books", name: "Books", count: 3 },
-    { id: "automotive", name: "Automotive", count: 2 },
-    { id: "toys", name: "Toys", count: 8 },
-  ];
+  // Category definitions
+  const categoryDefinitions = {
+    electronics: "Electronics & Technology",
+    fashion: "Fashion & Apparel",
+    home: "Home & Garden",
+    beauty: "Health & Beauty",
+    sports: "Sports & Fitness",
+    food: "Food & Beverages",
+    books: "Books & Media",
+    automotive: "Automotive",
+    toys: "Toys & Games",
+    jewelry: "Jewelry & Accessories",
+  };
 
   const priceRanges = [
-    { value: "0-2000", label: "LKR 0 - LKR 2000" },
-    { value: "2000-5000", label: "LKR 2000 - LKR 5000" },
-    { value: "5000-10000", label: "LKR 5000 - LKR 10,000" },
+    { value: "all", label: "All Prices" },
+    { value: "0-2000", label: "LKR 0 - LKR 2,000" },
+    { value: "2000-5000", label: "LKR 2,000 - LKR 5,000" },
+    { value: "5000-10000", label: "LKR 5,000 - LKR 10,000" },
     { value: "10000-10000000", label: "LKR 10,000+" },
   ];
 
@@ -75,372 +134,244 @@ const ProductCollection = () => {
     { id: "popular", name: "Most Popular" },
   ];
 
-  const products = [
-    {
-      id: 1,
-      name: "Wireless Bluetooth Headphones Pro Max",
-      shop: "TechHub Electronics",
-      shopId: 1,
-      category: "electronics",
-      image:
-        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
-      price: 79.99,
-      originalPrice: 129.99,
-      rating: 4.8,
-      reviews: 2340,
-      badge: "Hot",
-      discount: 38,
-      isNew: false,
-      featured: true,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: true,
-    },
-    {
-      id: 2,
-      name: "Smart Fitness Watch Series 7",
-      shop: "SportZone Pro",
-      shopId: 2,
-      category: "electronics",
-      image:
-        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
-      price: 199.99,
-      originalPrice: 299.99,
-      rating: 4.7,
-      reviews: 1890,
-      badge: "New",
-      discount: 33,
-      isNew: true,
-      featured: true,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: false,
-    },
-    {
-      id: 3,
-      name: "Premium Coffee Maker Deluxe",
-      shop: "Home Comfort Store",
-      shopId: 3,
-      category: "home",
-      image:
-        "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=300&h=300&fit=crop",
-      price: 149.99,
-      originalPrice: 219.99,
-      rating: 4.9,
-      reviews: 567,
-      badge: "Popular",
-      discount: 32,
-      isNew: false,
-      featured: false,
-      inStock: true,
-      freeShipping: false,
-      fastDelivery: true,
-    },
-    {
-      id: 4,
-      name: "Designer Leather Backpack",
-      shop: "Fashion Forward",
-      shopId: 4,
-      category: "fashion",
-      image:
-        "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop",
-      price: 89.99,
-      originalPrice: 139.99,
-      rating: 4.6,
-      reviews: 890,
-      badge: "Trending",
-      discount: 36,
-      isNew: false,
-      featured: true,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: true,
-    },
-    {
-      id: 5,
-      name: "Professional Camera Lens 85mm",
-      shop: "Photo Pro Studio",
-      shopId: 5,
-      category: "electronics",
-      image:
-        "https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=300&h=300&fit=crop",
-      price: 449.99,
-      originalPrice: 599.99,
-      rating: 4.9,
-      reviews: 1234,
-      badge: "#1 Seller",
-      discount: 25,
-      isNew: false,
-      featured: true,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: true,
-    },
-    {
-      id: 6,
-      name: "Gaming Mechanical Keyboard RGB",
-      shop: "GameZone Central",
-      shopId: 6,
-      category: "electronics",
-      image:
-        "https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=300&h=300&fit=crop",
-      price: 129.99,
-      originalPrice: 179.99,
-      rating: 4.8,
-      reviews: 2156,
-      badge: "Bestseller",
-      discount: 28,
-      isNew: false,
-      featured: false,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: false,
-    },
-    {
-      id: 7,
-      name: "Portable Bluetooth Speaker",
-      shop: "Audio Excellence",
-      shopId: 7,
-      category: "electronics",
-      image:
-        "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&h=300&fit=crop",
-      price: 59.99,
-      originalPrice: 119.99,
-      rating: 4.7,
-      reviews: 845,
-      badge: "50% OFF",
-      discount: 50,
-      isNew: false,
-      featured: false,
-      inStock: true,
-      freeShipping: false,
-      fastDelivery: true,
-    },
-    {
-      id: 8,
-      name: "Wireless Charging Pad Fast",
-      shop: "TechHub Electronics",
-      shopId: 1,
-      category: "electronics",
-      image:
-        "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=300&h=300&fit=crop",
-      price: 24.99,
-      originalPrice: 49.99,
-      rating: 4.5,
-      reviews: 567,
-      badge: "Flash Deal",
-      discount: 50,
-      isNew: true,
-      featured: false,
-      inStock: false,
-      freeShipping: true,
-      fastDelivery: false,
-    },
-    {
-      id: 9,
-      name: "Organic Skincare Set Premium",
-      shop: "Beauty Essentials",
-      shopId: 8,
-      category: "beauty",
-      image:
-        "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=300&h=300&fit=crop",
-      price: 79.99,
-      originalPrice: 120.99,
-      rating: 4.6,
-      reviews: 432,
-      badge: "Organic",
-      discount: 34,
-      isNew: false,
-      featured: true,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: true,
-    },
-    {
-      id: 10,
-      name: "Running Shoes Athletic Pro",
-      shop: "SportZone Pro",
-      shopId: 2,
-      category: "sports",
-      image:
-        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=300&fit=crop",
-      price: 119.99,
-      originalPrice: 159.99,
-      rating: 4.7,
-      reviews: 1023,
-      badge: "Athletic",
-      discount: 25,
-      isNew: false,
-      featured: false,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: false,
-    },
-    {
-      id: 11,
-      name: "Smart Home Security Camera",
-      shop: "SecureHome Tech",
-      shopId: 9,
-      category: "electronics",
-      image:
-        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop",
-      price: 89.99,
-      originalPrice: 129.99,
-      rating: 4.5,
-      reviews: 678,
-      badge: "Smart",
-      discount: 31,
-      isNew: true,
-      featured: false,
-      inStock: true,
-      freeShipping: false,
-      fastDelivery: true,
-    },
-    {
-      id: 12,
-      name: "Vintage Style Denim Jacket",
-      shop: "Fashion Forward",
-      shopId: 4,
-      category: "fashion",
-      image:
-        "https://images.unsplash.com/photo-1544966503-7cc5ac882d5e?w=300&h=300&fit=crop",
-      price: 69.99,
-      originalPrice: 99.99,
-      rating: 4.4,
-      reviews: 456,
-      badge: "Vintage",
-      discount: 30,
-      isNew: false,
-      featured: false,
-      inStock: true,
-      freeShipping: false,
-      fastDelivery: false,
-    },
-    {
-      id: 13,
-      name: "Indoor Plant Collection Set",
-      shop: "Green Garden Store",
-      shopId: 10,
-      category: "home",
-      image:
-        "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop",
-      price: 49.99,
-      originalPrice: 79.99,
-      rating: 4.8,
-      reviews: 234,
-      badge: "Eco",
-      discount: 38,
-      isNew: false,
-      featured: true,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: false,
-    },
-    {
-      id: 14,
-      name: "Professional Hair Dryer",
-      shop: "Beauty Essentials",
-      shopId: 8,
-      category: "beauty",
-      image:
-        "https://images.unsplash.com/photo-1522338140262-f46f5913618c?w=300&h=300&fit=crop",
-      price: 159.99,
-      originalPrice: 229.99,
-      rating: 4.7,
-      reviews: 789,
-      badge: "Professional",
-      discount: 30,
-      isNew: false,
-      featured: false,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: true,
-    },
-    {
-      id: 15,
-      name: "Educational STEM Robotics Kit",
-      shop: "Learning Hub",
-      shopId: 11,
-      category: "toys",
-      image:
-        "https://images.unsplash.com/photo-1518977956812-cd3dbadaaf31?w=300&h=300&fit=crop",
-      price: 89.99,
-      originalPrice: 129.99,
-      rating: 4.9,
-      reviews: 345,
-      badge: "Educational",
-      discount: 31,
-      isNew: true,
-      featured: true,
-      inStock: true,
-      freeShipping: false,
-      fastDelivery: true,
-    },
-    {
-      id: 16,
-      name: "Car Phone Mount Magnetic",
-      shop: "Auto Parts Pro",
-      shopId: 12,
-      category: "automotive",
-      image:
-        "https://images.unsplash.com/photo-1544966503-7cc5ac882d5e?w=300&h=300&fit=crop",
-      price: 19.99,
-      originalPrice: 34.99,
-      rating: 4.3,
-      reviews: 567,
-      badge: "Magnetic",
-      discount: 43,
-      isNew: false,
-      featured: false,
-      inStock: true,
-      freeShipping: false,
-      fastDelivery: false,
-    },
-  ];
+  // Fetch category data and store shop information
+  const fetchCategoryData = async () => {
+    setIsLoadingCategories(true);
+    try {
+      const result = await fetchStoresByCategory("fashion", 1, 1).unwrap();
+      const responseData = result?.data?.[0];
 
-  // Read URL parameters on component mount and when location changes
+      if (responseData?.categoryCounts) {
+        setCategoryData({
+          categoryCounts: responseData.categoryCounts,
+        });
+      } else {
+        setCategoryData({ categoryCounts: {} });
+      }
+
+      // Store shop data from the response
+      if (result?.data && Array.isArray(result.data)) {
+        const shops = result.data.map((item) => item.shop).filter(Boolean);
+        console.log("Storing shops data from category fetch:", shops);
+        setShopsData(shops);
+      }
+    } catch (error) {
+      console.error("Failed to fetch category data:", error);
+      setCategoryData({ categoryCounts: {} });
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
+  // Build categories from backend data
+  const categories = useMemo(() => {
+    if (!categoryData?.categoryCounts) {
+      return [{ id: "all", name: "All Categories", count: 0 }];
+    }
+
+    const counts = categoryData.categoryCounts;
+    const totalCount = Object.values(counts).reduce(
+      (sum, count) => sum + count,
+      0
+    );
+
+    const categoryList = [
+      { id: "all", name: "All Categories", count: totalCount },
+    ];
+
+    Object.entries(counts).forEach(([categoryKey, count]) => {
+      if (categoryDefinitions[categoryKey] && count > 0) {
+        categoryList.push({
+          id: categoryKey,
+          name: categoryDefinitions[categoryKey],
+          count: count,
+        });
+      }
+    });
+
+    return categoryList.sort((a, b) => {
+      if (a.id === "all") return -1;
+      if (b.id === "all") return 1;
+      return b.count - a.count;
+    });
+  }, [categoryData]);
+
+  // Simple function to get shop ID from stored shop data
+  const getShopIdForSeller = (sellerId) => {
+    const shop = shopsData.find((shop) => shop.sellerId === sellerId);
+    console.log(`Getting shop for seller ${sellerId}:`, shop);
+    return shop?._id || null;
+  };
+
+  // Simple handleVisitShop function using stored shop data
+  const handleVisitShop = (product, e) => {
+    e.stopPropagation();
+
+    const sellerId = product.sellerDetails || product.sellerId;
+    if (!sellerId) {
+      showToast.error(
+        "Unable to visit shop. Seller information not available."
+      );
+      return;
+    }
+
+    console.log("Available shops data:", shopsData);
+    const shopId = getShopIdForSeller(sellerId);
+    console.log(`Shop ID for seller ${sellerId}:`, shopId);
+
+    if (shopId) {
+      // Navigate using the correct shop ID from shop._id
+      console.log(`Navigating to shop: ${shopId}`);
+      navigate(`/shop/${shopId}`);
+    } else {
+      // Fallback to seller ID if shop not found
+      console.log(`Shop not found, using seller ID: ${sellerId}`);
+      navigate(`/shop/${sellerId}`);
+    }
+  };
+
+  // State to track if URL parameters have been loaded
+  const [urlParamsLoaded, setUrlParamsLoaded] = useState(false);
+
+  // Debounced search term
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  // Debounce search term to avoid too many API calls
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Read URL parameters on component mount
+  useEffect(() => {
+    console.log(
+      "Reading URL parameters:",
+      Object.fromEntries(searchParams.entries())
+    );
+
     const categoryParam = searchParams.get("category");
     const searchParam = searchParams.get("search");
     const priceParam = searchParams.get("price");
     const ratingParam = searchParams.get("rating");
     const sortParam = searchParams.get("sort");
+    const pageParam = searchParams.get("page");
 
-    // Set category if valid category is passed
-    if (categoryParam && categories.find((cat) => cat.id === categoryParam)) {
+    if (categoryParam && categoryDefinitions[categoryParam]) {
+      console.log("Setting category from URL:", categoryParam);
       setSelectedCategory(categoryParam);
     }
-
-    // Set search term if passed
     if (searchParam) {
       setSearchTerm(searchParam);
     }
-
-    // Set price range if valid
-    if (priceParam && priceRanges.find((range) => range.id === priceParam)) {
+    if (priceParam && priceRanges.find((range) => range.value === priceParam)) {
       setSelectedPriceRange(priceParam);
     }
-
-    // Set rating if valid
     if (
       ratingParam &&
       ratingFilters.find((rating) => rating.id === ratingParam)
     ) {
       setSelectedRating(ratingParam);
     }
-
-    // Set sort option if valid
     if (sortParam && sortOptions.find((option) => option.id === sortParam)) {
       setSortBy(sortParam);
     }
+    if (pageParam && !isNaN(parseInt(pageParam))) {
+      setCurrentPage(parseInt(pageParam));
+    }
+
+    // Mark URL parameters as loaded
+    console.log("URL parameters loaded, enabling search");
+    setUrlParamsLoaded(true);
   }, [searchParams]);
 
-  // Update URL when filters change (optional - for better UX)
+  // Fetch initial data
+  useEffect(() => {
+    fetchCategoryData();
+
+    if (authUser?._id) {
+      fetchCartItems(authUser._id, 1, 100);
+      fetchWishlist(authUser._id);
+    }
+  }, [authUser, fetchCartItems, fetchWishlist]);
+
+  // Perform search when filters change (but only after URL params are loaded)
+  useEffect(() => {
+    // Don't search until URL parameters have been processed
+    if (!urlParamsLoaded) return;
+
+    const performSearch = async () => {
+      console.log("Performing search with category:", selectedCategory);
+      console.log("Search term:", debouncedSearchTerm);
+
+      const searchFilters = {
+        categoryMain: selectedCategory !== "all" ? selectedCategory : "",
+        PriceRange: selectedPriceRange !== "all" ? selectedPriceRange : "",
+        CustomerRating: selectedRating !== "all" ? parseInt(selectedRating) : 0,
+        color: "",
+        brandName: "",
+        title: debouncedSearchTerm || "", // Add title filter for search functionality
+      };
+
+      console.log("Search filters:", searchFilters);
+
+      try {
+        const result = await searchAllProducts(
+          searchFilters,
+          currentPage,
+          itemsPerPage
+        ).unwrap();
+
+        // Also fetch shop data for the current category
+        if (selectedCategory !== "all") {
+          const shopResult = await fetchStoresByCategory(
+            selectedCategory,
+            1,
+            50
+          ).unwrap();
+          if (shopResult?.data && Array.isArray(shopResult.data)) {
+            const shops = shopResult.data
+              .map((item) => item.shop)
+              .filter(Boolean);
+            console.log("Storing shops data from search:", shops);
+            setShopsData(shops);
+          }
+        }
+      } catch (error) {
+        console.error("Search failed:", error);
+      }
+    };
+
+    performSearch();
+  }, [
+    urlParamsLoaded,
+    selectedCategory,
+    selectedPriceRange,
+    selectedRating,
+    currentPage,
+    debouncedSearchTerm, // Use debounced search term instead of immediate search term
+    searchAllProducts,
+    fetchStoresByCategory,
+  ]);
+
+  // Clear search results on unmount
+  useEffect(() => {
+    return () => {
+      if (clearSearchResults) {
+        clearSearchResults();
+      }
+      clearErrors();
+    };
+  }, [clearSearchResults, clearErrors]);
+
+  // Update URL when filters change
   const updateURLParams = (updates) => {
     const newSearchParams = new URLSearchParams(searchParams);
 
     Object.entries(updates).forEach(([key, value]) => {
-      if (value && value !== "all" && value !== "") {
+      if (value && value !== "all" && value !== "" && value !== 1) {
         newSearchParams.set(key, value);
       } else {
         newSearchParams.delete(key);
@@ -450,252 +381,363 @@ const ProductCollection = () => {
     setSearchParams(newSearchParams, { replace: true });
   };
 
-  // Modified filter handlers to update URL
+  // Filter handlers
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
-    updateURLParams({ category });
+    setCurrentPage(1);
+    updateURLParams({ category, page: 1 });
   };
 
   const handleSearchChange = (search) => {
     setSearchTerm(search);
-    updateURLParams({ search });
+    setCurrentPage(1); // Reset to first page when searching
+    updateURLParams({ search, page: 1 });
   };
 
   const handlePriceRangeChange = (priceRange) => {
     setSelectedPriceRange(priceRange);
-    updateURLParams({ price: priceRange });
+    setCurrentPage(1);
+    updateURLParams({ price: priceRange, page: 1 });
   };
 
   const handleRatingChange = (rating) => {
     setSelectedRating(rating);
-    updateURLParams({ rating });
+    setCurrentPage(1);
+    updateURLParams({ rating, page: 1 });
   };
 
   const handleSortChange = (sort) => {
     setSortBy(sort);
-    updateURLParams({ sort });
-  };
-
-  // Filter and sort products
-  const filteredProducts = useMemo(() => {
-    let filtered = products;
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (product) =>
-          product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.shop.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.category.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filter by category
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter(
-        (product) => product.category === selectedCategory
-      );
-    }
-
-    // Filter by price range
-    if (selectedPriceRange !== "all") {
-      const [min, max] = selectedPriceRange.split("-");
-      if (max === "+") {
-        filtered = filtered.filter((product) => product.price >= parseInt(min));
-      } else {
-        filtered = filtered.filter(
-          (product) =>
-            product.price >= parseInt(min) && product.price <= parseInt(max)
-        );
-      }
-    }
-
-    // Filter by rating
-    if (selectedRating !== "all") {
-      const minRating = parseFloat(selectedRating);
-      filtered = filtered.filter((product) => product.rating >= minRating);
-    }
-
-    // Sort products
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "price-low":
-          return a.price - b.price;
-        case "price-high":
-          return b.price - a.price;
-        case "rating":
-          return b.rating - a.rating;
-        case "newest":
-          return b.isNew - a.isNew;
-        case "popular":
-          return b.reviews - a.reviews;
-        case "featured":
-        default:
-          return b.featured - a.featured;
-      }
-    });
-
-    return filtered;
-  }, [
-    searchTerm,
-    selectedCategory,
-    selectedPriceRange,
-    selectedRating,
-    sortBy,
-  ]);
-
-  // Pagination logic
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentProducts = filteredProducts.slice(startIndex, endIndex);
-
-  // Reset to first page when filters change
-  useEffect(() => {
     setCurrentPage(1);
-  }, [
-    searchTerm,
-    selectedCategory,
-    selectedPriceRange,
-    selectedRating,
-    sortBy,
-  ]);
-
-  const getBadgeVariant = (badge) => {
-    const variants = {
-      Hot: "danger",
-      New: "success",
-      Popular: "primary",
-      Trending: "warning",
-      "#1 Seller": "purple",
-      Bestseller: "primary",
-      "50% OFF": "danger",
-      "Flash Deal": "warning",
-      Organic: "success",
-      Athletic: "info",
-      Smart: "info",
-      Vintage: "warning",
-      Eco: "success",
-      Professional: "default",
-      Educational: "purple",
-      Magnetic: "default",
-    };
-    return variants[badge] || "default";
+    updateURLParams({ sort, page: 1 });
   };
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
+    updateURLParams({ page });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const toggleLike = (productId, e) => {
+  // Product actions
+  const toggleWishlist = async (product, e) => {
     e.stopPropagation();
-    setLikedProducts((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(productId)) {
-        newSet.delete(productId);
+
+    if (!authUser?._id) {
+      navigate("/login");
+      return;
+    }
+
+    const productId = product._id;
+    const isInWishlist = isItemInProductWishlist(productId);
+
+    setAddingToWishlist((prev) => new Set(prev).add(productId));
+
+    try {
+      if (isInWishlist) {
+        await removeFromWishlist(authUser._id, productId);
+        const productName =
+          product.title || product.name || product.productName || "Item";
+        showToast.success(`"${productName}" removed from wishlist`);
       } else {
-        newSet.add(productId);
+        await addToWishlist([productId], []);
+        const productName =
+          product.title || product.name || product.productName || "Item";
+        showToast.success(`"${productName}" added to wishlist!`, {
+          text: "View Wishlist",
+          action: () => navigate("/wishlist"),
+        });
       }
-      return newSet;
-    });
+
+      await fetchWishlist(authUser._id);
+    } catch (error) {
+      console.error("Failed to update wishlist:", error);
+      const action = isInWishlist ? "remove from" : "add to";
+      showToast.error(`Failed to ${action} wishlist. Please try again.`, {
+        text: "Retry",
+        action: () => toggleWishlist(product, e),
+      });
+    } finally {
+      setAddingToWishlist((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(productId);
+        return newSet;
+      });
+    }
   };
 
-  const handleAddToCart = (product, e) => {
+  const handleAddToCart = async (product, e) => {
     e.stopPropagation();
-    console.log("Added to cart:", product.id);
+
+    if (!authUser?._id) {
+      navigate("/login");
+      return;
+    }
+
+    if (isItemInCart(product._id)) {
+      showToast.cart("Item is already in your cart", {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
+      return;
+    }
+
+    setAddingToCart((prev) => new Set(prev).add(product._id));
+
+    try {
+      await addItemToCart(authUser._id, product._id, 1).unwrap();
+      await fetchCartItems(authUser._id, 1, 100);
+
+      const productName =
+        product.title || product.name || product.productName || "Item";
+      showToast.success(`"${productName}" added to cart successfully!`, {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+      showToast.error("Failed to add to cart. Please try again.", {
+        text: "Retry",
+        action: () => handleAddToCart(product, e),
+      });
+    } finally {
+      setAddingToCart((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(product._id);
+        return newSet;
+      });
+    }
   };
 
   const handleBuyNow = (product, e) => {
     e.stopPropagation();
-    navigate(`/checkout?product=${product.id}&quantity=1`);
-  };
-
-  const handleVisitShop = (product, e) => {
-    e.stopPropagation();
-    navigate(`/shop/${product.shopId}`);
+    navigate(`/checkout?product=${product._id}&quantity=1`);
   };
 
   const handleQuickView = (product, e) => {
     e.stopPropagation();
-    console.log("Quick view:", product.id);
+    navigate(`/product/${product._id}`);
   };
 
-  // Reset all filters function
+  const handleProductClick = (product) => {
+    navigate(`/product/${product._id}`);
+  };
+
   const resetAllFilters = () => {
     setSearchTerm("");
     setSelectedCategory("all");
     setSelectedPriceRange("all");
     setSelectedRating("all");
     setSortBy("featured");
-
-    // Clear URL parameters
+    setCurrentPage(1);
     setSearchParams({}, { replace: true });
   };
 
+  // Helper functions
+  const getWishlistButtonContent = (product) => {
+    const productId = product._id;
+    const isLoading = addingToWishlist.has(productId);
+    const inWishlist = isItemInProductWishlist(productId);
+
+    if (isLoading) {
+      return {
+        className: "bg-gray-500 text-white scale-110",
+        icon: <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />,
+      };
+    }
+
+    if (inWishlist) {
+      return {
+        className: "bg-red-500 text-white scale-110",
+        icon: <Heart className="h-3 w-3 sm:h-4 sm:w-4" />,
+      };
+    }
+
+    return {
+      className: "bg-white/90 text-gray-600 hover:text-red-500 hover:bg-white",
+      icon: <Heart className="h-3 w-3 sm:h-4 sm:w-4" />,
+    };
+  };
+
+  const getCartButtonContent = (product) => {
+    const productId = product._id;
+    const isLoading = addingToCart.has(productId);
+    const inCart = isItemInCart(productId);
+    const isOutOfStock = product.status === "outOfStock";
+
+    if (isLoading) {
+      return {
+        text: "Adding...",
+        icon: <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 animate-spin" />,
+        disabled: true,
+        variant: "primary",
+      };
+    }
+
+    if (inCart) {
+      return {
+        text: "In Cart",
+        icon: <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />,
+        disabled: false,
+        variant: "success",
+      };
+    }
+
+    if (isOutOfStock) {
+      return {
+        text: "Notify",
+        icon: <Bell className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />,
+        disabled: true,
+        variant: "outline",
+      };
+    }
+
+    return {
+      text: "Add",
+      icon: <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />,
+      disabled: false,
+      variant: "outline",
+    };
+  };
+
+  const getProductPrice = (product) => {
+    const variation = product.variations?.[0];
+    return {
+      price: variation?.price || 0,
+      originalPrice: variation?.originalPrice || null,
+    };
+  };
+
+  const getProductImage = (product) => {
+    if (product.images?.[0]?.url) {
+      return product.images[0].url;
+    }
+    if (product.variations?.[0]?.images?.[0]?.url) {
+      return product.variations[0].images[0].url;
+    }
+    return "/placehold.png";
+  };
+
+  const renderStars = (rating) => {
+    return [...Array(5)].map((_, i) => (
+      <Star
+        key={i}
+        className={`h-3 w-3 sm:h-4 sm:w-4 ${
+          i < Math.floor(rating || 0)
+            ? "text-yellow-400 fill-current"
+            : "text-gray-300"
+        }`}
+      />
+    ));
+  };
+
+  // Loading state
+  if (searchLoading && (!searchResults || searchResults.length === 0)) {
+    return (
+      <section className="py-8 sm:py-12 lg:py-16 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 sm:h-12 sm:w-12 animate-spin text-blue-600 mx-auto mb-4" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+              Loading Products
+            </h2>
+            <p className="text-sm sm:text-base text-gray-600">
+              Please wait while we fetch the latest products...
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="py-16 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-8 sm:py-12 lg:py-16 bg-gray-50 min-h-screen">
+      <ToastNotification ref={toastRef} />
+
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
             Product Collection
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto px-4">
             Discover our complete collection of premium products from trusted
             sellers worldwide.
           </p>
+          {searchLoading && (
+            <div className="mt-3 sm:mt-4 flex items-center justify-center text-xs sm:text-sm text-blue-600">
+              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-2" />
+              Updating product results...
+            </div>
+          )}
         </div>
 
         {/* Search Bar */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <div className="max-w-2xl mx-auto relative">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
               <input
                 type="text"
-                placeholder="Search products..."
+                placeholder="Search products by title..."
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-white shadow-sm touch-manipulation"
+                className="w-full pl-10 sm:pl-12 pr-12 sm:pr-16 py-3 sm:py-4 text-sm sm:text-lg border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-white shadow-sm touch-manipulation"
               />
+              {/* Loading indicator for search */}
+              {searchTerm !== debouncedSearchTerm && (
+                <div className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-blue-500" />
+                </div>
+              )}
+              {/* Clear search button */}
+              {searchTerm && searchTerm === debouncedSearchTerm && (
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setCurrentPage(1);
+                    updateURLParams({ search: "", page: 1 });
+                  }}
+                  className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ×
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         {/* Filters and Controls */}
-        <Card className="p-6 mb-8">
-          {/* Filter Toggle for Mobile */}
+        <Card className="p-4 sm:p-6 mb-6 sm:mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">
               Filters & Sorting
             </h3>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
-              className="md:hidden flex items-center gap-2 touch-manipulation"
+              className="md:hidden flex items-center gap-2 touch-manipulation text-xs"
             >
-              <Filter className="h-4 w-4" />
+              <Filter className="h-3 w-3" />
+              <span className="hidden xs:inline">Filters</span>
               {showFilters ? (
-                <ChevronUp className="h-4 w-4" />
+                <ChevronUp className="h-3 w-3" />
               ) : (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-3 w-3" />
               )}
             </Button>
           </div>
 
-          {/* Filters */}
           <div
             className={`${showFilters ? "block" : "hidden"} md:block space-y-4`}
           >
             {/* Categories */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Category
               </label>
-              <div className="flex flex-wrap gap-2">
-                {categories.slice(0, 6).map((category) => (
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {categories.slice(0, 8).map((category) => (
                   <Button
                     key={category.id}
                     variant={
@@ -703,10 +745,13 @@ const ProductCollection = () => {
                     }
                     size="sm"
                     onClick={() => handleCategoryChange(category.id)}
-                    className="flex items-center gap-2 touch-manipulation"
+                    className="flex items-center gap-1 sm:gap-2 touch-manipulation text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
+                    disabled={isLoadingCategories}
                   >
-                    <span>{category.name}</span>
-                    <Badge variant="default" size="sm">
+                    <span className="truncate max-w-20 sm:max-w-none">
+                      {category.name}
+                    </span>
+                    <Badge variant="default" size="sm" className="text-xs">
                       {category.count}
                     </Badge>
                   </Button>
@@ -715,34 +760,32 @@ const ProductCollection = () => {
             </div>
 
             {/* Secondary Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Price Range */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                   Price Range
                 </label>
                 <select
                   value={selectedPriceRange}
                   onChange={(e) => handlePriceRangeChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none touch-manipulation"
+                  className="w-full px-2 sm:px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none touch-manipulation"
                 >
                   {priceRanges.map((range) => (
-                    <option key={range.id} value={range.id}>
-                      {range.name}
+                    <option key={range.value} value={range.value}>
+                      {range.label}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Rating */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                   Rating
                 </label>
                 <select
                   value={selectedRating}
                   onChange={(e) => handleRatingChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none touch-manipulation"
+                  className="w-full px-2 sm:px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none touch-manipulation"
                 >
                   {ratingFilters.map((rating) => (
                     <option key={rating.id} value={rating.id}>
@@ -752,15 +795,14 @@ const ProductCollection = () => {
                 </select>
               </div>
 
-              {/* Sort By */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="sm:col-span-2 lg:col-span-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                   Sort By
                 </label>
                 <select
                   value={sortBy}
                   onChange={(e) => handleSortChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none touch-manipulation"
+                  className="w-full px-2 sm:px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none touch-manipulation"
                 >
                   {sortOptions.map((option) => (
                     <option key={option.id} value={option.id}>
@@ -774,297 +816,423 @@ const ProductCollection = () => {
         </Card>
 
         {/* Results Info and View Controls */}
-        <div className="flex flex-col lg:flex-row justify-between items-center mb-8 gap-4">
-          {/* Results Info */}
-          <div className="text-gray-600">
-            Showing {startIndex + 1}-
-            {Math.min(endIndex, filteredProducts.length)} of{" "}
-            {filteredProducts.length} products
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-3 sm:gap-4">
+          <div className="text-xs sm:text-sm text-gray-600 order-2 sm:order-1">
+            {searchPagination ? (
+              <>
+                Showing {(currentPage - 1) * itemsPerPage + 1}-
+                {Math.min(
+                  currentPage * itemsPerPage,
+                  searchPagination.totalItems
+                )}{" "}
+                of {searchPagination.totalItems} products
+              </>
+            ) : (
+              `Showing ${searchResults?.length || 0} products`
+            )}
             {selectedCategory !== "all" && (
-              <span className="ml-2 text-blue-600 font-medium">
+              <span className="ml-1 sm:ml-2 text-blue-600 font-medium block sm:inline">
                 in {categories.find((cat) => cat.id === selectedCategory)?.name}
               </span>
             )}
             {searchTerm && (
-              <span className="ml-2 text-blue-600 font-medium">
+              <span className="ml-1 sm:ml-2 text-blue-600 font-medium block sm:inline">
                 for "{searchTerm}"
               </span>
             )}
           </div>
 
-          {/* View Controls */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 order-1 sm:order-2">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">View:</span>
+              <span className="text-xs sm:text-sm text-gray-600 hidden sm:inline">
+                View:
+              </span>
               <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white">
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`p-2 transition-colors touch-manipulation ${
+                  className={`p-1.5 sm:p-2 transition-colors touch-manipulation ${
                     viewMode === "grid"
                       ? "bg-blue-600 text-white"
                       : "text-gray-600 hover:bg-gray-100"
                   }`}
                 >
-                  <Grid className="h-4 w-4" />
+                  <Grid className="h-3 w-3 sm:h-4 sm:w-4" />
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`p-2 transition-colors touch-manipulation ${
+                  className={`p-1.5 sm:p-2 transition-colors touch-manipulation ${
                     viewMode === "list"
                       ? "bg-blue-600 text-white"
                       : "text-gray-600 hover:bg-gray-100"
                   }`}
                 >
-                  <List className="h-4 w-4" />
+                  <List className="h-3 w-3 sm:h-4 sm:w-4" />
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* No Results Message */}
-        {filteredProducts.length === 0 && (
-          <Card className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <Package className="h-16 w-16 mx-auto" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">
-              No products found
+        {/* Error State */}
+        {searchError && (
+          <Card className="text-center py-8 sm:py-12">
+            <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
+              Failed to load products
             </h3>
-            <p className="text-gray-500 mb-4">
-              Try adjusting your search or filter criteria
+            <p className="text-sm sm:text-base text-gray-600 mb-4">
+              {searchError}
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              {searchTerm && (
-                <Button
-                  variant="outline"
-                  onClick={() => handleSearchChange("")}
-                  className="touch-manipulation"
-                >
-                  Clear Search
-                </Button>
-              )}
-              <Button
-                variant="primary"
-                onClick={resetAllFilters}
-                className="touch-manipulation"
-              >
-                Reset All Filters
-              </Button>
-            </div>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
           </Card>
         )}
 
-        {/* Products Grid */}
-        {filteredProducts.length > 0 && (
-          <div
-            className={`grid gap-4 sm:gap-6 lg:gap-8 mb-12 ${
-              viewMode === "grid"
-                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                : "grid-cols-1"
-            }`}
-          >
-            {currentProducts.map((product) => (
-              <Card
-                key={product.id}
-                className={`group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer ${
-                  viewMode === "list"
-                    ? "flex flex-col md:flex-row"
-                    : "flex flex-col"
-                }`}
-                padding={false}
-                onClick={() => navigate(`/product/${product.id}`)}
-              >
-                {/* Product Image */}
-                <div
-                  className={`relative overflow-hidden ${
-                    viewMode === "list"
-                      ? "md:w-80 flex-shrink-0 h-64 md:h-auto"
-                      : "h-64 sm:h-72"
-                  }`}
+        {/* No Results Message */}
+        {!searchLoading &&
+          !searchError &&
+          (!searchResults || searchResults.length === 0) && (
+            <Card className="text-center py-8 sm:py-12">
+              <div className="text-gray-400 mb-4">
+                <Package className="h-12 w-12 sm:h-16 sm:w-16 mx-auto" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-600 mb-2">
+                No products found
+              </h3>
+              <p className="text-sm sm:text-base text-gray-500 mb-4 px-4">
+                Try adjusting your search or filter criteria
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                {searchTerm && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setCurrentPage(1);
+                      updateURLParams({ search: "", page: 1 });
+                    }}
+                    className="touch-manipulation"
+                  >
+                    Clear Search
+                  </Button>
+                )}
+                <Button
+                  variant="primary"
+                  onClick={resetAllFilters}
+                  className="touch-manipulation"
                 >
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                  Reset All Filters
+                </Button>
+              </div>
+            </Card>
+          )}
 
-                  {/* Badges */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-1">
-                    <Badge variant={getBadgeVariant(product.badge)} size="sm">
-                      {product.badge}
-                    </Badge>
-                    {!product.inStock && (
-                      <Badge variant="danger" size="sm">
-                        Out of Stock
-                      </Badge>
-                    )}
-                  </div>
+        {/* Products Grid */}
+        {!searchLoading &&
+          !searchError &&
+          searchResults &&
+          searchResults.length > 0 && (
+            <div
+              className={`grid gap-3 sm:gap-4 lg:gap-6 mb-8 sm:mb-12 ${
+                viewMode === "grid"
+                  ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1"
+              }`}
+            >
+              {searchResults.map((product) => {
+                const cartButton = getCartButtonContent(product);
+                const wishlistButton = getWishlistButtonContent(product);
+                const { price, originalPrice } = getProductPrice(product);
+                const productImage = getProductImage(product);
 
-                  {/* Discount Badge */}
-                  {product.discount && (
-                    <div className="absolute top-3 right-3">
-                      <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                        -{product.discount}%
-                      </div>
-                    </div>
-                  )}
+                const discount =
+                  originalPrice && originalPrice > price
+                    ? Math.round(
+                        ((originalPrice - price) / originalPrice) * 100
+                      )
+                    : null;
 
-                  {/* Action Buttons */}
-                  <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => toggleLike(product.id, e)}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors touch-manipulation ${
-                        likedProducts.has(product.id)
-                          ? "bg-red-500 text-white"
-                          : "bg-white/90 text-gray-600 hover:text-red-500"
+                return (
+                  <Card
+                    key={product._id}
+                    className={`group overflow-hidden hover:shadow-lg hover:shadow-blue-100/50 transition-all duration-300 cursor-pointer bg-white border border-gray-100 hover:border-blue-200 ${
+                      viewMode === "list"
+                        ? "flex flex-col lg:flex-row h-auto lg:h-56"
+                        : "flex flex-col h-full"
+                    }`}
+                    padding={false}
+                    onClick={() => handleProductClick(product)}
+                  >
+                    {/* Product Image Container */}
+                    <div
+                      className={`relative overflow-hidden bg-gray-50 ${
+                        viewMode === "list"
+                          ? "h-48 sm:h-56 lg:h-56 lg:w-56 lg:flex-shrink-0"
+                          : "h-40 sm:h-48 lg:h-56"
                       }`}
-                      aria-label="Add to wishlist"
                     >
-                      <Heart className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={(e) => handleQuickView(product, e)}
-                      className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors touch-manipulation"
-                      aria-label="Quick view"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </div>
+                      <img
+                        src={productImage}
+                        alt={product.title || product.name || "Product"}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                          e.target.src = "/placehold.png";
+                        }}
+                      />
 
-                  {/* Quick Features */}
-                  <div className="absolute bottom-3 left-3 flex gap-1 flex-wrap">
-                    {product.freeShipping && (
-                      <Badge variant="success" size="sm">
-                        Free Ship
-                      </Badge>
-                    )}
-                    {product.fastDelivery && (
-                      <Badge variant="warning" size="sm">
-                        Fast
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* Product Info */}
-                <div className="p-4 sm:p-5 flex-1 flex flex-col">
-                  {/* Shop Name */}
-                  <div className="mb-2">
-                    <span
-                      className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/shop/${product.shopId}`);
-                      }}
-                    >
-                      {product.shop}
-                    </span>
-                  </div>
-
-                  {/* Product Title */}
-                  <div className="mb-3 h-12 sm:h-14 flex items-start">
-                    <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
-                      {product.name}
-                    </h3>
-                  </div>
-
-                  {/* Rating */}
-                  <div className="mb-3 h-5">
-                    <div className="flex items-center gap-1">
-                      <div className="flex items-center">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${
-                              i < Math.floor(product.rating)
-                                ? "text-yellow-400 fill-current"
-                                : "text-gray-300"
-                            }`}
-                          />
-                        ))}
+                      {/* Top Badges */}
+                      <div className="absolute top-2 sm:top-3 left-2 sm:left-3 flex flex-col gap-1">
+                        {product.status === "active" ? (
+                          <Badge
+                            variant="success"
+                            size="sm"
+                            className="text-xs font-medium"
+                          >
+                            Available
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="secondary"
+                            size="sm"
+                            className="text-xs"
+                          >
+                            {product.status}
+                          </Badge>
+                        )}
+                        {product.brand && (
+                          <Badge
+                            variant="info"
+                            size="sm"
+                            className="text-xs font-medium"
+                          >
+                            {product.brand}
+                          </Badge>
+                        )}
                       </div>
-                      <span className="text-sm text-gray-600">
-                        {product.rating} ({product.reviews})
-                      </span>
-                    </div>
-                  </div>
 
-                  {/* Price */}
-                  <div className="mb-4 h-8">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-gray-900">
-                        LKR {product.price}
-                      </span>
-                      {product.originalPrice && (
-                        <span className="text-sm text-gray-500 line-through">
-                          LKR {product.originalPrice}
+                      {/* Discount Badge */}
+                      {discount && (
+                        <div className="absolute top-2 sm:top-3 right-2 sm:right-3">
+                          <div className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+                            -{discount}%
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                        <button
+                          onClick={(e) => toggleWishlist(product, e)}
+                          disabled={addingToWishlist.has(product._id)}
+                          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-200 backdrop-blur-sm touch-manipulation shadow-lg disabled:opacity-70 ${wishlistButton.className}`}
+                          aria-label={
+                            isItemInProductWishlist(product._id)
+                              ? "Remove from wishlist"
+                              : "Add to wishlist"
+                          }
+                        >
+                          {wishlistButton.icon}
+                        </button>
+                        <button
+                          onClick={(e) => handleQuickView(product, e)}
+                          className="w-7 h-7 sm:w-8 sm:h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 hover:bg-white transition-all duration-200 touch-manipulation shadow-lg"
+                          aria-label="Quick view"
+                        >
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </button>
+                      </div>
+
+                      {/* Features Badges */}
+                      <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 flex gap-1 flex-wrap max-w-20 sm:max-w-24">
+                        {product.shippingClass?.shippingClass ===
+                          "standard" && (
+                          <Badge
+                            variant="success"
+                            size="sm"
+                            className="text-xs"
+                          >
+                            <Truck className="h-2 w-2 mr-1" />
+                            <span className="hidden sm:inline">Free</span>
+                          </Badge>
+                        )}
+                        {product.shippingClass?.warranty && (
+                          <Badge variant="info" size="sm" className="text-xs">
+                            <Shield className="h-2 w-2" />
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Product Info */}
+                    <div className="p-3 sm:p-4 flex-1 flex flex-col">
+                      {/* Shop Name & Location */}
+                      <div className="mb-2 flex items-center justify-between">
+                        <span
+                          className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer font-medium truncate"
+                          onClick={(e) => handleVisitShop(product, e)}
+                          title={`Visit Shop (Seller: ${
+                            product.sellerDetails || product.sellerId
+                          })`}
+                        >
+                          {product.brand || "Shop"}
                         </span>
-                      )}
-                      {product.discount && (
-                        <Badge variant="success" size="sm">
-                          Save LKR 
-                          {(product.originalPrice - product.price).toFixed(2)}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
+                        {viewMode === "list" && (
+                          <div className="flex items-center text-xs text-gray-500">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            <span className="hidden sm:inline">Location</span>
+                          </div>
+                        )}
+                      </div>
 
-                  {/* Spacer to push buttons to bottom */}
-                  <div className="flex-grow"></div>
-
-                  {/* Action Buttons */}
-                  <div className="space-y-2 mt-4">
-                    {/* Main Buy Now Button */}
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      className="w-full py-3 font-semibold touch-manipulation"
-                      disabled={!product.inStock}
-                      onClick={(e) => handleBuyNow(product, e)}
-                    >
-                      {product.inStock ? "Buy it Now" : "Out of Stock"}
-                    </Button>
-
-                    {/* Secondary Buttons */}
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 touch-manipulation"
-                        onClick={(e) => handleAddToCart(product, e)}
-                        disabled={!product.inStock}
+                      {/* Product Title */}
+                      <div
+                        className={`mb-2 sm:mb-3 ${
+                          viewMode === "grid" ? "h-8 sm:h-10" : "h-auto"
+                        } flex items-start`}
                       >
-                        <ShoppingCart className="h-4 w-4 mr-1" />
-                        Cart
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex-1 border border-blue-300 text-blue-700 hover:bg-blue-50 touch-manipulation"
-                        onClick={(e) => handleVisitShop(product, e)}
-                      >
-                        <Store className="h-4 w-4 mr-1" />
-                        Shop
-                      </Button>
+                        <h3
+                          className={`font-semibold text-gray-900 group-hover:text-blue-600 transition-colors leading-tight ${
+                            viewMode === "grid"
+                              ? "line-clamp-2 text-xs sm:text-sm"
+                              : "text-sm sm:text-base"
+                          }`}
+                        >
+                          {product.title ||
+                            product.name ||
+                            product.productName ||
+                            "Product"}
+                        </h3>
+                      </div>
+
+                      {/* Rating & Reviews */}
+                      <div className="mb-2 sm:mb-3 flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                          <div className="flex items-center">
+                            {renderStars(product.averageRating)}
+                          </div>
+                          <span className="text-xs text-gray-600 ml-1">
+                            {product.averageRating || 0}
+                          </span>
+                        </div>
+                        {viewMode === "list" && (
+                          <span className="text-xs text-gray-500">
+                            ({product.reviews || 0} reviews)
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Price Section */}
+                      <div className="mb-3 sm:mb-4">
+                        <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                          <span className="text-sm sm:text-lg font-bold text-gray-900">
+                            LKR {price}
+                          </span>
+                          {originalPrice && originalPrice > price && (
+                            <span className="text-xs sm:text-sm text-gray-500 line-through">
+                              LKR {originalPrice}
+                            </span>
+                          )}
+                        </div>
+                        {originalPrice && originalPrice > price && (
+                          <div className="mt-1">
+                            <Badge
+                              variant="success"
+                              size="sm"
+                              className="text-xs"
+                            >
+                              <Tag className="h-2 w-2 mr-1" />
+                              Save LKR {(originalPrice - price).toFixed(2)}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* List View Extra Info */}
+                      {viewMode === "list" && (
+                        <div className="mb-3 text-xs text-gray-600 hidden lg:block">
+                          <p className="line-clamp-2">
+                            {product.description ||
+                              "High quality product with excellent features and reliable performance."}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Spacer to push buttons to bottom */}
+                      <div className="flex-grow"></div>
+
+                      {/* Action Buttons */}
+                      <div className="space-y-1.5 sm:space-y-2 mt-auto">
+                        {/* Main Buy Now Button */}
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          className="w-full py-2 sm:py-3 font-semibold touch-manipulation text-xs sm:text-sm bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200"
+                          disabled={product.status !== "active"}
+                          onClick={(e) => handleBuyNow(product, e)}
+                        >
+                          {product.status === "active"
+                            ? "Buy Now"
+                            : "Unavailable"}
+                        </Button>
+
+                        {/* Secondary Buttons */}
+                        <div className="flex gap-1.5 sm:gap-2">
+                          <Button
+                            variant={cartButton.variant}
+                            size="sm"
+                            className={`flex-1 touch-manipulation text-xs sm:text-sm py-1.5 sm:py-2 transition-all duration-200 ${
+                              cartButton.variant === "success"
+                                ? "bg-green-600 hover:bg-green-700 text-white shadow-md"
+                                : cartButton.variant === "primary"
+                                ? "bg-blue-600 hover:bg-blue-700 text-white"
+                                : "hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                            }`}
+                            onClick={(e) => handleAddToCart(product, e)}
+                            disabled={cartButton.disabled}
+                          >
+                            {cartButton.icon}
+                            <span className="hidden sm:inline">
+                              {cartButton.text}
+                            </span>
+                            <span className="sm:hidden">
+                              {cartButton.text === "Adding..."
+                                ? "..."
+                                : cartButton.text.slice(0, 3)}
+                            </span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 touch-manipulation text-xs sm:text-sm py-1.5 sm:py-2 transition-all duration-200"
+                            onClick={(e) => handleVisitShop(product, e)}
+                            title="Visit Shop"
+                          >
+                            <Store className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                            <span className="hidden sm:inline">Shop</span>
+                            <span className="sm:hidden">Visit</span>
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
 
         {/* Pagination */}
-        {filteredProducts.length > 0 && totalPages > 1 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            itemsPerPage={itemsPerPage}
-            totalItems={filteredProducts.length}
-          />
-        )}
+        {!searchLoading &&
+          searchPagination &&
+          searchPagination.totalPages > 1 && (
+            <div className="mt-8 sm:mt-12">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={searchPagination.totalPages}
+                onPageChange={handlePageChange}
+                itemsPerPage={itemsPerPage}
+                totalItems={searchPagination.totalItems}
+              />
+            </div>
+          )}
       </div>
     </section>
   );

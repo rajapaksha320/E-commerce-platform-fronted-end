@@ -20,6 +20,9 @@ import {
   MoreHorizontal,
   RefreshCw,
   AlertCircle,
+  Loader2,
+  ShoppingBag,
+  CheckSquare,
 } from "lucide-react";
 import {
   Button,
@@ -28,211 +31,149 @@ import {
 } from "../../components/ui/ContactUis/Uis";
 import Pagination from "../../components/ui/ContactUis/Pagination";
 import OrderDetailsModal from "./OrderDetailsModal";
+import ProductReviewModal from "./ProductReviewModal";
 import { useNavigate } from "react-router-dom";
+import useUser from "../../hooks/useUser"; // Import useUser hook
+import { useSelector } from "react-redux";
+import {
+  selectUser,
+  selectIsAuthenticated,
+} from "../../store/slices/authSlice";
 
 const Orders = () => {
   const navigate = useNavigate();
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const currentUser = useSelector(selectUser);
+
+  // Redux user hook
+  const {
+    // Orders state
+    orders,
+    ordersLoading,
+    ordersError,
+    ordersPagination,
+
+    // Actions
+    fetchBuyerOrders,
+    submitReview,
+    clearErrors,
+
+    // Helper functions
+    getOrdersByStatus,
+    getPendingReviewOrders,
+    ordersSummary,
+  } = useUser();
+
+  // Local state
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Review modal state
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewOrder, setReviewOrder] = useState(null);
+
   const itemsPerPage = 5;
 
-  // Mock orders data
-  const [orders] = useState([
-    {
-      id: "ORD-001",
-      orderNumber: "#ORD-2024-001",
-      date: "2024-01-15",
-      status: "delivered",
-      total: 359.98,
-      items: [
-        {
-          id: 1,
-          name: "Wireless Bluetooth Headphones Pro Max",
-          brand: "TechAudio",
-          price: 179.99,
-          quantity: 2,
-          image:
-            "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop",
-        },
-      ],
-      shippingAddress: "123 Main St, New York, NY 10001",
-      trackingNumber: "TRK123456789",
-      estimatedDelivery: "2024-01-18",
-      actualDelivery: "2024-01-17",
-    },
-    {
-      id: "ORD-002",
-      orderNumber: "#ORD-2024-002",
-      date: "2024-01-20",
-      status: "shipped",
-      total: 299.99,
-      items: [
-        {
-          id: 2,
-          name: "Premium Leather Handbag",
-          brand: "LuxeFashion",
-          price: 299.99,
-          quantity: 1,
-          image:
-            "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&h=400&fit=crop",
-        },
-      ],
-      shippingAddress: "456 Oak Ave, Brooklyn, NY 11201",
-      trackingNumber: "TRK987654321",
-      estimatedDelivery: "2024-01-25",
-    },
-    {
-      id: "ORD-003",
-      orderNumber: "#ORD-2024-003",
-      date: "2024-01-22",
-      status: "processing",
-      total: 199.99,
-      items: [
-        {
-          id: 3,
-          name: "Smart Fitness Watch",
-          brand: "FitTech",
-          price: 199.99,
-          quantity: 1,
-          image:
-            "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&h=400&fit=crop",
-        },
-      ],
-      shippingAddress: "789 Pine St, Queens, NY 11375",
-      estimatedDelivery: "2024-01-28",
-    },
-    {
-      id: "ORD-004",
-      orderNumber: "#ORD-2024-004",
-      date: "2024-01-10",
-      status: "cancelled",
-      total: 149.99,
-      items: [
-        {
-          id: 4,
-          name: "Gaming Mechanical Keyboard",
-          brand: "GamePro",
-          price: 149.99,
-          quantity: 1,
-          image:
-            "https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=400&h=400&fit=crop",
-        },
-      ],
-      shippingAddress: "321 Elm St, Manhattan, NY 10003",
-      cancelReason: "Customer request",
-    },
-    {
-      id: "ORD-005",
-      orderNumber: "#ORD-2024-005",
-      date: "2024-01-25",
-      status: "delivered",
-      total: 74.97,
-      items: [
-        {
-          id: 5,
-          name: "Organic Coffee Beans",
-          brand: "BrewMaster",
-          price: 24.99,
-          quantity: 3,
-          image:
-            "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop",
-        },
-      ],
-      shippingAddress: "654 Maple Dr, Staten Island, NY 10301",
-      trackingNumber: "TRK456789123",
-      estimatedDelivery: "2024-01-28",
-      actualDelivery: "2024-01-27",
-    },
-    {
-      id: "ORD-006",
-      orderNumber: "#ORD-2024-006",
-      date: "2024-01-28",
-      status: "shipped",
-      total: 899.99,
-      items: [
-        {
-          id: 6,
-          name: "Professional Camera",
-          brand: "PhotoPro",
-          price: 899.99,
-          quantity: 1,
-          image:
-            "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&h=400&fit=crop",
-        },
-      ],
-      shippingAddress: "987 Cedar Ln, Bronx, NY 10461",
-      trackingNumber: "TRK789123456",
-      estimatedDelivery: "2024-02-02",
-    },
-  ]);
+  // Get user ID
+  const userId = currentUser?._id || currentUser?.userId;
+  const buyerId = userId;
 
+  // Fetch orders on component mount
+  useEffect(() => {
+    if (isAuthenticated && buyerId) {
+      fetchBuyerOrders(buyerId, currentPage, itemsPerPage);
+    }
+  }, [isAuthenticated, buyerId, currentPage, fetchBuyerOrders]);
+
+  // Clear errors on unmount
+  useEffect(() => {
+    return () => {
+      clearErrors();
+    };
+  }, [clearErrors]);
+
+  // Updated status options to match backend enum
   const statusOptions = [
     { value: "all", label: "All Orders", count: orders.length },
     {
-      value: "processing",
-      label: "Processing",
-      count: orders.filter((o) => o.status === "processing").length,
+      value: "pending",
+      label: "Pending",
+      count: orders.filter((o) => o.orderStatus === "pending").length,
+    },
+    {
+      value: "confirmed",
+      label: "Confirmed",
+      count: orders.filter((o) => o.orderStatus === "confirmed").length,
     },
     {
       value: "shipped",
       label: "Shipped",
-      count: orders.filter((o) => o.status === "shipped").length,
+      count: orders.filter((o) => o.orderStatus === "shipped").length,
     },
     {
       value: "delivered",
       label: "Delivered",
-      count: orders.filter((o) => o.status === "delivered").length,
+      count: orders.filter((o) => o.orderStatus === "delivered").length,
     },
     {
       value: "cancelled",
       label: "Cancelled",
-      count: orders.filter((o) => o.status === "cancelled").length,
+      count: orders.filter((o) => o.orderStatus === "cancelled").length,
     },
   ];
 
   // Filter orders based on status and search
   const filteredOrders = orders.filter((order) => {
     const matchesStatus =
-      selectedStatus === "all" || order.status === selectedStatus;
+      selectedStatus === "all" || order.orderStatus === selectedStatus;
+
     const matchesSearch =
       !searchQuery ||
-      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.items.some((item) =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      order.orderNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order._id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.listingIds?.some((listing) =>
+        listing.title?.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
     return matchesStatus && matchesSearch;
   });
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedOrders = filteredOrders.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
+  const totalPages =
+    ordersPagination?.totalPages ||
+    Math.ceil(filteredOrders.length / itemsPerPage);
+  const totalItems = ordersPagination?.totalItems || filteredOrders.length;
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    if (buyerId) {
+      fetchBuyerOrders(buyerId, page, itemsPerPage);
+    }
+  };
 
   // Reset pagination when filters change
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(totalPages);
+      setCurrentPage(1);
     }
   }, [filteredOrders.length, currentPage, totalPages]);
 
+  // Updated status badge function
   const getStatusBadge = (status) => {
     const statusConfig = {
-      processing: { variant: "warning", icon: Clock, label: "Processing" },
+      pending: { variant: "warning", icon: Clock, label: "Pending" },
+      confirmed: { variant: "success", icon: CheckSquare, label: "Confirmed" },
       shipped: { variant: "primary", icon: Truck, label: "Shipped" },
       delivered: { variant: "success", icon: CheckCircle, label: "Delivered" },
       cancelled: { variant: "danger", icon: XCircle, label: "Cancelled" },
     };
 
-    const config = statusConfig[status] || statusConfig.processing;
+    const config = statusConfig[status] || statusConfig.pending;
     const Icon = config.icon;
 
     return (
@@ -253,19 +194,7 @@ const Orders = () => {
     setCurrentPage(1); // Reset to first page on filter
   };
 
-  const handleTrackOrder = (order) => {
-    // Navigate to order tracking page with tracking number in URL
-    if (order.trackingNumber) {
-      navigate(
-        `/track-parcel?number=${encodeURIComponent(order.trackingNumber)}`
-      );
-    } else {
-      navigate("/track-parcel");
-    }
-  };
-
   const handleViewOrder = (order) => {
-    // Open modal with order details
     setSelectedOrder(order);
     setIsModalOpen(true);
   };
@@ -276,14 +205,48 @@ const Orders = () => {
   };
 
   const handleReorder = (order) => {
-    // Add items to cart and navigate to cart
     console.log("Reordering:", order);
     navigate("/shopping-cart");
   };
 
-  const handleReturnOrder = (order) => {
-    // Navigate to return page
-    navigate(`/returns/${order.id}`);
+  // Review handling functions
+  const handleReviewProduct = (order, product) => {
+    setReviewOrder(order);
+    setSelectedProduct(product);
+    setIsReviewModalOpen(true);
+  };
+
+  const handleCloseReviewModal = () => {
+    setIsReviewModalOpen(false);
+    setSelectedProduct(null);
+    setReviewOrder(null);
+  };
+
+  const handleSubmitReview = async (reviewData) => {
+    try {
+      const payload = {
+        buyerId: buyerId,
+        shopId: reviewOrder.storeIds[0], // Assuming first store
+        listingId: selectedProduct._id,
+        orderId: reviewOrder._id,
+        review: reviewData.reviewText,
+        shoppingExperience: reviewData.shoppingExperience,
+        customerService: reviewData.customerService,
+        productQuality: reviewData.productQuality,
+        deliverySpeed: reviewData.deliverySpeed,
+      };
+
+      await submitReview(payload).unwrap();
+
+      // Refresh orders to update review status
+      if (buyerId) {
+        fetchBuyerOrders(buyerId, currentPage, itemsPerPage);
+      }
+
+      handleCloseReviewModal();
+    } catch (error) {
+      console.error("Failed to submit review:", error);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -293,6 +256,93 @@ const Orders = () => {
       day: "numeric",
     });
   };
+
+  // Transform order data for display
+  const getOrderDisplayData = (order) => {
+    return {
+      id: order._id,
+      orderNumber: order.orderNumber || `#ORD-${order._id.slice(-6)}`,
+      date: order.createdAt || order.orderDate,
+      status: order.orderStatus,
+      total: order.totalAmount || 0,
+      items: order.listingIds || [],
+      shippingAddress: order.shippingAddress
+        ? `${order.shippingAddress.streetAddress}, ${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.zipCode}`
+        : "No shipping address",
+      trackingNumber: order.trackingNumber || null,
+      estimatedDelivery: order.estimatedDelivery,
+      actualDelivery: order.actualDelivery,
+      cancelReason: order.cancelReason,
+      isReviewed: order.isReviewed,
+    };
+  };
+
+  // Get product image from listing
+  const getProductImage = (listing) => {
+    if (!listing?.images?.length) return "/placehold.png";
+    const primaryImage = listing.images.find((img) => img.isPrimary);
+    return primaryImage?.url || listing.images[0]?.url || "/placehold.png";
+  };
+
+  // Get product price from listing
+  const getProductPrice = (listing) => {
+    if (!listing?.variations?.length) return 0;
+    const defaultVariation =
+      listing.variations.find((v) => v.isDefault) || listing.variations[0];
+    return defaultVariation?.price || 0;
+  };
+
+  // Loading state
+  if (ordersLoading && orders.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading your orders...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (ordersError && !ordersLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
+        <Card className="text-center p-8 max-w-md mx-auto">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Error Loading Orders
+          </h3>
+          <p className="text-gray-600 mb-4">{ordersError}</p>
+          <Button
+            onClick={() =>
+              buyerId && fetchBuyerOrders(buyerId, currentPage, itemsPerPage)
+            }
+          >
+            Try Again
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  // Not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
+        <Card className="text-center p-8 max-w-md mx-auto">
+          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Please Log In
+          </h3>
+          <p className="text-gray-600 mb-4">
+            You need to be logged in to view your orders.
+          </p>
+          <Button onClick={() => navigate("/")}>Go to Login</Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
@@ -313,6 +363,9 @@ const Orders = () => {
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 flex items-center">
                   <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 mr-2" />
                   My Orders
+                  {ordersLoading && (
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-600 ml-2" />
+                  )}
                 </h1>
                 <p className="text-xs sm:text-sm text-gray-600">
                   {filteredOrders.length}{" "}
@@ -320,21 +373,6 @@ const Orders = () => {
                 </p>
               </div>
             </div>
-            {/* <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsLoading(true)}
-                className="hidden sm:flex"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-              <Button variant="ghost" size="sm" className="hidden sm:flex">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </div> */}
           </div>
         </div>
       </div>
@@ -380,19 +418,11 @@ const Orders = () => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
               />
             </div>
-            {/* <Button
-              variant="outline"
-              size="md"
-              className="flex items-center space-x-2 sm:w-auto"
-            >
-              <Filter className="h-4 w-4" />
-              <span>More Filters</span>
-            </Button> */}
           </div>
         </div>
 
         {/* Orders List */}
-        {paginatedOrders.length === 0 ? (
+        {filteredOrders.length === 0 ? (
           <Card className="text-center py-12">
             <div className="max-w-md mx-auto">
               <div className="bg-gray-100 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
@@ -416,207 +446,185 @@ const Orders = () => {
           </Card>
         ) : (
           <div className="space-y-6">
-            {paginatedOrders.map((order) => (
-              <Card
-                key={order.id}
-                className="p-6 hover:shadow-lg transition-shadow duration-200"
-              >
-                <div className="space-y-4">
-                  {/* Order Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-                    <div className="flex items-center space-x-4">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {order.orderNumber}
-                        </h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <span className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {formatDate(order.date)}
-                          </span>
-                          <span className="flex items-center">
-                            <CreditCard className="h-4 w-4 mr-1" />
-                            <span className="mr-1">LKR</span>
-                            {order.total.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      {getStatusBadge(order.status)}
-                      <Button variant="ghost" size="sm" className="p-2">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+            {filteredOrders.map((order) => {
+              const orderData = getOrderDisplayData(order);
 
-                  {/* Order Items */}
-                  <div className="space-y-3">
-                    {order.items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex space-x-4 p-3 bg-gray-50 rounded-lg"
-                      >
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-16 h-16 object-cover rounded-lg"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-gray-900 truncate">
-                            {item.name}
-                          </h4>
-                          <p className="text-sm text-gray-600">{item.brand}</p>
-                          <div className="flex items-center mt-1 space-x-4">
-                            <span className="text-sm text-gray-600">
-                              Qty: {item.quantity}
+              return (
+                <Card
+                  key={orderData.id}
+                  className="p-6 hover:shadow-lg transition-shadow duration-200"
+                >
+                  <div className="space-y-4">
+                    {/* Order Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                      <div className="flex items-center space-x-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {orderData.orderNumber}
+                          </h3>
+                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                            <span className="flex items-center">
+                              <Calendar className="h-4 w-4 mr-1" />
+                              {formatDate(orderData.date)}
                             </span>
-                            <span className="text-sm font-medium text-gray-900">
+                            <span className="flex items-center">
+                              <CreditCard className="h-4 w-4 mr-1" />
                               <span className="mr-1">LKR</span>
-                              {item.price.toFixed(2)}
+                              {orderData.total.toFixed(2)}
                             </span>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Shipping Info */}
-                  {order.shippingAddress && (
-                    <div className="flex items-start space-x-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-                      <MapPin className="h-4 w-4 mt-0.5 text-blue-600" />
-                      <div>
-                        <span className="font-medium text-blue-900">
-                          Shipping to:
-                        </span>
-                        <p>{order.shippingAddress}</p>
+                      <div className="flex items-center space-x-3">
+                        {getStatusBadge(orderData.status)}
+                        <Button variant="ghost" size="sm" className="p-2">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-                  )}
 
-                  {/* Tracking Info */}
-                  {/* {order.trackingNumber && (
-                    <div className="flex items-center justify-between bg-green-50 p-3 rounded-lg">
-                      <div className="flex items-center space-x-2 text-sm">
-                        <Truck className="h-4 w-4 text-green-600" />
-                        <span className="text-green-800">
-                          <span className="font-medium">Tracking:</span>{" "}
-                          {order.trackingNumber}
-                        </span>
+                    {/* Order Items */}
+                    <div className="space-y-3">
+                      {orderData.items.map((item, index) => (
+                        <div
+                          key={item._id || index}
+                          className="flex space-x-4 p-3 bg-gray-50 rounded-lg"
+                        >
+                          <img
+                            src={getProductImage(item)}
+                            alt={item.title || "Product"}
+                            className="w-16 h-16 object-cover rounded-lg"
+                            onError={(e) => {
+                              e.target.src = "/placehold.png";
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-gray-900 truncate">
+                              {item.title || "Unknown Product"}
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              {item.brandName || "Unknown Brand"}
+                            </p>
+                            <div className="flex items-center mt-1 space-x-4">
+                              <span className="text-sm text-gray-600">
+                                Qty: 1
+                              </span>
+                              <span className="text-sm font-medium text-gray-900">
+                                <span className="mr-1">LKR</span>
+                                {getProductPrice(item).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Individual Product Review Button */}
+                          {orderData.status === "delivered" &&
+                            !orderData.isReviewed && (
+                              <div className="flex items-center">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleReviewProduct(order, item)
+                                  }
+                                  className="flex items-center text-yellow-600 hover:text-yellow-700 border-yellow-300 hover:border-yellow-400 hover:bg-yellow-50"
+                                >
+                                  <Star className="h-3 w-3 mr-1" />
+                                  Review
+                                </Button>
+                              </div>
+                            )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Shipping Info */}
+                    {orderData.shippingAddress && (
+                      <div className="flex items-start space-x-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                        <MapPin className="h-4 w-4 mt-0.5 text-blue-600" />
+                        <div>
+                          <span className="font-medium text-blue-900">
+                            Shipping to:
+                          </span>
+                          <p>{orderData.shippingAddress}</p>
+                        </div>
                       </div>
-                      {order.estimatedDelivery && (
-                        <span className="text-sm text-green-700">
-                          Est. delivery: {formatDate(order.estimatedDelivery)}
-                        </span>
+                    )}
+
+                    {/* Cancelled Info */}
+                    {orderData.status === "cancelled" &&
+                      orderData.cancelReason && (
+                        <div className="bg-red-50 p-3 rounded-lg">
+                          <div className="flex items-center space-x-2 text-sm text-red-800">
+                            <AlertCircle className="h-4 w-4" />
+                            <span>
+                              <span className="font-medium">Cancelled:</span>{" "}
+                              {orderData.cancelReason}
+                            </span>
+                          </div>
+                        </div>
                       )}
-                    </div>
-                  )} */}
 
-                  {/* Delivered Info */}
-                  {/* {order.status === "delivered" && order.actualDelivery && (
-                    <div className="bg-green-50 p-3 rounded-lg">
-                      <div className="flex items-center space-x-2 text-sm text-green-800">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>
-                          <span className="font-medium">Delivered on:</span>{" "}
-                          {formatDate(order.actualDelivery)}
-                        </span>
-                      </div>
-                    </div>
-                  )} */}
-
-                  {/* Cancelled Info */}
-                  {order.status === "cancelled" && order.cancelReason && (
-                    <div className="bg-red-50 p-3 rounded-lg">
-                      <div className="flex items-center space-x-2 text-sm text-red-800">
-                        <AlertCircle className="h-4 w-4" />
-                        <span>
-                          <span className="font-medium">Cancelled:</span>{" "}
-                          {order.cancelReason}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewOrder(order)}
-                      className="flex items-center"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Details
-                    </Button>
-
-                    {/* {order.trackingNumber && order.status !== "delivered" && (
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">
                       <Button
-                        variant="primary"
+                        variant="outline"
                         size="sm"
-                        onClick={() => handleTrackOrder(order)}
+                        onClick={() => handleViewOrder(order)}
                         className="flex items-center"
                       >
-                        <Truck className="h-4 w-4 mr-2" />
-                        Track Order
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
                       </Button>
-                    )} */}
 
-                    {order.status === "delivered" && (
-                      <>
-                        {/* <Button
+                      {orderData.status === "delivered" && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleReorder(order)}
+                            className="flex items-center"
+                          >
+                            <RotateCcw className="h-4 w-4 mr-2" />
+                            Reorder
+                          </Button>
+
+                          {/* Show review status */}
+                          {orderData.isReviewed ? (
+                            <Badge
+                              variant="success"
+                              className="flex items-center px-3 py-1"
+                            >
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Reviewed
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="warning"
+                              className="flex items-center px-3 py-1"
+                            >
+                              <Clock className="h-3 w-3 mr-1" />
+                              Pending Review
+                            </Badge>
+                          )}
+                        </>
+                      )}
+
+                      {orderData.status === "cancelled" && (
+                        <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleReorder(order)}
                           className="flex items-center"
                         >
                           <RotateCcw className="h-4 w-4 mr-2" />
-                          Reorder
-                        </Button> */}
-                        {/* <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleReturnOrder(order)}
-                          className="flex items-center"
-                        >
-                          <RotateCcw className="h-4 w-4 mr-2" />
-                          Return
-                        </Button> */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="flex items-center text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-                        >
-                          <Star className="h-4 w-4 mr-2" />
-                          Review
+                          Order Again
                         </Button>
-                      </>
-                    )}
-
-                    {/* {order.status === "cancelled" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleReorder(order)}
-                        className="flex items-center"
-                      >
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                        Order Again
-                      </Button>
-                    )} */}
-
-                    {/* <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex items-center text-gray-600 hover:text-gray-700"
-                    >
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      Support
-                    </Button> */}
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
 
@@ -626,9 +634,9 @@ const Orders = () => {
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              onPageChange={setCurrentPage}
+              onPageChange={handlePageChange}
               itemsPerPage={itemsPerPage}
-              totalItems={filteredOrders.length}
+              totalItems={totalItems}
             />
           </div>
         )}
@@ -639,6 +647,15 @@ const Orders = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         order={selectedOrder}
+      />
+
+      {/* Product Review Modal */}
+      <ProductReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={handleCloseReviewModal}
+        product={selectedProduct}
+        order={reviewOrder}
+        onSubmitReview={handleSubmitReview}
       />
     </div>
   );

@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -25,6 +26,8 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertCircle,
+  CheckCircle,
+  Bell,
 } from "lucide-react";
 
 import {
@@ -34,13 +37,17 @@ import {
 } from "../../components/ui/ContactUis/Uis";
 import useUser from "../../hooks/useUser";
 import { selectUser as selectAuthUser } from "../../store/slices/authSlice";
-import Pagination from "../../components/ui/Pagination"; 
-
-
+import Pagination from "../../components/ui/Pagination";
+import ToastNotification, {
+  useToast,
+} from "../../components/ui/ToastNotification"; // Import the new component
 
 const WishList = () => {
   const navigate = useNavigate();
   const authUser = useSelector(selectAuthUser);
+
+  // Toast notification hook
+  const { toastRef, showToast } = useToast();
 
   // User hook for wishlist management
   const {
@@ -50,6 +57,9 @@ const WishList = () => {
     fetchWishlist,
     removeFromWishlist,
     addItemToCart,
+    cartItems,
+    fetchCartItems,
+    isItemInCart,
     clearErrors,
   } = useUser();
 
@@ -60,18 +70,22 @@ const WishList = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
 
+  // Cart operation states
+  const [addingToCart, setAddingToCart] = useState(new Set());
+
   // Pagination states
   const [productsPage, setProductsPage] = useState(1);
   const [shopsPage, setShopsPage] = useState(1);
   const productsPerPage = 8;
   const shopsPerPage = 6;
 
-  // Fetch wishlist on component mount
+  // Fetch wishlist and cart on component mount
   useEffect(() => {
     if (authUser?._id) {
       fetchWishlist(authUser._id);
+      fetchCartItems(authUser._id, 1, 100); // Fetch all cart items for checking
     }
-  }, [authUser, fetchWishlist]);
+  }, [authUser, fetchWishlist, fetchCartItems]);
 
   // Clear errors when component unmounts
   useEffect(() => {
@@ -186,9 +200,16 @@ const WishList = () => {
 
     try {
       await removeFromWishlist(authUser._id, itemId);
+      showToast.success("Item removed from wishlist");
     } catch (error) {
       console.error("Failed to remove from wishlist:", error);
+      showToast.error("Failed to remove from wishlist. Please try again.");
     }
+  };
+
+  // Check if product is in cart
+  const isProductInCart = (productId) => {
+    return isItemInCart(productId);
   };
 
   // Handle add to cart
@@ -198,11 +219,45 @@ const WishList = () => {
       return;
     }
 
+    // Check if already in cart
+    if (isProductInCart(product._id)) {
+      showToast.cart("Item is already in your cart", {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
+      return;
+    }
+
+    // Set loading state
+    setAddingToCart((prev) => new Set(prev).add(product._id));
+
     try {
-      await addItemToCart(authUser._id, product._id, 1);
-      // You can show a success message here
+      await addItemToCart(authUser._id, product._id, 1).unwrap();
+
+      // Refresh cart items to update status
+      await fetchCartItems(authUser._id, 1, 100);
+
+      // Get product name with fallbacks
+      const productName =
+        product.title || product.name || product.productName || "Item";
+
+      showToast.success(`"${productName}" added to cart successfully!`, {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
     } catch (error) {
       console.error("Failed to add to cart:", error);
+      showToast.error("Failed to add to cart. Please try again.", {
+        text: "Retry",
+        action: () => handleAddToCart(product),
+      });
+    } finally {
+      // Remove loading state
+      setAddingToCart((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(product._id);
+        return newSet;
+      });
     }
   };
 
@@ -223,8 +278,12 @@ const WishList = () => {
 
     const title =
       type === "shop"
-        ? `Check out ${item.basicInformation?.storeName || item.name}`
-        : `Check out ${item.title}`;
+        ? `Check out ${
+            item.basicInformation?.storeName || item.name || "this shop"
+          }`
+        : `Check out ${
+            item.title || item.name || item.productName || "this product"
+          }`;
 
     try {
       if (navigator.share) {
@@ -232,19 +291,17 @@ const WishList = () => {
           title: title,
           url: url,
         });
-        setShareMessage("Shared successfully!");
+        showToast.success("Shared successfully!");
       } else {
         await navigator.clipboard.writeText(url);
-        setShareMessage("Link copied to clipboard!");
+        showToast.success("Link copied to clipboard!");
       }
     } catch (error) {
       if (error.name !== "AbortError") {
         prompt("Copy this link to share:", url);
-        setShareMessage("Link ready to copy!");
+        showToast.info("Link ready to copy!");
       }
     }
-
-    setTimeout(() => setShareMessage(""), 3000);
   };
 
   const getBadgeVariant = (status) => {
@@ -267,6 +324,48 @@ const WishList = () => {
         }`}
       />
     ));
+  };
+
+  // Get cart button content
+  const getCartButtonContent = (product) => {
+    const productId = product._id;
+    const isLoading = addingToCart.has(productId);
+    const inCart = isProductInCart(productId);
+    const isOutOfStock = product.status === "outOfStock";
+
+    if (isLoading) {
+      return {
+        text: "Adding...",
+        icon: <Loader2 className="h-3 w-3 mr-1 animate-spin" />,
+        disabled: true,
+        variant: "primary",
+      };
+    }
+
+    if (inCart) {
+      return {
+        text: "In Cart",
+        icon: <CheckCircle className="h-3 w-3 mr-1" />,
+        disabled: false,
+        variant: "success",
+      };
+    }
+
+    if (isOutOfStock) {
+      return {
+        text: "Notify",
+        icon: <Bell className="h-3 w-3 mr-1" />,
+        disabled: true,
+        variant: "outline",
+      };
+    }
+
+    return {
+      text: "Add",
+      icon: <ShoppingCart className="h-3 w-3 mr-1" />,
+      disabled: false,
+      variant: "primary",
+    };
   };
 
   // Loading state
@@ -299,9 +398,12 @@ const WishList = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Share Success Message */}
+      {/* Toast Notification Component */}
+      <ToastNotification ref={toastRef} />
+
+      {/* Share Success Message (keeping the old one for share functionality) */}
       {shareMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg animate-pulse">
+        <div className="fixed top-4 right-4 z-40 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg animate-pulse">
           {shareMessage}
         </div>
       )}
@@ -494,10 +596,13 @@ const WishList = () => {
                           src={
                             shop.shopMedia?.storeLogo ||
                             shop.shopMedia?.bannerImage ||
-                            "/api/placeholder/400/200"
+                            "/placehold.png"
                           }
                           alt={shop.basicInformation?.storeName || "Shop"}
                           className="w-full h-36 sm:h-48 object-cover rounded-lg mb-3 sm:mb-4"
+                          onError={(e) => {
+                            e.target.src = "/placehold.png";
+                          }}
                         />
                         <div className="absolute top-2 sm:top-3 left-2 sm:left-3">
                           <Badge
@@ -621,111 +726,127 @@ const WishList = () => {
                       : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1"
                   }`}
                 >
-                  {displayProducts.map((product) => (
-                    <Card
-                      key={product._id}
-                      className={`group hover:shadow-lg transition-all duration-300 ${
-                        viewMode === "list" ? "lg:flex lg:space-x-4" : ""
-                      }`}
-                    >
-                      <div
-                        className={`relative ${
-                          viewMode === "list" ? "lg:w-48 lg:flex-shrink-0" : ""
+                  {displayProducts.map((product) => {
+                    const cartButton = getCartButtonContent(product);
+
+                    return (
+                      <Card
+                        key={product._id}
+                        className={`group hover:shadow-lg transition-all duration-300 ${
+                          viewMode === "list" ? "lg:flex lg:space-x-4" : ""
                         }`}
                       >
-                        <img
-                          src={
-                            product.images?.[0]?.url ||
-                            "/api/placeholder/400/400"
-                          }
-                          alt={product.title || "Product"}
-                          className={`w-full object-cover rounded-lg ${
+                        <div
+                          className={`relative ${
                             viewMode === "list"
-                              ? "aspect-square lg:h-32 lg:w-32"
-                              : "aspect-square"
-                          } mb-2 sm:mb-3`}
-                        />
-                        <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2">
-                          <Badge
-                            variant={getBadgeVariant(product.status)}
-                            size="sm"
-                            className="text-xs"
-                          >
-                            {product.status || "Active"}
-                          </Badge>
-                        </div>
-                        <button
-                          onClick={() =>
-                            handleRemoveFromWishlist("products", product._id)
-                          }
-                          className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1 sm:p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-all group-hover:scale-110"
+                              ? "lg:w-48 lg:flex-shrink-0"
+                              : ""
+                          }`}
                         >
-                          <X className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-600 hover:text-red-600" />
-                        </button>
-                        {product.status === "outOfStock" && (
-                          <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                            <span className="text-white font-medium text-xs bg-red-600 px-2 py-1 rounded-full">
-                              Out of Stock
-                            </span>
+                          <img
+                            src={product.images?.[0]?.url || "/placehold.png"}
+                            alt={product.title || "Product"}
+                            className={`w-full object-cover rounded-lg ${
+                              viewMode === "list"
+                                ? "aspect-square lg:h-32 lg:w-32"
+                                : "aspect-square"
+                            } mb-2 sm:mb-3`}
+                            onError={(e) => {
+                              e.target.src = "/placehold.png";
+                            }}
+                          />
+                          <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2">
+                            <Badge
+                              variant={getBadgeVariant(product.status)}
+                              size="sm"
+                              className="text-xs"
+                            >
+                              {product.status || "Active"}
+                            </Badge>
                           </div>
-                        )}
-                      </div>
-
-                      <div
-                        className={`space-y-1.5 sm:space-y-2 ${
-                          viewMode === "list" ? "lg:flex-1" : ""
-                        }`}
-                      >
-                        <div>
-                          <p className="text-xs text-blue-600 font-medium">
-                            {product.brand}
-                          </p>
-                          <h3 className="font-medium text-gray-900 text-xs sm:text-sm line-clamp-2">
-                            {product.title}
-                          </h3>
-                        </div>
-
-                        <div className="flex items-center space-x-1">
-                          {renderStars(product.averageRating || 0)}
-                          <span className="text-xs text-gray-600">
-                            ({product.averageRating || 0})
-                          </span>
-                        </div>
-
-                        <div className="flex items-baseline space-x-1 sm:space-x-2">
-                          <span className="font-bold text-gray-900 text-sm sm:text-base">
-                            LKR {product.variations?.[0]?.price || "0"}
-                          </span>
-                          {product.variations?.[0]?.originalPrice && (
-                            <span className="text-xs sm:text-sm text-gray-500 line-through">
-                              LKR {product.variations[0].originalPrice}
-                            </span>
+                          <button
+                            onClick={() =>
+                              handleRemoveFromWishlist("products", product._id)
+                            }
+                            className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1 sm:p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-all group-hover:scale-110"
+                          >
+                            <X className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-600 hover:text-red-600" />
+                          </button>
+                          {product.status === "outOfStock" && (
+                            <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                              <span className="text-white font-medium text-xs bg-red-600 px-2 py-1 rounded-full">
+                                Out of Stock
+                              </span>
+                            </div>
                           )}
                         </div>
 
-                        <div className="flex space-x-1.5 sm:space-x-2 pt-1 sm:pt-2">
-                          <Button
-                            onClick={() => handleViewProduct(product._id)}
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 text-xs py-1.5"
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            View
-                          </Button>
-                          <Button
-                            onClick={() => handleAddToCart(product)}
-                            size="sm"
-                            className="flex-1 text-xs py-1.5"
-                            disabled={product.status === "outOfStock"}
-                          >
-                            <ShoppingCart className="h-3 w-3 mr-1" />
-                            {product.status === "outOfStock" ? "Notify" : "Add"}
-                          </Button>
+                        <div
+                          className={`space-y-1.5 sm:space-y-2 ${
+                            viewMode === "list" ? "lg:flex-1" : ""
+                          }`}
+                        >
+                          <div>
+                            <p className="text-xs text-blue-600 font-medium">
+                              {product.brand ||
+                                product.brandName ||
+                                "Unknown Brand"}
+                            </p>
+                            <h3 className="font-medium text-gray-900 text-xs sm:text-sm line-clamp-2">
+                              {product.title ||
+                                product.name ||
+                                product.productName ||
+                                "Unknown Product"}
+                            </h3>
+                          </div>
+
+                          <div className="flex items-center space-x-1">
+                            {renderStars(product.averageRating || 0)}
+                            <span className="text-xs text-gray-600">
+                              ({product.averageRating || 0})
+                            </span>
+                          </div>
+
+                          <div className="flex items-baseline space-x-1 sm:space-x-2">
+                            <span className="font-bold text-gray-900 text-sm sm:text-base">
+                              LKR {product.variations?.[0]?.price || "0"}
+                            </span>
+                            {product.variations?.[0]?.originalPrice && (
+                              <span className="text-xs sm:text-sm text-gray-500 line-through">
+                                LKR {product.variations[0].originalPrice}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex space-x-1.5 sm:space-x-2 pt-1 sm:pt-2">
+                            <Button
+                              onClick={() => handleViewProduct(product._id)}
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 text-xs py-1.5"
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              View
+                            </Button>
+                            <Button
+                              onClick={() => handleAddToCart(product)}
+                              size="sm"
+                              variant={cartButton.variant}
+                              className={`flex-1 text-xs py-1.5 ${
+                                cartButton.variant === "success"
+                                  ? "bg-green-600 hover:bg-green-700 text-white"
+                                  : ""
+                              }`}
+                              disabled={cartButton.disabled}
+                            >
+                              {cartButton.icon}
+                              {cartButton.text}
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    );
+                  })}
                 </div>
 
                 {/* Products Pagination */}

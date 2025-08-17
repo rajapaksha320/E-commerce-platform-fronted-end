@@ -5,6 +5,8 @@ import {
   getAllStores,
   filterStoresByCategory,
   getShopListings,
+  getListingById,
+  getShopDetailsById,
   addToCart,
   getCartItems,
   updateCartItem,
@@ -35,6 +37,8 @@ import {
   clearUserProfile,
   clearSearchResults,
   clearStoreSearchResults,
+  clearListingDetail,
+  clearShopDetail,
 
   // Selectors
   selectStores,
@@ -43,6 +47,12 @@ import {
   selectStoresPagination,
   selectStoresLoading,
   selectStoresError,
+  selectCurrentListing,
+  selectListingDetailLoading,
+  selectListingDetailError,
+  selectCurrentShopDetails,
+  selectShopDetailLoading,
+  selectShopDetailError,
   selectCartItems,
   selectCartPagination,
   selectCartLoading,
@@ -95,6 +105,16 @@ const useUser = () => {
   const storesPagination = useSelector(selectStoresPagination);
   const storesLoading = useSelector(selectStoresLoading);
   const storesError = useSelector(selectStoresError);
+
+  // LISTING DETAIL STATE
+  const currentListing = useSelector(selectCurrentListing);
+  const listingDetailLoading = useSelector(selectListingDetailLoading);
+  const listingDetailError = useSelector(selectListingDetailError);
+
+  // SHOP DETAIL STATE
+  const currentShopDetails = useSelector(selectCurrentShopDetails);
+  const shopDetailLoading = useSelector(selectShopDetailLoading);
+  const shopDetailError = useSelector(selectShopDetailError);
 
   // CART STATE
   const cartItems = useSelector(selectCartItems);
@@ -172,6 +192,22 @@ const useUser = () => {
   const fetchShopListings = useCallback(
     (sellerId, page = 1, pageSize = 10) => {
       return dispatch(getShopListings({ sellerId, page, pageSize }));
+    },
+    [dispatch]
+  );
+
+  // LISTING DETAIL ACTIONS
+  const fetchListingById = useCallback(
+    (listingId) => {
+      return dispatch(getListingById(listingId));
+    },
+    [dispatch]
+  );
+
+  // SHOP DETAIL ACTIONS
+  const fetchShopDetailsById = useCallback(
+    (shopId) => {
+      return dispatch(getShopDetailsById(shopId));
     },
     [dispatch]
   );
@@ -365,6 +401,14 @@ const useUser = () => {
     dispatch(clearStoreSearchResults());
   }, [dispatch]);
 
+  const resetListingDetail = useCallback(() => {
+    dispatch(clearListingDetail());
+  }, [dispatch]);
+
+  const resetShopDetail = useCallback(() => {
+    dispatch(clearShopDetail());
+  }, [dispatch]);
+
   // HELPER FUNCTIONS
   const isItemInCart = useCallback(
     (listingId) => {
@@ -415,6 +459,52 @@ const useUser = () => {
     },
     [orders]
   );
+
+  // LISTING DETAIL HELPERS
+  const getCurrentListingData = useCallback(() => {
+    if (!currentListing) return null;
+    return {
+      listing: currentListing.listing,
+      seller: currentListing.sellerInfo?.[0] || null,
+    };
+  }, [currentListing]);
+
+  const getListingVariations = useCallback(() => {
+    if (!currentListing?.listing?.variations) return [];
+    return currentListing.listing.variations;
+  }, [currentListing]);
+
+  const getDefaultVariation = useCallback(() => {
+    const variations = getListingVariations();
+    return variations.find((v) => v.isDefault) || variations[0] || null;
+  }, [getListingVariations]);
+
+  const getListingImages = useCallback(() => {
+    if (!currentListing?.listing?.images) return [];
+    return currentListing.listing.images;
+  }, [currentListing]);
+
+  const getPrimaryImage = useCallback(() => {
+    const images = getListingImages();
+    return images.find((img) => img.isPrimary) || images[0] || null;
+  }, [getListingImages]);
+
+  // SHOP DETAIL HELPERS
+  const getShopContactInfo = useCallback(() => {
+    if (!currentShopDetails?.contactDetails) return null;
+    return currentShopDetails.contactDetails;
+  }, [currentShopDetails]);
+
+  const getShopBasicInfo = useCallback(() => {
+    if (!currentShopDetails?.basicInformation) return null;
+    return currentShopDetails.basicInformation;
+  }, [currentShopDetails]);
+
+  const getShopMedia = useCallback(() => {
+    if (!currentShopDetails?.shopMedia)
+      return { storeLogo: null, bannerImage: null };
+    return currentShopDetails.shopMedia;
+  }, [currentShopDetails]);
 
   // SEARCH HELPER FUNCTIONS
   const performSearch = useCallback(
@@ -610,6 +700,28 @@ const useUser = () => {
     hasError: !!storeSearchError,
   };
 
+  const listingDetailSummary = {
+    hasListing: !!currentListing,
+    isLoading: listingDetailLoading,
+    hasError: !!listingDetailError,
+    hasSeller: !!(currentListing?.sellerInfo?.length > 0),
+    hasVariations: !!currentListing?.listing?.hasVariations,
+    variationCount: currentListing?.listing?.variations?.length || 0,
+    imageCount: currentListing?.listing?.images?.length || 0,
+  };
+
+  const shopDetailSummary = {
+    hasShop: !!currentShopDetails,
+    isLoading: shopDetailLoading,
+    hasError: !!shopDetailError,
+    isActive: currentShopDetails?.status === "active",
+    hasLogo: !!currentShopDetails?.shopMedia?.storeLogo,
+    hasBanner: !!currentShopDetails?.shopMedia?.bannerImage,
+    rating: currentShopDetails?.rating || 0,
+    totalProducts: currentShopDetails?.totalProducts || 0,
+    totalSales: currentShopDetails?.totalSales || 0,
+  };
+
   return {
     // STATE
     stores,
@@ -618,6 +730,12 @@ const useUser = () => {
     storesPagination,
     storesLoading,
     storesError,
+    currentListing,
+    listingDetailLoading,
+    listingDetailError,
+    currentShopDetails,
+    shopDetailLoading,
+    shopDetailError,
     cartItems,
     cartPagination,
     cartLoading,
@@ -663,6 +781,8 @@ const useUser = () => {
     fetchAllStores,
     fetchStoresByCategory,
     fetchShopListings,
+    fetchListingById,
+    fetchShopDetailsById,
     addItemToCart,
     fetchCartItems,
     updateCartItemQuantity,
@@ -693,6 +813,8 @@ const useUser = () => {
     resetUserProfile,
     resetSearchResults,
     resetStoreSearchResults,
+    resetListingDetail,
+    resetShopDetail,
 
     // HELPERS
     isItemInCart,
@@ -702,6 +824,14 @@ const useUser = () => {
     getAddressByType,
     getPendingReviewOrders,
     getOrdersByStatus,
+    getCurrentListingData,
+    getListingVariations,
+    getDefaultVariation,
+    getListingImages,
+    getPrimaryImage,
+    getShopContactInfo,
+    getShopBasicInfo,
+    getShopMedia,
 
     // SUMMARIES
     cartSummary,
@@ -710,6 +840,8 @@ const useUser = () => {
     addressesSummary,
     searchSummary,
     storeSearchSummary,
+    listingDetailSummary,
+    shopDetailSummary,
 
     // BULK OPERATIONS
     bulkAddToCart,

@@ -25,6 +25,18 @@ const userService = {
     );
   },
 
+  // Get shop details by ID
+  getShopDetailsById: async (shopId) => {
+    return await axiosInstance.get(`/api/v1/store/get-store-by-id/${shopId}`);
+  },
+
+  // LISTING SERVICES
+
+  // Get listing by ID with seller info
+  getListingById: async (listingId) => {
+    return await axiosInstance.get(`/api/v1/listing/one-listing/${listingId}`);
+  },
+
   // CART SERVICES
 
   // Add item to cart
@@ -190,6 +202,8 @@ const userService = {
   updateUserProfile: async (profileData) => {
     const payload = {
       userId: profileData.userId,
+      firstName: profileData.firstName, // Added
+      lastName: profileData.lastName, // Added
       phoneNumber: profileData.phoneNumber,
       dateOfBirth: profileData.dateOfBirth,
       gender: profileData.gender,
@@ -226,6 +240,7 @@ const userService = {
       CustomerRating: searchParams.CustomerRating,
       color: searchParams.color,
       brandName: searchParams.brandName,
+      title: searchParams.title,
       page,
       pageSize,
     };
@@ -249,6 +264,7 @@ const userService = {
       CustomerRating: searchParams.CustomerRating,
       color: searchParams.color,
       brandName: searchParams.brandName,
+      title: searchParams.title,
       page,
       pageSize,
     };
@@ -273,11 +289,6 @@ const userService = {
   // Get store by ID
   getStoreById: async (storeId) => {
     return await axiosInstance.get(`/api/v1/store/${storeId}`);
-  },
-
-  // Get listing by ID
-  getListingById: async (listingId) => {
-    return await axiosInstance.get(`/api/v1/listing/${listingId}`);
   },
 
   // ANALYTICS HELPERS (if needed)
@@ -392,7 +403,7 @@ const userService = {
       };
 
       listings.forEach((response, index) => {
-        const listing = response.data;
+        const listing = response.data.listing;
         if (listing.status !== "active") {
           validation.isValid = false;
           validation.unavailableItems.push(listing._id);
