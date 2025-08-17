@@ -67,6 +67,11 @@ const ProductPage = () => {
     fetchWishlist,
     wishlist,
     wishlistLoading,
+    // Add shop-related functions
+    fetchShopDetailsById,
+    currentShopDetails,
+    shopDetailLoading,
+    fetchStoresByCategory,
   } = useUser();
 
   // Component state
@@ -79,6 +84,10 @@ const ProductPage = () => {
   const [selectedImageZoom, setSelectedImageZoom] = useState(false);
   const [wishlistOperationLoading, setWishlistOperationLoading] =
     useState(false);
+
+  // State to store shop information
+  const [shopInfo, setShopInfo] = useState(null);
+  const [shopLoading, setShopLoading] = useState(false);
 
   // Derived data
   const listingData = getCurrentListingData();
@@ -98,6 +107,52 @@ const ProductPage = () => {
 
   // Check if product has variations
   const hasVariations = product?.hasVariations;
+
+  // Function to fetch shop information by seller ID
+  const fetchShopBySellerId = async (sellerId) => {
+    if (!sellerId) return;
+
+    setShopLoading(true);
+    try {
+      // Try to get shop information using category filter API
+      // Since we don't know the category, we'll try a common one first
+      // This is a workaround - ideally the listing API should return shop ID
+      const response = await fetchStoresByCategory(
+        product?.category?.main || "fashion",
+        1,
+        50
+      ).unwrap();
+
+      if (response?.data && Array.isArray(response.data)) {
+        // Find the shop that matches the seller ID
+        const matchingShopData = response.data.find(
+          (storeData) => storeData.shop?.sellerId === sellerId
+        );
+
+        if (matchingShopData?.shop) {
+          setShopInfo(matchingShopData.shop);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching shop information:", error);
+      // Fallback: set seller info as shop info for navigation
+      if (seller) {
+        setShopInfo({
+          _id: seller._id, // This will be seller ID as fallback
+          sellerId: seller._id,
+          basicInformation: {
+            storeName:
+              seller.businessInfo?.businessName || `${seller.firstName}'s Shop`,
+            storeDescription: "Professional seller",
+          },
+          contactDetails: seller.contactInfo || {},
+          isActive: seller.isActive,
+        });
+      }
+    } finally {
+      setShopLoading(false);
+    }
+  };
 
   // Fetch product data and wishlist
   useEffect(() => {
@@ -120,6 +175,13 @@ const ProductPage = () => {
     fetchWishlist,
     resetListingDetail,
   ]);
+
+  // Fetch shop information when seller data is available
+  useEffect(() => {
+    if (seller?._id && product?.category?.main) {
+      fetchShopBySellerId(seller._id);
+    }
+  }, [seller?._id, product?.category?.main]);
 
   // Update wishlist status when wishlist data or product data changes
   useEffect(() => {
@@ -314,6 +376,20 @@ const ProductPage = () => {
     }
   };
 
+  // Updated shop navigation handler
+  const handleVisitShop = () => {
+    if (shopInfo?._id) {
+      // Use the correct shop ID
+      navigate(`/shop/${shopInfo._id}`);
+    } else if (seller?._id) {
+      // Fallback to seller ID if shop info is not available
+      console.warn("Shop ID not available, using seller ID as fallback");
+      navigate(`/shop/${seller._id}`);
+    } else {
+      console.error("Neither shop ID nor seller ID available");
+    }
+  };
+
   const renderStars = (rating, size = "sm") => {
     const numRating = parseFloat(rating || 0);
     return [...Array(5)].map((_, i) => (
@@ -329,6 +405,43 @@ const ProductPage = () => {
   };
 
   const isInStock = getStockQuantity() > 0 && product.status === "active";
+
+  // Get shop display information
+  const getShopDisplayInfo = () => {
+    if (shopInfo) {
+      return {
+        name:
+          shopInfo.basicInformation?.storeName ||
+          `${seller?.firstName || "Unknown"}'s Shop`,
+        isActive: shopInfo.status === "active" || shopInfo.isActive,
+        location:
+          shopInfo.contactDetails?.storeLocation ||
+          seller?.contactInfo?.city ||
+          "Unknown location",
+        businessType: seller?.businessInfo?.businessType || "Professional",
+        id: shopInfo._id,
+      };
+    } else if (seller) {
+      return {
+        name:
+          seller.businessInfo?.businessName ||
+          `${seller.firstName || "Unknown"}'s Shop`,
+        isActive: seller.isActive,
+        location: seller.contactInfo?.city || "Unknown location",
+        businessType: seller.businessInfo?.businessType || "Professional",
+        id: seller._id, // Fallback to seller ID
+      };
+    }
+    return {
+      name: "Shop",
+      isActive: false,
+      location: "Unknown location",
+      businessType: "Professional",
+      id: null,
+    };
+  };
+
+  const shopDisplayInfo = getShopDisplayInfo();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -469,7 +582,7 @@ const ProductPage = () => {
             <div>
               <div className="flex items-center space-x-2 mb-2">
                 <span className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">
-                  {product.brand || seller?.businessInfo?.businessName}
+                  {product.brand || shopDisplayInfo.name}
                 </span>
                 {seller?.businessInfo && (
                   <Badge variant="success" size="sm">
@@ -654,17 +767,20 @@ const ProductPage = () => {
               </div>
 
               {/* Visit Shop Button */}
-              {seller && (
-                <Button
-                  onClick={() => navigate(`/shop/${seller._id}`)}
-                  variant="outline"
-                  className="w-full py-3 text-lg font-semibold border-gray-300 text-gray-700 hover:bg-blue-50 hover:text-gray-500 touch-manipulation"
-                  size="lg"
-                >
+              <Button
+                onClick={handleVisitShop}
+                variant="outline"
+                className="w-full py-3 text-lg font-semibold border-gray-300 text-gray-700 hover:bg-blue-50 hover:text-gray-500 touch-manipulation"
+                size="lg"
+                disabled={shopLoading}
+              >
+                {shopLoading ? (
+                  <Loader className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
                   <Building className="h-5 w-5 mr-2" />
-                  Visit {seller.businessInfo?.businessName || "Shop"}
-                </Button>
-              )}
+                )}
+                Visit {shopDisplayInfo.name}
+              </Button>
             </div>
 
             {/* Key Features */}
@@ -721,60 +837,60 @@ const ProductPage = () => {
             </div>
 
             {/* Shop Information Card */}
-            {seller && (
-              <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-                      <Building className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">
-                        {seller.businessInfo?.businessName || "Shop"}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Trusted Seller •{" "}
-                        {seller.contactInfo?.city || "Location"}
-                        {seller.isActive && (
-                          <span className="ml-2 inline-flex items-center">
-                            <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
-                            Online
-                          </span>
-                        )}
-                      </p>
-                      {seller.businessInfo?.businessType && (
-                        <p className="text-xs text-gray-500 capitalize">
-                          {seller.businessInfo.businessType} Business
-                        </p>
+            <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                    <Building className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">
+                      {shopDisplayInfo.name}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Trusted Seller • {shopDisplayInfo.location}
+                      {shopDisplayInfo.isActive && (
+                        <span className="ml-2 inline-flex items-center">
+                          <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                          Online
+                        </span>
                       )}
-                    </div>
+                    </p>
+                    <p className="text-xs text-gray-500 capitalize">
+                      {shopDisplayInfo.businessType} Business
+                    </p>
                   </div>
-                  <Button
-                    onClick={() => navigate(`/shop/${seller._id}`)}
-                    variant="primary"
-                    size="sm"
-                    className="flex items-center space-x-2"
-                  >
+                </div>
+                <Button
+                  onClick={handleVisitShop}
+                  variant="primary"
+                  size="sm"
+                  className="flex items-center space-x-2"
+                  disabled={shopLoading}
+                >
+                  {shopLoading ? (
+                    <Loader className="h-4 w-4 animate-spin" />
+                  ) : (
                     <Building className="h-4 w-4" />
-                    <span>Visit Shop</span>
-                  </Button>
-                </div>
+                  )}
+                  <span>Visit Shop</span>
+                </Button>
+              </div>
 
-                {/* Additional shop info */}
-                <div className="mt-3 pt-3 border-t border-blue-200 grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center space-x-2 text-gray-600">
-                    <MapPin className="h-4 w-4" />
-                    <span>
-                      {seller.contactInfo?.city || "Unknown location"}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-gray-600">
-                    <User className="h-4 w-4" />
-                    <span>Professional Seller</span>
-                  </div>
+              {/* Additional shop info */}
+              <div className="mt-3 pt-3 border-t border-blue-200 grid grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center space-x-2 text-gray-600">
+                  <MapPin className="h-4 w-4" />
+                  <span>{shopDisplayInfo.location}</span>
                 </div>
-              </Card>
-            )}
+                <div className="flex items-center space-x-2 text-gray-600">
+                  <User className="h-4 w-4" />
+                  <span>Professional Seller</span>
+                </div>
+              </div>
+
+             
+            </Card>
           </div>
         </div>
 
