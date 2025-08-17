@@ -9,6 +9,16 @@ const initialState = {
   filteredStores: [],
   storesPagination: null,
 
+  // Listing Detail
+  currentListing: null,
+  listingDetailLoading: false,
+  listingDetailError: null,
+
+  // Shop Detail
+  currentShopDetails: null,
+  shopDetailLoading: false,
+  shopDetailError: null,
+
   // Cart
   cartItems: [],
   cartPagination: null,
@@ -116,6 +126,36 @@ export const getShopListings = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch shop listings"
+      );
+    }
+  }
+);
+
+// LISTING DETAIL ASYNC THUNKS
+export const getListingById = createAsyncThunk(
+  "user/getListingById",
+  async (listingId, { rejectWithValue }) => {
+    try {
+      const response = await userService.getListingById(listingId);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch listing details"
+      );
+    }
+  }
+);
+
+// SHOP DETAIL ASYNC THUNKS
+export const getShopDetailsById = createAsyncThunk(
+  "user/getShopDetailsById",
+  async (shopId, { rejectWithValue }) => {
+    try {
+      const response = await userService.getShopDetailsById(shopId);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch shop details"
       );
     }
   }
@@ -443,6 +483,8 @@ const userSlice = createSlice({
       state.ordersError = null;
       state.addressesError = null;
       state.reviewsError = null;
+      state.listingDetailError = null;
+      state.shopDetailError = null;
     },
     clearSuccess: (state) => {
       state.success = false;
@@ -483,6 +525,14 @@ const userSlice = createSlice({
       state.storeSearchResults = [];
       state.storeSearchPagination = null;
       state.lastStoreSearchParams = null;
+    },
+    clearListingDetail: (state) => {
+      state.currentListing = null;
+      state.listingDetailError = null;
+    },
+    clearShopDetail: (state) => {
+      state.currentShopDetails = null;
+      state.shopDetailError = null;
     },
   },
   extraReducers: (builder) => {
@@ -530,6 +580,39 @@ const userSlice = createSlice({
       .addCase(getShopListings.rejected, (state, action) => {
         state.storesLoading = false;
         state.storesError = action.payload;
+      });
+
+    // LISTING DETAIL
+    builder
+      .addCase(getListingById.pending, (state) => {
+        state.listingDetailLoading = true;
+        state.listingDetailError = null;
+      })
+      .addCase(getListingById.fulfilled, (state, action) => {
+        state.listingDetailLoading = false;
+        state.currentListing = {
+          listing: action.payload.listing,
+          sellerInfo: action.payload.sellerInfo,
+        };
+      })
+      .addCase(getListingById.rejected, (state, action) => {
+        state.listingDetailLoading = false;
+        state.listingDetailError = action.payload;
+      });
+
+    // SHOP DETAIL
+    builder
+      .addCase(getShopDetailsById.pending, (state) => {
+        state.shopDetailLoading = true;
+        state.shopDetailError = null;
+      })
+      .addCase(getShopDetailsById.fulfilled, (state, action) => {
+        state.shopDetailLoading = false;
+        state.currentShopDetails = action.payload.data;
+      })
+      .addCase(getShopDetailsById.rejected, (state, action) => {
+        state.shopDetailLoading = false;
+        state.shopDetailError = action.payload;
       });
 
     // CART
@@ -896,6 +979,8 @@ export const {
   clearUserProfile,
   clearSearchResults,
   clearStoreSearchResults,
+  clearListingDetail,
+  clearShopDetail,
 } = userSlice.actions;
 
 // Selectors
@@ -908,6 +993,19 @@ export const selectStoreListings = (state) => state.user.storeListings;
 export const selectStoresPagination = (state) => state.user.storesPagination;
 export const selectStoresLoading = (state) => state.user.storesLoading;
 export const selectStoresError = (state) => state.user.storesError;
+
+// Listing detail selectors
+export const selectCurrentListing = (state) => state.user.currentListing;
+export const selectListingDetailLoading = (state) =>
+  state.user.listingDetailLoading;
+export const selectListingDetailError = (state) =>
+  state.user.listingDetailError;
+
+// Shop detail selectors
+export const selectCurrentShopDetails = (state) =>
+  state.user.currentShopDetails;
+export const selectShopDetailLoading = (state) => state.user.shopDetailLoading;
+export const selectShopDetailError = (state) => state.user.shopDetailError;
 
 // Cart selectors
 export const selectCartItems = (state) => state.user.cartItems;
