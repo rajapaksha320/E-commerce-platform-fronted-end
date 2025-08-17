@@ -486,7 +486,7 @@ const userSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // 🏪 STORES
+    // STORES
     builder
       .addCase(getAllStores.pending, (state) => {
         state.storesLoading = true;
@@ -532,7 +532,7 @@ const userSlice = createSlice({
         state.storesError = action.payload;
       });
 
-    // 🛒 CART
+    // CART
     builder
       .addCase(addToCart.pending, (state) => {
         state.cartLoading = true;
@@ -576,7 +576,7 @@ const userSlice = createSlice({
         state.cartLoading = false;
         state.success = true;
         state.message = action.payload.message;
-        // Update the specific cart item
+        // Update the specific shopping cart item
         const index = state.cartItems.findIndex(
           (item) => item._id === action.payload.cartItem._id
         );
@@ -608,7 +608,7 @@ const userSlice = createSlice({
         state.cartError = action.payload;
       });
 
-    // ❤️ WISHLIST
+    // WISHLIST
     builder
       .addCase(getWishlist.pending, (state) => {
         state.wishlistLoading = true;
