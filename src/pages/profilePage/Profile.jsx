@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   User,
   ArrowLeft,
@@ -7,25 +7,16 @@ import {
   Edit3,
   Save,
   X,
-  Eye,
-  EyeOff,
-  Shield,
-  Settings,
-  Bell,
-  CreditCard,
   MapPin,
   Phone,
-  Mail,
-  Calendar,
   AlertTriangle,
   Trash2,
-  Lock,
-  Key,
   UserCheck,
-  Download,
-  Upload,
   Check,
   AlertCircle,
+  Plus,
+  Home,
+  Building,
 } from "lucide-react";
 import {
   Button,
@@ -34,59 +25,422 @@ import {
   Input,
 } from "../../components/ui/ContactUis/Uis";
 import { useNavigate } from "react-router-dom";
+import useUser from "../../hooks/useUser";
+import { useSelector } from "react-redux";
+import {
+  selectUser as selectAuthUser,
+  selectUserFullName,
+  selectUserEmail,
+} from "../../store/slices/authSlice";
+import {
+  AccountDeletionDialog,
+  AddressDeletionDialog,
+} from "../../components/ui/ConfirmationDialog";
+
+// Address Modal Component
+const AddressModal = ({
+  isOpen,
+  onClose,
+  onSave,
+  editingAddress,
+  isLoading,
+}) => {
+  const [formData, setFormData] = useState({
+    addressType: "home",
+    firstName: "",
+    lastName: "",
+    streetAddress: "",
+    apartment: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    phoneNumber: "",
+    isDefault: false,
+  });
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (editingAddress) {
+      setFormData(editingAddress);
+    } else {
+      setFormData({
+        addressType: "home",
+        firstName: "",
+        lastName: "",
+        streetAddress: "",
+        apartment: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        phoneNumber: "",
+        isDefault: false,
+      });
+    }
+  }, [editingAddress, isOpen]);
+
+  const handleChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.firstName.trim())
+      newErrors.firstName = "First name is required";
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!formData.streetAddress.trim())
+      newErrors.streetAddress = "Street address is required";
+    if (!formData.city.trim()) newErrors.city = "City is required";
+    if (!formData.state.trim()) newErrors.state = "State is required";
+    if (!formData.zipCode.trim()) newErrors.zipCode = "ZIP code is required";
+    if (!formData.phoneNumber.trim())
+      newErrors.phoneNumber = "Phone number is required";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      onSave(formData);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">
+              {editingAddress ? "Edit Address" : "Add New Address"}
+            </h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Address Type
+              </label>
+              <select
+                value={formData.addressType}
+                onChange={(e) => handleChange("addressType", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="home">Home</option>
+                <option value="work">Work</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  First Name *
+                </label>
+                <Input
+                  type="text"
+                  value={formData.firstName}
+                  onChange={(e) => handleChange("firstName", e.target.value)}
+                  className={errors.firstName ? "border-red-500" : ""}
+                />
+                {errors.firstName && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.firstName}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Last Name *
+                </label>
+                <Input
+                  type="text"
+                  value={formData.lastName}
+                  onChange={(e) => handleChange("lastName", e.target.value)}
+                  className={errors.lastName ? "border-red-500" : ""}
+                />
+                {errors.lastName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Street Address *
+              </label>
+              <Input
+                type="text"
+                value={formData.streetAddress}
+                onChange={(e) => handleChange("streetAddress", e.target.value)}
+                className={errors.streetAddress ? "border-red-500" : ""}
+              />
+              {errors.streetAddress && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.streetAddress}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Apartment/Unit (Optional)
+              </label>
+              <Input
+                type="text"
+                value={formData.apartment}
+                onChange={(e) => handleChange("apartment", e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  City *
+                </label>
+                <Input
+                  type="text"
+                  value={formData.city}
+                  onChange={(e) => handleChange("city", e.target.value)}
+                  className={errors.city ? "border-red-500" : ""}
+                />
+                {errors.city && (
+                  <p className="mt-1 text-sm text-red-600">{errors.city}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  State *
+                </label>
+                <Input
+                  type="text"
+                  value={formData.state}
+                  onChange={(e) => handleChange("state", e.target.value)}
+                  className={errors.state ? "border-red-500" : ""}
+                />
+                {errors.state && (
+                  <p className="mt-1 text-sm text-red-600">{errors.state}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  ZIP Code *
+                </label>
+                <Input
+                  type="text"
+                  value={formData.zipCode}
+                  onChange={(e) => handleChange("zipCode", e.target.value)}
+                  className={errors.zipCode ? "border-red-500" : ""}
+                />
+                {errors.zipCode && (
+                  <p className="mt-1 text-sm text-red-600">{errors.zipCode}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Phone Number *
+              </label>
+              <Input
+                type="tel"
+                value={formData.phoneNumber}
+                onChange={(e) => handleChange("phoneNumber", e.target.value)}
+                className={errors.phoneNumber ? "border-red-500" : ""}
+              />
+              {errors.phoneNumber && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.phoneNumber}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isDefault"
+                checked={formData.isDefault}
+                onChange={(e) => handleChange("isDefault", e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label htmlFor="isDefault" className="ml-2 text-sm text-gray-700">
+                Set as default address
+              </label>
+            </div>
+
+            <div className="flex space-x-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="flex-1"
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                className="flex-1"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                ) : null}
+                {editingAddress ? "Update" : "Add"} Address
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Profile = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
-  // Profile data state
+  // Redux selectors
+  const authUser = useSelector(selectAuthUser);
+  const userFullName = useSelector(selectUserFullName);
+  const userEmail = useSelector(selectUserEmail);
+
+  // User hook
+  const {
+    addresses,
+    addressesLoading,
+    addressesError,
+    loading,
+    error,
+    success,
+    message,
+    userProfile,
+    profileLoading,
+    profileError,
+    fetchAddresses,
+    addAddress,
+    editAddress,
+    removeAddress,
+    updateProfile,
+    deleteAccount,
+    fetchUserProfile,
+    clearErrors,
+    clearSuccessState,
+    addressesSummary,
+  } = useUser();
+
+  // Profile data state - initialized from Redux
   const [profileData, setProfileData] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@example.com",
-    phone: "+1 (555) 123-4567",
-    dateOfBirth: "1990-01-15",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
     gender: "male",
     avatar: null,
-    bio: "Tech enthusiast and avid online shopper.",
+    bio: "",
   });
 
-  // Account settings state
-  const [accountSettings, setAccountSettings] = useState({
-    emailNotifications: true,
-    smsNotifications: false,
-    marketingEmails: true,
-    orderUpdates: true,
-    newsletter: false,
-    twoFactorAuth: false,
-  });
-
-  // Security state
-  const [securityData, setSecurityData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
+  // Address management state
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
 
   // UI state
   const [activeTab, setActiveTab] = useState("personal");
   const [isEditing, setIsEditing] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showPasswordFields, setShowPasswordFields] = useState({
-    current: false,
-    new: false,
-    confirm: false,
-  });
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Confirmation dialog states
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
+  const [showDeleteAddressDialog, setShowDeleteAddressDialog] = useState(false);
+  const [addressToDelete, setAddressToDelete] = useState(null);
+
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
 
   const tabs = [
     { id: "personal", label: "Personal Info", icon: User },
-    // { id: "security", label: "Security", icon: Shield },
-    // { id: "preferences", label: "Preferences", icon: Settings },
+    { id: "addresses", label: "Addresses", icon: MapPin },
     { id: "account", label: "Account", icon: UserCheck },
   ];
+
+  // Initialize profile data from Redux and API on component mount
+  useEffect(() => {
+    if (authUser) {
+      // Set initial data from auth state
+      setProfileData({
+        firstName: authUser.firstName || "",
+        lastName: authUser.lastName || "",
+        email: authUser.email || "",
+        phone: authUser.phoneNumber || "",
+        dateOfBirth: authUser.dateOfBirth
+          ? authUser.dateOfBirth.split("T")[0]
+          : "",
+        gender: authUser.gender || "male",
+        avatar: null,
+        bio: authUser.bio || "",
+      });
+
+      // Fetch fresh profile data from API
+      fetchUserProfile(authUser._id);
+
+      // Fetch addresses when component mounts
+      fetchAddresses(authUser._id);
+    }
+  }, [authUser, fetchUserProfile, fetchAddresses]);
+
+  // Update profile data when userProfile from API is loaded
+  useEffect(() => {
+    if (userProfile) {
+      setProfileData({
+        firstName: userProfile.firstName || "",
+        lastName: userProfile.lastName || "",
+        email: userProfile.email || "",
+        phone: userProfile.phoneNumber || "",
+        dateOfBirth: userProfile.dateOfBirth
+          ? userProfile.dateOfBirth.split("T")[0]
+          : "",
+        gender: userProfile.gender || "male",
+        avatar: null,
+        bio: userProfile.bio || "",
+      });
+    }
+  }, [userProfile]);
+
+  // Handle success/error messages
+  useEffect(() => {
+    if (success && message) {
+      setSuccessMessage(message);
+      setTimeout(() => {
+        setSuccessMessage("");
+        clearSuccessState();
+      }, 3000);
+    }
+  }, [success, message, clearSuccessState]);
+
+  // Clear errors when they exist
+  useEffect(() => {
+    if (error) {
+      setTimeout(() => {
+        clearErrors();
+      }, 5000);
+    }
+  }, [error, clearErrors]);
 
   // Validation functions
   const validateEmail = (email) => {
@@ -99,28 +453,9 @@ const Profile = () => {
     return phoneRegex.test(phone.replace(/[\s\-()]/g, ""));
   };
 
-  const validatePassword = (password) => {
-    return (
-      password.length >= 8 && /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)
-    );
-  };
-
   // Handle profile data changes
   const handleProfileChange = (field, value) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
-  };
-
-  // Handle account settings changes
-  const handleSettingChange = (setting, value) => {
-    setAccountSettings((prev) => ({ ...prev, [setting]: value }));
-  };
-
-  // Handle security data changes
-  const handleSecurityChange = (field, value) => {
-    setSecurityData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
@@ -131,7 +466,6 @@ const Profile = () => {
     const file = event.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        // 5MB limit
         setErrors((prev) => ({
           ...prev,
           avatar: "File size must be less than 5MB",
@@ -158,81 +492,111 @@ const Profile = () => {
       newErrors.lastName = "Last name is required";
     if (!validateEmail(profileData.email))
       newErrors.email = "Invalid email address";
-    if (!validatePhone(profileData.phone))
+    if (profileData.phone && !validatePhone(profileData.phone))
       newErrors.phone = "Invalid phone number";
 
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      setIsLoading(true);
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const updateData = {
+          userId: authUser._id,
+          phoneNumber: profileData.phone,
+          dateOfBirth: profileData.dateOfBirth,
+          gender: profileData.gender,
+          bio: profileData.bio,
+          isActive: true,
+        };
+
+        await updateProfile(updateData);
         setIsEditing(false);
-        setSuccessMessage("Profile updated successfully!");
-        setTimeout(() => setSuccessMessage(""), 3000);
       } catch (error) {
         setErrors({ general: "Failed to update profile. Please try again." });
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  // Handle password change
-  const handlePasswordChange = async () => {
-    const newErrors = {};
-
-    if (!securityData.currentPassword)
-      newErrors.currentPassword = "Current password is required";
-    if (!validatePassword(securityData.newPassword)) {
-      newErrors.newPassword =
-        "Password must be at least 8 characters with uppercase, lowercase, and numbers";
-    }
-    if (securityData.newPassword !== securityData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
-    }
-
-    setErrors(newErrors);
-
-    if (Object.keys(newErrors).length === 0) {
-      setIsLoading(true);
-      try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setSecurityData({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        });
-        setSuccessMessage("Password updated successfully!");
-        setTimeout(() => setSuccessMessage(""), 3000);
-      } catch (error) {
-        setErrors({ general: "Failed to update password. Please try again." });
-      } finally {
-        setIsLoading(false);
       }
     }
   };
 
   // Handle account deletion
   const handleDeleteAccount = async () => {
-    setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      // Redirect to goodbye page or home
-      navigate("/account-deleted");
+      await deleteAccount(authUser._id);
+      // After successful deletion, redirect to home or login
+      setTimeout(() => {
+        navigate("/");
+      }, 2000);
     } catch (error) {
       setErrors({ general: "Failed to delete account. Please try again." });
     } finally {
-      setIsLoading(false);
-      setShowDeleteModal(false);
+      setShowDeleteAccountDialog(false);
+    }
+  };
+
+  // Address management functions
+  const handleAddressAdd = () => {
+    if (addressesSummary.maxReached) {
+      setErrors({ address: "Maximum 5 addresses allowed" });
+      return;
+    }
+    setEditingAddress(null);
+    setShowAddressModal(true);
+  };
+
+  const handleAddressEdit = (address) => {
+    setEditingAddress(address);
+    setShowAddressModal(true);
+  };
+
+  const handleAddressSave = async (addressData) => {
+    try {
+      const addressPayload = {
+        ...addressData,
+        buyerId: authUser._id,
+      };
+
+      if (editingAddress) {
+        await editAddress(editingAddress._id, addressData);
+      } else {
+        await addAddress(addressPayload);
+      }
+
+      setShowAddressModal(false);
+      setEditingAddress(null);
+    } catch (error) {
+      console.error("Error saving address:", error);
+    }
+  };
+
+  const handleAddressDeleteClick = (address) => {
+    setAddressToDelete(address);
+    setShowDeleteAddressDialog(true);
+  };
+
+  const handleAddressDeleteConfirm = async () => {
+    if (addressToDelete) {
+      try {
+        await removeAddress(addressToDelete._id);
+      } catch (error) {
+        console.error("Error deleting address:", error);
+      } finally {
+        setShowDeleteAddressDialog(false);
+        setAddressToDelete(null);
+      }
     }
   };
 
   const getInitials = (firstName, lastName) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  };
+
+  const getAddressIcon = (type) => {
+    switch (type) {
+      case "home":
+        return Home;
+      case "work":
+        return Building;
+      default:
+        return MapPin;
+    }
   };
 
   return (
@@ -261,7 +625,7 @@ const Profile = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              {isEditing && (
+              {isEditing && activeTab === "personal" && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -271,27 +635,25 @@ const Profile = () => {
                   Cancel
                 </Button>
               )}
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() =>
-                  activeTab === "personal"
-                    ? isEditing
-                      ? handleSaveProfile()
-                      : setIsEditing(true)
-                    : null
-                }
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                ) : isEditing ? (
-                  <Save className="h-4 w-4 mr-2" />
-                ) : (
-                  <Edit3 className="h-4 w-4 mr-2" />
-                )}
-                {isEditing ? "Save" : "Edit"}
-              </Button>
+              {activeTab === "personal" && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() =>
+                    isEditing ? handleSaveProfile() : setIsEditing(true)
+                  }
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  ) : isEditing ? (
+                    <Save className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Edit3 className="h-4 w-4 mr-2" />
+                  )}
+                  {isEditing ? "Save" : "Edit"}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -307,10 +669,12 @@ const Profile = () => {
         )}
 
         {/* Error Message */}
-        {errors.general && (
+        {(error || profileError || errors.general || errors.address) && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
             <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-            <span className="text-red-800">{errors.general}</span>
+            <span className="text-red-800">
+              {error || profileError || errors.general || errors.address}
+            </span>
           </div>
         )}
 
@@ -329,10 +693,13 @@ const Profile = () => {
                     />
                   ) : (
                     <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg border-4 border-blue-100">
-                      {getInitials(profileData.firstName, profileData.lastName)}
+                      {getInitials(
+                        profileData.firstName || "U",
+                        profileData.lastName || "U"
+                      )}
                     </div>
                   )}
-                  {isEditing && (
+                  {isEditing && activeTab === "personal" && (
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors"
@@ -342,9 +709,9 @@ const Profile = () => {
                   )}
                 </div>
                 <h3 className="mt-3 font-semibold text-gray-900">
-                  {profileData.firstName} {profileData.lastName}
+                  {userFullName || "User"}
                 </h3>
-                <p className="text-sm text-gray-600">{profileData.email}</p>
+                <p className="text-sm text-gray-600">{userEmail}</p>
               </div>
 
               {/* Tab Navigation */}
@@ -363,6 +730,15 @@ const Profile = () => {
                     >
                       <Icon className="h-4 w-4 mr-3" />
                       {tab.label}
+                      {tab.id === "addresses" && addresses.length > 0 && (
+                        <Badge
+                          variant="secondary"
+                          size="sm"
+                          className="ml-auto"
+                        >
+                          {addresses.length}
+                        </Badge>
+                      )}
                     </button>
                   );
                 })}
@@ -380,136 +756,146 @@ const Profile = () => {
                   Personal Information
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      First Name *
-                    </label>
-                    <Input
-                      type="text"
-                      value={profileData.firstName}
-                      onChange={(e) =>
-                        handleProfileChange("firstName", e.target.value)
-                      }
-                      disabled={!isEditing}
-                      className={errors.firstName ? "border-red-500" : ""}
-                    />
-                    {errors.firstName && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.firstName}
+                {profileLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-gray-600">
+                      Loading profile...
+                    </span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        First Name *
+                      </label>
+                      <Input
+                        type="text"
+                        value={profileData.firstName}
+                        onChange={(e) =>
+                          handleProfileChange("firstName", e.target.value)
+                        }
+                        disabled={!isEditing}
+                        className={errors.firstName ? "border-red-500" : ""}
+                      />
+                      {errors.firstName && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.firstName}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Last Name *
+                      </label>
+                      <Input
+                        type="text"
+                        value={profileData.lastName}
+                        onChange={(e) =>
+                          handleProfileChange("lastName", e.target.value)
+                        }
+                        disabled={!isEditing}
+                        className={errors.lastName ? "border-red-500" : ""}
+                      />
+                      {errors.lastName && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.lastName}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email Address *
+                      </label>
+                      <Input
+                        type="email"
+                        value={profileData.email}
+                        onChange={(e) =>
+                          handleProfileChange("email", e.target.value)
+                        }
+                        disabled={true} // Email typically can't be changed
+                        className="bg-gray-50"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Email cannot be changed
                       </p>
-                    )}
-                  </div>
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Last Name *
-                    </label>
-                    <Input
-                      type="text"
-                      value={profileData.lastName}
-                      onChange={(e) =>
-                        handleProfileChange("lastName", e.target.value)
-                      }
-                      disabled={!isEditing}
-                      className={errors.lastName ? "border-red-500" : ""}
-                    />
-                    {errors.lastName && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.lastName}
-                      </p>
-                    )}
-                  </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Phone Number
+                      </label>
+                      <Input
+                        type="tel"
+                        value={profileData.phone}
+                        onChange={(e) =>
+                          handleProfileChange("phone", e.target.value)
+                        }
+                        disabled={!isEditing}
+                        className={errors.phone ? "border-red-500" : ""}
+                        placeholder="+94771234567"
+                      />
+                      {errors.phone && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.phone}
+                        </p>
+                      )}
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email Address *
-                    </label>
-                    <Input
-                      type="email"
-                      value={profileData.email}
-                      onChange={(e) =>
-                        handleProfileChange("email", e.target.value)
-                      }
-                      disabled={!isEditing}
-                      className={errors.email ? "border-red-500" : ""}
-                    />
-                    {errors.email && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.email}
-                      </p>
-                    )}
-                  </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date of Birth
+                      </label>
+                      <Input
+                        type="date"
+                        value={profileData.dateOfBirth}
+                        onChange={(e) =>
+                          handleProfileChange("dateOfBirth", e.target.value)
+                        }
+                        disabled={!isEditing}
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number *
-                    </label>
-                    <Input
-                      type="tel"
-                      value={profileData.phone}
-                      onChange={(e) =>
-                        handleProfileChange("phone", e.target.value)
-                      }
-                      disabled={!isEditing}
-                      className={errors.phone ? "border-red-500" : ""}
-                    />
-                    {errors.phone && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.phone}
-                      </p>
-                    )}
-                  </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Gender
+                      </label>
+                      <select
+                        value={profileData.gender}
+                        onChange={(e) =>
+                          handleProfileChange("gender", e.target.value)
+                        }
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                      >
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                        <option value="Prefer not to say">
+                          Prefer not to say
+                        </option>
+                      </select>
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date of Birth
-                    </label>
-                    <Input
-                      type="date"
-                      value={profileData.dateOfBirth}
-                      onChange={(e) =>
-                        handleProfileChange("dateOfBirth", e.target.value)
-                      }
-                      disabled={!isEditing}
-                    />
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Bio
+                      </label>
+                      <textarea
+                        value={profileData.bio}
+                        onChange={(e) =>
+                          handleProfileChange("bio", e.target.value)
+                        }
+                        disabled={!isEditing}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 resize-none"
+                        placeholder="Tell us a bit about yourself..."
+                      />
+                    </div>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Gender
-                    </label>
-                    <select
-                      value={profileData.gender}
-                      onChange={(e) =>
-                        handleProfileChange("gender", e.target.value)
-                      }
-                      disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-                    >
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="other">Other</option>
-                      <option value="prefer-not-to-say">
-                        Prefer not to say
-                      </option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Bio
-                  </label>
-                  <textarea
-                    value={profileData.bio}
-                    onChange={(e) => handleProfileChange("bio", e.target.value)}
-                    disabled={!isEditing}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 resize-none"
-                    placeholder="Tell us a bit about yourself..."
-                  />
-                </div>
+                )}
 
                 <input
                   ref={fileInputRef}
@@ -521,281 +907,137 @@ const Profile = () => {
               </Card>
             )}
 
-            {/* Security Tab */}
-            {activeTab === "security" && (
-              <div className="space-y-6">
-                <Card className="p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <Shield className="h-5 w-5 text-blue-600 mr-2" />
-                    Security Settings
-                  </h2>
-
-                  {/* Change Password */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                      <Key className="h-4 w-4 text-gray-600 mr-2" />
-                      Change Password
-                    </h3>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Current Password
-                      </label>
-                      <div className="relative">
-                        <Input
-                          type={
-                            showPasswordFields.current ? "text" : "password"
-                          }
-                          value={securityData.currentPassword}
-                          onChange={(e) =>
-                            handleSecurityChange(
-                              "currentPassword",
-                              e.target.value
-                            )
-                          }
-                          className={
-                            errors.currentPassword ? "border-red-500" : ""
-                          }
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setShowPasswordFields((prev) => ({
-                              ...prev,
-                              current: !prev.current,
-                            }))
-                          }
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1"
-                        >
-                          {showPasswordFields.current ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                      {errors.currentPassword && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.currentPassword}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        New Password
-                      </label>
-                      <div className="relative">
-                        <Input
-                          type={showPasswordFields.new ? "text" : "password"}
-                          value={securityData.newPassword}
-                          onChange={(e) =>
-                            handleSecurityChange("newPassword", e.target.value)
-                          }
-                          className={errors.newPassword ? "border-red-500" : ""}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setShowPasswordFields((prev) => ({
-                              ...prev,
-                              new: !prev.new,
-                            }))
-                          }
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1"
-                        >
-                          {showPasswordFields.new ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                      {errors.newPassword && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.newPassword}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Confirm New Password
-                      </label>
-                      <div className="relative">
-                        <Input
-                          type={
-                            showPasswordFields.confirm ? "text" : "password"
-                          }
-                          value={securityData.confirmPassword}
-                          onChange={(e) =>
-                            handleSecurityChange(
-                              "confirmPassword",
-                              e.target.value
-                            )
-                          }
-                          className={
-                            errors.confirmPassword ? "border-red-500" : ""
-                          }
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setShowPasswordFields((prev) => ({
-                              ...prev,
-                              confirm: !prev.confirm,
-                            }))
-                          }
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1"
-                        >
-                          {showPasswordFields.confirm ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                      {errors.confirmPassword && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.confirmPassword}
-                        </p>
-                      )}
-                    </div>
-
-                    <Button
-                      variant="primary"
-                      onClick={handlePasswordChange}
-                      disabled={
-                        isLoading ||
-                        !securityData.currentPassword ||
-                        !securityData.newPassword ||
-                        !securityData.confirmPassword
-                      }
-                      className="flex items-center"
-                    >
-                      {isLoading ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      ) : (
-                        <Lock className="h-4 w-4 mr-2" />
-                      )}
-                      Update Password
-                    </Button>
-                  </div>
-                </Card>
-
-                {/* Two-Factor Authentication */}
-                <Card className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <Shield className="h-4 w-4 text-gray-600 mr-2" />
-                    Two-Factor Authentication
-                  </h3>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">
-                        Add an extra layer of security to your account
-                      </p>
-                      <Badge
-                        variant={
-                          accountSettings.twoFactorAuth
-                            ? "success"
-                            : "secondary"
-                        }
-                        className="mt-2"
-                      >
-                        {accountSettings.twoFactorAuth ? "Enabled" : "Disabled"}
-                      </Badge>
-                    </div>
-                    <Button
-                      variant={
-                        accountSettings.twoFactorAuth ? "danger" : "primary"
-                      }
-                      onClick={() =>
-                        handleSettingChange(
-                          "twoFactorAuth",
-                          !accountSettings.twoFactorAuth
-                        )
-                      }
-                    >
-                      {accountSettings.twoFactorAuth ? "Disable" : "Enable"}
-                    </Button>
-                  </div>
-                </Card>
-              </div>
-            )}
-
-            {/* Preferences Tab */}
-            {/* {activeTab === "preferences" && (
+            {/* Addresses Tab */}
+            {activeTab === "addresses" && (
               <Card className="p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                  <Settings className="h-5 w-5 text-blue-600 mr-2" />
-                  Notification Preferences
-                </h2>
-
-                <div className="space-y-6">
-                  {[
-                    {
-                      key: "emailNotifications",
-                      label: "Email Notifications",
-                      description: "Receive notifications via email",
-                    },
-                    {
-                      key: "smsNotifications",
-                      label: "SMS Notifications",
-                      description: "Receive notifications via text message",
-                    },
-                    {
-                      key: "marketingEmails",
-                      label: "Marketing Emails",
-                      description: "Receive promotional emails and offers",
-                    },
-                    {
-                      key: "orderUpdates",
-                      label: "Order Updates",
-                      description: "Get notified about order status changes",
-                    },
-                    {
-                      key: "newsletter",
-                      label: "Newsletter",
-                      description: "Subscribe to our weekly newsletter",
-                    },
-                  ].map((setting) => (
-                    <div
-                      key={setting.key}
-                      className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0"
-                    >
-                      <div>
-                        <h4 className="font-medium text-gray-900">
-                          {setting.label}
-                        </h4>
-                        <p className="text-sm text-gray-600">
-                          {setting.description}
-                        </p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={accountSettings[setting.key]}
-                          onChange={(e) =>
-                            handleSettingChange(setting.key, e.target.checked)
-                          }
-                          className="sr-only peer"
-                        />
-                        <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                    <MapPin className="h-5 w-5 text-blue-600 mr-2" />
+                    My Addresses
+                  </h2>
+                  <Button
+                    onClick={handleAddressAdd}
+                    variant="primary"
+                    size="sm"
+                    className="flex items-center"
+                    disabled={addressesSummary.maxReached}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Address
+                  </Button>
                 </div>
+
+                {addressesSummary.maxReached && (
+                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800">
+                      Maximum of 5 addresses allowed. Delete an existing address
+                      to add a new one.
+                    </p>
+                  </div>
+                )}
+
+                {addressesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : addresses.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      No addresses found
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      Add your first address to get started with deliveries.
+                    </p>
+                    <Button
+                      onClick={handleAddressAdd}
+                      variant="primary"
+                      className="flex items-center mx-auto"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Your First Address
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {addresses.map((address) => {
+                      const AddressIcon = getAddressIcon(address.addressType);
+                      return (
+                        <div
+                          key={address._id}
+                          className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <AddressIcon className="h-4 w-4 text-gray-600" />
+                                <Badge
+                                  variant={
+                                    address.addressType === "home"
+                                      ? "success"
+                                      : address.addressType === "work"
+                                      ? "primary"
+                                      : "secondary"
+                                  }
+                                  size="sm"
+                                >
+                                  {address.addressType.charAt(0).toUpperCase() +
+                                    address.addressType.slice(1)}
+                                </Badge>
+                                {address.isDefault && (
+                                  <Badge variant="secondary" size="sm">
+                                    Default
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="font-semibold text-gray-900">
+                                {address.firstName} {address.lastName}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {address.streetAddress}
+                                {address.apartment && `, ${address.apartment}`}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {address.city}, {address.state}{" "}
+                                {address.zipCode}
+                              </p>
+                              <p className="text-sm text-gray-600 flex items-center mt-1">
+                                <Phone className="h-3 w-3 mr-1" />
+                                {address.phoneNumber}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                onClick={() => handleAddressEdit(address)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-600 hover:text-blue-700"
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                onClick={() =>
+                                  handleAddressDeleteClick(address)
+                                }
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </Card>
-            )} */}
+            )}
 
             {/* Account Tab */}
             {activeTab === "account" && (
               <div className="space-y-6">
-             
-
                 {/* Delete Account */}
                 <Card className="p-6 border-red-200 bg-red-50">
                   <h3 className="text-lg font-semibold text-red-900 mb-4 flex items-center">
@@ -812,7 +1054,7 @@ const Profile = () => {
                     </p>
                     <Button
                       variant="danger"
-                      onClick={() => setShowDeleteModal(true)}
+                      onClick={() => setShowDeleteAccountDialog(true)}
                       className="flex items-center"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -826,49 +1068,38 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* Delete Account Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Delete Account
-              </h3>
-              <p className="text-sm text-gray-500 mb-6">
-                Are you sure you want to delete your account? This action is
-                permanent and cannot be undone. All your data will be
-                permanently removed.
-              </p>
-              <div className="flex space-x-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteModal(false)}
-                  className="flex-1"
-                  disabled={isLoading}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={handleDeleteAccount}
-                  className="flex-1"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  ) : (
-                    <Trash2 className="h-4 w-4 mr-2" />
-                  )}
-                  Delete
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Address Modal */}
+      <AddressModal
+        isOpen={showAddressModal}
+        onClose={() => {
+          setShowAddressModal(false);
+          setEditingAddress(null);
+        }}
+        onSave={handleAddressSave}
+        editingAddress={editingAddress}
+        isLoading={addressesLoading}
+      />
+
+      {/* Delete Account Confirmation Dialog */}
+      <AccountDeletionDialog
+        isOpen={showDeleteAccountDialog}
+        onClose={() => setShowDeleteAccountDialog(false)}
+        onConfirm={handleDeleteAccount}
+        isLoading={loading}
+        userEmail={userEmail}
+      />
+
+      {/* Delete Address Confirmation Dialog */}
+      <AddressDeletionDialog
+        isOpen={showDeleteAddressDialog}
+        onClose={() => {
+          setShowDeleteAddressDialog(false);
+          setAddressToDelete(null);
+        }}
+        onConfirm={handleAddressDeleteConfirm}
+        isLoading={addressesLoading}
+        address={addressToDelete}
+      />
     </div>
   );
 };
