@@ -17,7 +17,7 @@ export const store = configureStore({
           "auth/setTokens",
           "seller/uploadImage",
           "seller/uploadMultipleImages",
-          // User-related actions that might contain non-serializable data
+          // User-related actions 
           "user/addToCart/fulfilled",
           "user/updateCartItem/fulfilled",
           "user/updateWishlist/fulfilled",
@@ -25,7 +25,7 @@ export const store = configureStore({
         ],
         ignoredPaths: [
           "seller.ui.pendingImageUploads",
-          // User-related paths that might contain non-serializable data
+          // User-related paths
           "user.cartItems",
           "user.wishlist",
           "user.orders",

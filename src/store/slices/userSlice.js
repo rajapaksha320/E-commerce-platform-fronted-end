@@ -845,7 +845,7 @@ const userSlice = createSlice({
         state.profileError = action.payload;
       });
 
-    // 🔍 SEARCH & FILTER
+    // SEARCH & FILTER
     builder
       .addCase(searchProducts.pending, (state) => {
         state.searchLoading = true;
