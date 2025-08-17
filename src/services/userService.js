@@ -184,7 +184,7 @@ const userService = {
     );
   },
 
-  // 👤 PROFILE SERVICES
+  // PROFILE SERVICES
 
   // Update user profile
   updateUserProfile: async (profileData) => {
@@ -209,14 +209,14 @@ const userService = {
     );
   },
 
-  // 👤 GET USER PROFILE SERVICE
+  // GET USER PROFILE SERVICE
 
   // Get user profile
   getUserProfile: async (userId) => {
     return await axiosInstance.get(`/api/v1/auth/get-buyer-profile/${userId}`);
   },
 
-  // 🔍 SEARCH & FILTER SERVICES
+  // SEARCH & FILTER SERVICES
 
   // Main search/filter across all stores
   searchProducts: async (searchParams, page = 1, pageSize = 10) => {
@@ -259,7 +259,7 @@ const userService = {
     );
   },
 
-  // 🔍 SEARCH AND FILTER HELPERS
+  // SEARCH AND FILTER HELPERS
 
   // Search stores by name or location
   searchStores: async (query, page = 1, pageSize = 10) => {
@@ -280,7 +280,7 @@ const userService = {
     return await axiosInstance.get(`/api/v1/listing/${listingId}`);
   },
 
-  // 📊 ANALYTICS HELPERS (if needed)
+  // ANALYTICS HELPERS (if needed)
 
   // Get popular stores
   getPopularStores: async (limit = 10) => {
@@ -299,7 +299,7 @@ const userService = {
     );
   },
 
-  // 🛍️ QUICK ACTIONS
+  // QUICK ACTIONS
 
   // Quick add to cart and wishlist
   quickAddToCart: async (buyerId, listingId, quantity = 1) => {
