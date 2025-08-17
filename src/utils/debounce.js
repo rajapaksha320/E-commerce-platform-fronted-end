@@ -1,10 +1,6 @@
-/**
- * Debounce utility function
- * @param {Function} func - The function to debounce
- * @param {number} wait - The number of milliseconds to delay
- * @param {boolean} immediate - Whether to trigger the function on the leading edge instead of the trailing edge
- * @returns {Function} - The debounced function
- */
+
+// Debounce utility function
+
 export const debounce = (func, wait, immediate = false) => {
   let timeout;
   
