@@ -2,7 +2,7 @@
 import axiosInstance from "./axiosInstance";
 
 const userService = {
-  // 🏪 STORE SERVICES
+  // STORE SERVICES
 
   // Get all stores
   getAllStores: async (page = 1, pageSize = 10) => {
@@ -25,7 +25,7 @@ const userService = {
     );
   },
 
-  // 🛒 CART SERVICES
+  // CART SERVICES
 
   // Add item to cart
   addToCart: async ({ buyerId, listingId, quantity }) => {
@@ -58,7 +58,7 @@ const userService = {
     return await axiosInstance.delete(`/api/v1/cart/delete-cart/${cartItemId}`);
   },
 
-  // ❤️ WISHLIST SERVICES
+  // WISHLIST SERVICES
 
   // Get user wishlist
   getWishlist: async (userId) => {
@@ -83,7 +83,7 @@ const userService = {
     );
   },
 
-  // 📦 ORDER SERVICES
+  // ORDER SERVICES
 
   // Place an order
   placeOrder: async (orderData) => {
@@ -129,7 +129,7 @@ const userService = {
     );
   },
 
-  // 🏠 ADDRESS SERVICES
+  // ADDRESS SERVICES
 
   // Get buyer addresses
   getBuyerAddresses: async (buyerId) => {
