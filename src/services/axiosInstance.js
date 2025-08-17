@@ -13,7 +13,7 @@ const axiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // Important for cookies
+  withCredentials: true,
 });
 
 // Variable to store the store instance
@@ -58,8 +58,7 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-
-    // If error is 401 and we haven't already tried to refresh
+    // If the error is due to an expired token
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {

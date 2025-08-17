@@ -200,7 +200,7 @@ export const filterListings = createAsyncThunk(
   'seller/filterListings',
   async (filters, { rejectWithValue }) => {
     try {
-      // Map frontend status to backend status if present
+      // Map frontend status to backend status
       const processedFilters = { ...filters };
       if (processedFilters.status) {
         processedFilters.status = sellerService.mapFrontendToBackendStatus(processedFilters.status);
@@ -228,7 +228,7 @@ export const searchListings = createAsyncThunk(
         pageSize: 10,
       };
       
-      // Map frontend status to backend status if present
+      // Map frontend status to backend status 
       if (filters.status) {
         filters.status = sellerService.mapFrontendToBackendStatus(filters.status);
       }
@@ -561,7 +561,7 @@ const sellerSlice = createSlice({
         state.ui.error = action.payload;
       });
     
-    // Fetch Listings By Status - Fixed to handle empty results properly
+    // Fetch Listings By Status
     builder
       .addCase(fetchListingsByStatus.pending, (state) => {
         state.ui.listingsLoading = true;
@@ -572,15 +572,15 @@ const sellerSlice = createSlice({
       .addCase(fetchListingsByStatus.fulfilled, (state, action) => {
         state.ui.listingsLoading = false;
         
-        // Always clear existing data when fetching by status to avoid stale data
+        // Always clear existing data when fetching 
         state.listings.byId = {};
         state.listings.allIds = [];
         
         if (action.payload.isEmpty) {
-          // Handle empty results case - this is NOT an error
+          // Handle empty results
           state.ui.isEmpty = true;
           state.ui.message = action.payload.message || "No listings found for this status";
-          state.ui.error = null; // Clear any previous errors
+          state.ui.error = null; 
           state.listings.pagination = action.payload.pagination || {
             total: 0,
             page: 1,
@@ -652,15 +652,14 @@ const sellerSlice = createSlice({
       .addCase(filterListings.fulfilled, (state, action) => {
         state.ui.listingsLoading = false;
         
-        // Always clear existing data when filtering to avoid stale data
+        // Always clear existing data when filtering
         state.listings.byId = {};
         state.listings.allIds = [];
         
         if (action.payload.isEmpty) {
-          // Handle empty results case - this is NOT an error
           state.ui.isEmpty = true;
           state.ui.message = action.payload.message || "No listings found with the specified filters";
-          state.ui.error = null; // Clear any previous errors
+          state.ui.error = null; 
           state.listings.pagination = action.payload.pagination || {
             total: 0,
             page: 1,
@@ -677,7 +676,7 @@ const sellerSlice = createSlice({
           state.ui.message = '';
         }
         
-        // Store the original filters (before backend mapping)
+        // Store the original filters
         state.listings.filters = action.meta.arg;
       })
       .addCase(filterListings.rejected, (state, action) => {
@@ -696,7 +695,7 @@ const sellerSlice = createSlice({
         };
       });
 
-    // Search Listings - Fixed to handle empty results
+    // Search Listings 
     builder
       .addCase(searchListings.pending, (state) => {
         state.ui.listingsLoading = true;
@@ -707,12 +706,11 @@ const sellerSlice = createSlice({
       .addCase(searchListings.fulfilled, (state, action) => {
         state.ui.listingsLoading = false;
         
-        // Always clear existing data when searching to avoid stale data
+        // Always clear existing data when searching
         state.listings.byId = {};
         state.listings.allIds = [];
         
         if (action.payload.isEmpty) {
-          // Handle empty results case - this is NOT an error
           state.ui.isEmpty = true;
           state.ui.message = action.payload.message || "No listings found for your search";
           state.ui.error = null; // Clear any previous errors

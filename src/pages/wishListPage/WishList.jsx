@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   Heart,
   Star,
@@ -20,6 +21,10 @@ import {
   Eye,
   Menu,
   ChevronDown,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
 } from "lucide-react";
 
 import {
@@ -27,10 +32,28 @@ import {
   Badge,
   ContactCard as Card,
 } from "../../components/ui/ContactUis/Uis";
-import Pagination from "../../components/ui/ContactUis/Pagination";
+import useUser from "../../hooks/useUser";
+import { selectUser as selectAuthUser } from "../../store/slices/authSlice";
+import Pagination from "../../components/ui/Pagination"; 
+
+
 
 const WishList = () => {
   const navigate = useNavigate();
+  const authUser = useSelector(selectAuthUser);
+
+  // User hook for wishlist management
+  const {
+    wishlist,
+    wishlistLoading,
+    wishlistError,
+    fetchWishlist,
+    removeFromWishlist,
+    addItemToCart,
+    clearErrors,
+  } = useUser();
+
+  // UI States
   const [activeTab, setActiveTab] = useState("all");
   const [viewMode, setViewMode] = useState("grid");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -43,275 +66,59 @@ const WishList = () => {
   const productsPerPage = 8;
   const shopsPerPage = 6;
 
-  // Mock wishlist data
-  const [wishlistItems, setWishlistItems] = useState({
-    products: [
-      {
-        id: 1,
-        name: "Wireless Bluetooth Headphones Pro Max",
-        brand: "TechAudio",
-        price: 179.99,
-        originalPrice: 249.99,
-        discount: 28,
-        rating: 4.8,
-        totalReviews: 1247,
-        image:
-          "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop",
-        inStock: true,
-        category: "Electronics",
-        dateAdded: "2024-01-15",
-        badge: "Best Seller",
-      },
-      {
-        id: 2,
-        name: "Premium Leather Handbag",
-        brand: "LuxeFashion",
-        price: 299.99,
-        originalPrice: 399.99,
-        discount: 25,
-        rating: 4.6,
-        totalReviews: 823,
-        image:
-          "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&h=400&fit=crop",
-        inStock: true,
-        category: "Fashion",
-        dateAdded: "2024-01-12",
-        badge: "New",
-      },
-      {
-        id: 3,
-        name: "Smart Fitness Watch",
-        brand: "FitTech",
-        price: 199.99,
-        originalPrice: 279.99,
-        discount: 29,
-        rating: 4.7,
-        totalReviews: 956,
-        image:
-          "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&h=400&fit=crop",
-        inStock: false,
-        category: "Electronics",
-        dateAdded: "2024-01-10",
-        badge: "Popular",
-      },
-      {
-        id: 4,
-        name: "Organic Coffee Beans",
-        brand: "BrewMaster",
-        price: 24.99,
-        originalPrice: 34.99,
-        discount: 29,
-        rating: 4.9,
-        totalReviews: 445,
-        image:
-          "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop",
-        inStock: true,
-        category: "Food",
-        dateAdded: "2024-01-08",
-        badge: "Organic",
-      },
-      {
-        id: 5,
-        name: "Gaming Mechanical Keyboard",
-        brand: "GamePro",
-        price: 149.99,
-        originalPrice: 199.99,
-        discount: 25,
-        rating: 4.5,
-        totalReviews: 678,
-        image:
-          "https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=400&h=400&fit=crop",
-        inStock: true,
-        category: "Electronics",
-        dateAdded: "2024-01-05",
-        badge: "Gaming",
-      },
-      {
-        id: 6,
-        name: "Yoga Mat Premium",
-        brand: "ZenFit",
-        price: 59.99,
-        originalPrice: 79.99,
-        discount: 25,
-        rating: 4.7,
-        totalReviews: 334,
-        image:
-          "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=400&fit=crop",
-        inStock: true,
-        category: "Sports",
-        dateAdded: "2024-01-03",
-        badge: "Eco-Friendly",
-      },
-    ],
-    shops: [
-      {
-        id: 1,
-        name: "TechHub Electronics",
-        description: "Premium electronics and gadgets for tech enthusiasts",
-        rating: 4.9,
-        totalReviews: 15420,
-        totalProducts: 2847,
-        followers: 45200,
-        image:
-          "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop",
-        verified: true,
-        location: "New York, NY",
-        dateAdded: "2024-01-14",
-        categories: ["Electronics", "Gadgets", "Accessories"],
-        badge: "Verified",
-      },
-      {
-        id: 2,
-        name: "Fashion Forward",
-        description: "Trendy fashion and lifestyle products for modern living",
-        rating: 4.7,
-        totalReviews: 8934,
-        totalProducts: 1256,
-        followers: 28700,
-        image:
-          "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop",
-        verified: true,
-        location: "Los Angeles, CA",
-        dateAdded: "2024-01-11",
-        categories: ["Fashion", "Lifestyle", "Accessories"],
-        badge: "Top Rated",
-      },
-      {
-        id: 3,
-        name: "Organic Market",
-        description: "Fresh organic produce and natural health products",
-        rating: 4.8,
-        totalReviews: 6721,
-        totalProducts: 892,
-        followers: 19300,
-        image:
-          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop",
-        verified: false,
-        location: "Portland, OR",
-        dateAdded: "2024-01-09",
-        categories: ["Food", "Health", "Organic"],
-        badge: "Eco-Friendly",
-      },
-    ],
-  });
+  // Fetch wishlist on component mount
+  useEffect(() => {
+    if (authUser?._id) {
+      fetchWishlist(authUser._id);
+    }
+  }, [authUser, fetchWishlist]);
 
+  // Clear errors when component unmounts
+  useEffect(() => {
+    return () => {
+      clearErrors();
+    };
+  }, [clearErrors]);
+
+  // Extract data from wishlist
+  const productWishlists = wishlist?.productWishlists || [];
+  const shopWishlists = wishlist?.shopWishlists || [];
+
+  // Flatten wishlist items
+  const products = productWishlists.flatMap((list) => list.items || []);
+  const shops = shopWishlists.flatMap((list) => list.items || []);
+
+  // Get unique categories
   const categories = [
     "all",
     ...new Set([
-      ...wishlistItems.products.map((p) => p.category),
-      ...wishlistItems.shops.flatMap((s) => s.categories),
+      ...products.map((p) => p.category?.main || "Uncategorized"),
+      // Add shop categories if available
     ]),
   ];
 
-  const removeFromWishlist = (type, id) => {
-    setWishlistItems((prev) => ({
-      ...prev,
-      [type]: prev[type].filter((item) => item.id !== id),
-    }));
-  };
-
-  const handleAddToCart = (product) => {
-    console.log("Added to cart:", product);
-    // Add your cart logic here
-  };
-
-  const handleViewProduct = (productId) => {
-    navigate(`/product/${productId}`);
-  };
-
-  const handleViewShop = (shopId) => {
-    navigate(`/shop/${shopId}`);
-  };
-
-  const handleShare = async (type, item) => {
-    const baseUrl = window.location.origin;
-    const url =
-      type === "shop"
-        ? `${baseUrl}/shop/${item.id}`
-        : `${baseUrl}/product/${item.id}`;
-
-    const title =
-      type === "shop"
-        ? `Check out ${item.name} - ${item.description}`
-        : `Check out ${item.name} by ${item.brand}`;
-
-    const text =
-      type === "shop"
-        ? `${item.name} - ${item.description}. ${
-            item.rating
-          }⭐ (${item.totalReviews.toLocaleString()} reviews)`
-        : `${item.name} by ${item.brand} - ${item.price}. ${
-            item.rating
-          }⭐ (${item.totalReviews.toLocaleString()} reviews)`;
-
-    try {
-      // Check if Web Share API is supported (mainly mobile browsers)
-      if (navigator.share) {
-        await navigator.share({
-          title: title,
-          text: text,
-          url: url,
-        });
-        setShareMessage("Shared successfully!");
-      } else {
-        // Fallback to clipboard API
-        await navigator.clipboard.writeText(url);
-        setShareMessage("Link copied to clipboard!");
-      }
-    } catch (error) {
-      // If both fail, show the URL in an alert as last resort
-      if (error.name !== "AbortError") {
-        prompt("Copy this link to share:", url);
-        setShareMessage("Link ready to copy!");
-      }
-    }
-
-    // Clear message after 3 seconds
-    setTimeout(() => setShareMessage(""), 3000);
-  };
-
-  const getBadgeVariant = (badge) => {
-    const variants = {
-      "Best Seller": "success",
-      New: "primary",
-      Popular: "warning",
-      Organic: "success",
-      Verified: "primary",
-      "Top Rated": "warning",
-      "Eco-Friendly": "success",
-      Gaming: "primary",
-    };
-    return variants[badge] || "default";
-  };
-
-  const renderStars = (rating) => {
-    return [...Array(5)].map((_, i) => (
-      <Star
-        key={i}
-        className={`h-3 w-3 sm:h-4 sm:w-4 ${
-          i < Math.floor(rating)
-            ? "text-yellow-400 fill-current"
-            : "text-gray-300"
-        }`}
-      />
-    ));
-  };
-
-  const filteredItems = () => {
-    let products = wishlistItems.products;
-    let shops = wishlistItems.shops;
+  // Filter items based on selected category
+  const getFilteredItems = () => {
+    let filteredProducts = products;
+    let filteredShops = shops;
 
     if (selectedCategory !== "all") {
-      products = products.filter((p) => p.category === selectedCategory);
-      shops = shops.filter((s) => s.categories.includes(selectedCategory));
+      filteredProducts = products.filter(
+        (p) => p.category?.main === selectedCategory
+      );
+      // Filter shops if they have category information
+      filteredShops = shops.filter(
+        (s) => s.categories?.includes(selectedCategory) || false
+      );
     }
 
-    return { products, shops };
+    return { products: filteredProducts, shops: filteredShops };
   };
 
-  const { products: filteredProducts, shops: filteredShops } = filteredItems();
+  const { products: filteredProducts, shops: filteredShops } =
+    getFilteredItems();
 
-  // Define tabs after filtered items are calculated
+  // Define tabs
   const tabs = [
     {
       id: "all",
@@ -372,6 +179,123 @@ const WishList = () => {
     setProductsPage(1);
     setShopsPage(1);
   }, [selectedCategory, activeTab]);
+
+  // Handle remove from wishlist
+  const handleRemoveFromWishlist = async (type, itemId) => {
+    if (!authUser?._id) return;
+
+    try {
+      await removeFromWishlist(authUser._id, itemId);
+    } catch (error) {
+      console.error("Failed to remove from wishlist:", error);
+    }
+  };
+
+  // Handle add to cart
+  const handleAddToCart = async (product) => {
+    if (!authUser?._id) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      await addItemToCart(authUser._id, product._id, 1);
+      // You can show a success message here
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+    }
+  };
+
+  const handleViewProduct = (productId) => {
+    navigate(`/product/${productId}`);
+  };
+
+  const handleViewShop = (shopId) => {
+    navigate(`/shop/${shopId}`);
+  };
+
+  const handleShare = async (type, item) => {
+    const baseUrl = window.location.origin;
+    const url =
+      type === "shop"
+        ? `${baseUrl}/shop/${item._id}`
+        : `${baseUrl}/product/${item._id}`;
+
+    const title =
+      type === "shop"
+        ? `Check out ${item.basicInformation?.storeName || item.name}`
+        : `Check out ${item.title}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: title,
+          url: url,
+        });
+        setShareMessage("Shared successfully!");
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareMessage("Link copied to clipboard!");
+      }
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        prompt("Copy this link to share:", url);
+        setShareMessage("Link ready to copy!");
+      }
+    }
+
+    setTimeout(() => setShareMessage(""), 3000);
+  };
+
+  const getBadgeVariant = (status) => {
+    const variants = {
+      active: "success",
+      inactive: "secondary",
+      outOfStock: "danger",
+    };
+    return variants[status] || "default";
+  };
+
+  const renderStars = (rating) => {
+    return [...Array(5)].map((_, i) => (
+      <Star
+        key={i}
+        className={`h-3 w-3 sm:h-4 sm:w-4 ${
+          i < Math.floor(rating)
+            ? "text-yellow-400 fill-current"
+            : "text-gray-300"
+        }`}
+      />
+    ));
+  };
+
+  // Loading state
+  if (wishlistLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading your wishlist...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (wishlistError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="text-center p-8 max-w-md">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Failed to load wishlist
+          </h3>
+          <p className="text-gray-600 mb-4">{wishlistError}</p>
+          <Button onClick={() => fetchWishlist(authUser._id)}>Try Again</Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -562,25 +486,31 @@ const WishList = () => {
                 >
                   {displayShops.map((shop) => (
                     <Card
-                      key={shop.id}
+                      key={shop._id}
                       className="group hover:shadow-lg transition-all duration-300"
                     >
                       <div className="relative">
                         <img
-                          src={shop.image}
-                          alt={shop.name}
+                          src={
+                            shop.shopMedia?.storeLogo ||
+                            shop.shopMedia?.bannerImage ||
+                            "/api/placeholder/400/200"
+                          }
+                          alt={shop.basicInformation?.storeName || "Shop"}
                           className="w-full h-36 sm:h-48 object-cover rounded-lg mb-3 sm:mb-4"
                         />
                         <div className="absolute top-2 sm:top-3 left-2 sm:left-3">
                           <Badge
-                            variant={getBadgeVariant(shop.badge)}
+                            variant={getBadgeVariant(shop.status)}
                             size="sm"
                           >
-                            {shop.badge}
+                            {shop.status || "Active"}
                           </Badge>
                         </div>
                         <button
-                          onClick={() => removeFromWishlist("shops", shop.id)}
+                          onClick={() =>
+                            handleRemoveFromWishlist("shops", shop._id)
+                          }
                           className="absolute top-2 sm:top-3 right-2 sm:right-3 p-1.5 sm:p-2 bg-white/90 hover:bg-white rounded-full shadow-sm transition-all group-hover:scale-110"
                         >
                           <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-600 hover:text-red-600" />
@@ -591,23 +521,21 @@ const WishList = () => {
                         <div>
                           <div className="flex items-center space-x-2 mb-1">
                             <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
-                              {shop.name}
+                              {shop.basicInformation?.storeName || "Shop Name"}
                             </h3>
-                            {shop.verified && (
-                              <BadgeCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600" />
-                            )}
+                            <BadgeCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600" />
                           </div>
                           <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
-                            {shop.description}
+                            {shop.basicInformation?.storeDescription ||
+                              "Shop description"}
                           </p>
                         </div>
 
                         <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm text-gray-600">
                           <div className="flex items-center space-x-1">
-                            {renderStars(shop.rating)}
-                            <span className="font-medium">{shop.rating}</span>
-                            <span className="hidden sm:inline">
-                              ({shop.totalReviews.toLocaleString()})
+                            {renderStars(shop.rating || 0)}
+                            <span className="font-medium">
+                              {shop.rating || 0}
                             </span>
                           </div>
                         </div>
@@ -615,26 +543,20 @@ const WishList = () => {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-1 sm:space-y-0 text-xs sm:text-sm text-gray-600">
                           <div className="flex items-center space-x-1">
                             <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            <span>
-                              {shop.totalProducts.toLocaleString()} products
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            <span>
-                              {shop.followers.toLocaleString()} followers
-                            </span>
+                            <span>{shop.totalProducts || 0} products</span>
                           </div>
                         </div>
 
                         <div className="flex items-center space-x-1 text-xs sm:text-sm text-gray-600">
                           <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                          <span>{shop.location}</span>
+                          <span>
+                            {shop.contactDetails?.storeLocation || "Location"}
+                          </span>
                         </div>
 
                         <div className="flex space-x-2 pt-2">
                           <Button
-                            onClick={() => handleViewShop(shop.id)}
+                            onClick={() => handleViewShop(shop._id)}
                             variant="outline"
                             size="sm"
                             className="flex-1 text-xs sm:text-sm"
@@ -701,8 +623,8 @@ const WishList = () => {
                 >
                   {displayProducts.map((product) => (
                     <Card
-                      key={product.id}
-                      className={`group hover:shadow-lg transition-all duration-300  ${
+                      key={product._id}
+                      className={`group hover:shadow-lg transition-all duration-300 ${
                         viewMode === "list" ? "lg:flex lg:space-x-4" : ""
                       }`}
                     >
@@ -712,8 +634,11 @@ const WishList = () => {
                         }`}
                       >
                         <img
-                          src={product.image}
-                          alt={product.name}
+                          src={
+                            product.images?.[0]?.url ||
+                            "/api/placeholder/400/400"
+                          }
+                          alt={product.title || "Product"}
                           className={`w-full object-cover rounded-lg ${
                             viewMode === "list"
                               ? "aspect-square lg:h-32 lg:w-32"
@@ -722,22 +647,22 @@ const WishList = () => {
                         />
                         <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2">
                           <Badge
-                            variant={getBadgeVariant(product.badge)}
+                            variant={getBadgeVariant(product.status)}
                             size="sm"
                             className="text-xs"
                           >
-                            {product.badge}
+                            {product.status || "Active"}
                           </Badge>
                         </div>
                         <button
                           onClick={() =>
-                            removeFromWishlist("products", product.id)
+                            handleRemoveFromWishlist("products", product._id)
                           }
                           className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1 sm:p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-all group-hover:scale-110"
                         >
                           <X className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-600 hover:text-red-600" />
                         </button>
-                        {!product.inStock && (
+                        {product.status === "outOfStock" && (
                           <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
                             <span className="text-white font-medium text-xs bg-red-600 px-2 py-1 rounded-full">
                               Out of Stock
@@ -756,73 +681,47 @@ const WishList = () => {
                             {product.brand}
                           </p>
                           <h3 className="font-medium text-gray-900 text-xs sm:text-sm line-clamp-2">
-                            {product.name}
+                            {product.title}
                           </h3>
                         </div>
 
                         <div className="flex items-center space-x-1">
-                          {renderStars(product.rating)}
+                          {renderStars(product.averageRating || 0)}
                           <span className="text-xs text-gray-600">
-                            ({product.totalReviews.toLocaleString()})
+                            ({product.averageRating || 0})
                           </span>
                         </div>
 
                         <div className="flex items-baseline space-x-1 sm:space-x-2">
                           <span className="font-bold text-gray-900 text-sm sm:text-base">
-                            <span>LKR</span>
-                            {product.price}
+                            LKR {product.variations?.[0]?.price || "0"}
                           </span>
-                          {product.originalPrice && (
+                          {product.variations?.[0]?.originalPrice && (
                             <span className="text-xs sm:text-sm text-gray-500 line-through">
-                              <span>LKR</span>
-                              {product.originalPrice}
+                              LKR {product.variations[0].originalPrice}
                             </span>
-                          )}
-                          {product.discount && (
-                            <Badge
-                              variant="danger"
-                              size="sm"
-                              className="text-xs "
-                            >
-                              -{product.discount}%
-                            </Badge>
                           )}
                         </div>
 
                         <div className="flex space-x-1.5 sm:space-x-2 pt-1 sm:pt-2">
                           <Button
-                            onClick={() => handleViewProduct(product.id)}
+                            onClick={() => handleViewProduct(product._id)}
                             variant="outline"
                             size="sm"
                             className="flex-1 text-xs py-1.5"
                           >
                             <Eye className="h-3 w-3 mr-1" />
-                            <span className="hidden sm:inline">View</span>
-                            <span className="sm:hidden">View</span>
+                            View
                           </Button>
                           <Button
                             onClick={() => handleAddToCart(product)}
                             size="sm"
                             className="flex-1 text-xs py-1.5"
-                            disabled={!product.inStock}
+                            disabled={product.status === "outOfStock"}
                           >
                             <ShoppingCart className="h-3 w-3 mr-1" />
-                            <span className="hidden sm:inline">
-                              {product.inStock ? "Add" : "Notify"}
-                            </span>
-                            <span className="sm:hidden">
-                              {product.inStock ? "Add" : "Notify"}
-                            </span>
+                            {product.status === "outOfStock" ? "Notify" : "Add"}
                           </Button>
-                          {/* <Button
-                            onClick={() => handleShare("product", product)}
-                            size="sm"
-                            variant="outline"
-                            className="p-1.5"
-                            title="Share product"
-                          >
-                            <Share2 className="h-3 w-3" />
-                          </Button> */}
                         </div>
                       </div>
                     </Card>

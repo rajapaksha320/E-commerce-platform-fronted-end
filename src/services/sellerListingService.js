@@ -2,30 +2,18 @@
 import axiosInstance from './axiosInstance';
 
 const sellerService = {
-  // Listing Management APIs
-
-  /**
-   * Create a new listing
-   * @param {Object} listingData - The listing data
-   */
+  
+  // Create a new listing
   createListing: async (listingData) => {
     return await axiosInstance.post('/api/v1/listing/create', listingData);
   },
 
-  /**
-   * Update an existing listing
-   * @param {string} listingId - The listing ID (_id)
-   * @param {Object} updateData - The data to update
-   */
+  // Update an existing listing
   updateListing: async (listingId, updateData) => {
     return await axiosInstance.post(`/api/v1/listing/update/${listingId}`, updateData);
   },
 
-  /**
-   * Get all listings with pagination
-   * @param {number} page - Page number
-   * @param {number} pageSize - Items per page
-   */
+  // Get all listings with pagination and filtering
   getAllListings: async (page = 1, pageSize = 10) => {
     try {
       const response = await axiosInstance.get('/api/v1/listing/all', {
@@ -73,20 +61,12 @@ const sellerService = {
     }
   },
 
-  /**
-   * Get a single listing by ID
-   * @param {string} listingId - The listing ID (_id)
-   */
+  // Get a single listing by ID
   getListingById: async (listingId) => {
     return await axiosInstance.get(`/api/v1/listing/one-listing/${listingId}`);
   },
 
-  /**
-   * Get listings filtered by status - Fixed to handle empty results properly
-   * @param {string} status - Status filter (active, inactive, draft, outOfStock, sold)
-   * @param {number} page - Page number
-   * @param {number} pageSize - Items per page
-   */
+// Get listings by status with pagination
   getListingsByStatus: async (status, page = 1, pageSize = 10) => {
     try {
       const response = await axiosInstance.get('/api/v1/listing/listing-filter', {
@@ -133,18 +113,12 @@ const sellerService = {
     }
   },
 
-  /**
-   * Delete a listing
-   * @param {string} listingId - The listing ID (_id)
-   */
+  // Delete a listing by ID
   deleteListing: async (listingId) => {
     return await axiosInstance.get(`/api/v1/listing/listing-delete/${listingId}`);
   },
 
-  /**
-   * Filter listings with multiple criteria - Fixed to handle empty results
-   * @param {Object} filters - Filter object
-   */
+  // Filter listings with various criteria
   filterListings: async (filters) => {
     try {
       const params = {};
@@ -202,10 +176,7 @@ const sellerService = {
 
   // Store/Shop Management APIs
 
-  /**
-   * Create a store profile
-   * @param {Object} storeData - Store profile data
-   */
+  // Create store profile
   createStoreProfile: async (storeData) => {
     const payload = {
       storeName: storeData.storeName,
@@ -224,11 +195,7 @@ const sellerService = {
     return await axiosInstance.post('/api/v1/store/create-store-profile', payload);
   },
 
-  /**
-   * Update store profile
-   * @param {string} storeId - Store ID (_id)
-   * @param {Object} updateData - Data to update
-   */
+  // Update store profile
   updateStoreProfile: async (storeId, updateData) => {
     const payload = {
       updateData: {
@@ -262,9 +229,7 @@ const sellerService = {
     return await axiosInstance.post(`/api/v1/store/update-store-profile/${storeId}`, payload);
   },
 
-  /**
-   * Get store profiles for the seller
-   */
+  // Get store profile information
   getStoreProfiles: async () => {
     const payload = { role: 'seller' };
     return await axiosInstance.post('/api/v1/auth/seller-store-profile-info', payload);
@@ -272,10 +237,7 @@ const sellerService = {
 
   // Image Upload API
 
-  /**
-   * Upload an image
-   * @param {File} imageFile - The image file to upload
-   */
+  // Upload a single image
   uploadImage: async (imageFile) => {
     const formData = new FormData();
     formData.append('image', imageFile);
@@ -289,10 +251,7 @@ const sellerService = {
 
   // Batch Operations
 
-  /**
-   * Upload multiple images
-   * @param {File[]} imageFiles - Array of image files
-   */
+  // Upload multiple images
   uploadMultipleImages: async (imageFiles) => {
     const uploadPromises = imageFiles.map(file => {
       const formData = new FormData();
@@ -315,9 +274,8 @@ const sellerService = {
     }));
   },
 
-  /**
-   * Get listing statistics for dashboard
-   */
+
+  // Get listing statistics for dashboard
   getListingStatistics: async () => {
     try {
       const [active, inactive, draft, outOfStock, sold] = await Promise.all([
@@ -363,12 +321,8 @@ const sellerService = {
 
   // Search Operations
 
-  /**
-   * Search listings by keyword using the filter API
-   * @param {string} searchTerm - Search keyword
-   * @param {number} page - Page number
-   * @param {number} pageSize - Items per page
-   */
+
+  // Search listings by keyword using the filter API
   searchListings: async (searchTerm, page = 1, pageSize = 10) => {
     return await axiosInstance.get('/api/v1/listing/listing-filter', {
       params: {
@@ -379,10 +333,7 @@ const sellerService = {
     });
   },
 
-  /**
-   * Advanced search with multiple filters
-   * @param {Object} searchParams - Advanced search parameters
-   */
+  // Advanced search with multiple filters
   advancedSearchListings: async (searchParams) => {
     const {
       keyword,
@@ -421,10 +372,7 @@ const sellerService = {
 
   // Utility Functions
 
-  /**
-   * Validate listing data before submission
-   * @param {Object} listingData - Listing data to validate
-   */
+  // Validate listing data before submission
   validateListingData: (listingData) => {
     const errors = {};
 
@@ -463,10 +411,7 @@ const sellerService = {
     };
   },
 
-  /**
-   * Format listing data for API submission
-   * @param {Object} rawData - Raw listing data from form
-   */
+  // Format listing data for API submission
   formatListingData: (rawData) => {
     return {
       id: rawData.sku || Date.now().toString(),
@@ -500,10 +445,7 @@ const sellerService = {
     };
   },
 
-  /**
-   * Format store data for API submission
-   * @param {Object} rawData - Raw store data from form
-   */
+  // Format store data for API submission
   formatStoreData: (rawData) => {
     if (rawData.updateData) {
       return rawData;
@@ -525,11 +467,8 @@ const sellerService = {
   },
 
   // Status mapping utilities
-  /**
-   * Map frontend status to backend status
-   * @param {string} frontendStatus - Frontend status
-   * @returns {string} - Backend status
-   */
+
+  // Map frontend status to backend status
   mapFrontendToBackendStatus: (frontendStatus) => {
     const statusMap = {
       'active': 'active',
@@ -543,11 +482,7 @@ const sellerService = {
     return statusMap[frontendStatus] || frontendStatus;
   },
 
-  /**
-   * Map backend status to frontend status
-   * @param {string} backendStatus - Backend status
-   * @returns {string} - Frontend status
-   */
+  //  Map backend status to frontend status
   mapBackendToFrontendStatus: (backendStatus) => {
     const statusMap = {
       'active': 'active',

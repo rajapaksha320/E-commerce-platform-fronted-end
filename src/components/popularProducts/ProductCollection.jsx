@@ -52,12 +52,10 @@ const ProductCollection = () => {
   ];
 
   const priceRanges = [
-    { id: "all", name: "All Prices" },
-    { id: "0-25", name: "$0 - $25" },
-    { id: "25-50", name: "$25 - $50" },
-    { id: "50-100", name: "$50 - $100" },
-    { id: "100-200", name: "$100 - $200" },
-    { id: "200+", name: "$200+" },
+    { value: "0-2000", label: "LKR 0 - LKR 2000" },
+    { value: "2000-5000", label: "LKR 2000 - LKR 5000" },
+    { value: "5000-10000", label: "LKR 5000 - LKR 10,000" },
+    { value: "10000-10000000", label: "LKR 10,000+" },
   ];
 
   const ratingFilters = [
