@@ -45,8 +45,7 @@ const ProductCollection = () => {
   // Toast notification hook
   const { toastRef, showToast } = useToast();
 
-  // Redux state and actions from useUser hook with fallbacks
-  const userHook = useUser();
+  // Redux state and actions from useUser hook
   const {
     searchResults,
     searchPagination,
@@ -66,11 +65,11 @@ const ProductCollection = () => {
     addToWishlist,
     removeFromWishlist,
     isItemInProductWishlist,
-  } = userHook;
+  } = useUser();
 
   // Safely get clearSearchResults with fallback
   const clearSearchResults =
-    userHook.clearSearchResults ||
+    useUser().clearSearchResults ||
     (() => {
       console.warn("clearSearchResults function not available");
     });
@@ -85,17 +84,18 @@ const ProductCollection = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Cart operation states
+  // Cart and wishlist operation states
   const [addingToCart, setAddingToCart] = useState(new Set());
   const [addingToWishlist, setAddingToWishlist] = useState(new Set());
 
-  // Category data states
+  // Category and shop data states
   const [categoryData, setCategoryData] = useState(null);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [shopsData, setShopsData] = useState([]);
 
   const itemsPerPage = 12;
 
-  // Hardcoded category definitions for display
+  // Category definitions
   const categoryDefinitions = {
     electronics: "Electronics & Technology",
     fashion: "Fashion & Apparel",
@@ -134,7 +134,7 @@ const ProductCollection = () => {
     { id: "popular", name: "Most Popular" },
   ];
 
-  // Fetch category data to build category filter
+  // Fetch category data and store shop information
   const fetchCategoryData = async () => {
     setIsLoadingCategories(true);
     try {
@@ -147,6 +147,13 @@ const ProductCollection = () => {
         });
       } else {
         setCategoryData({ categoryCounts: {} });
+      }
+
+      // Store shop data from the response
+      if (result?.data && Array.isArray(result.data)) {
+        const shops = result.data.map((item) => item.shop).filter(Boolean);
+        console.log("Storing shops data from category fetch:", shops);
+        setShopsData(shops);
       }
     } catch (error) {
       console.error("Failed to fetch category data:", error);
@@ -172,7 +179,6 @@ const ProductCollection = () => {
       { id: "all", name: "All Categories", count: totalCount },
     ];
 
-    // Add categories that exist in both API data and our definitions
     Object.entries(counts).forEach(([categoryKey, count]) => {
       if (categoryDefinitions[categoryKey] && count > 0) {
         categoryList.push({
@@ -190,8 +196,50 @@ const ProductCollection = () => {
     });
   }, [categoryData]);
 
-  // Read URL parameters on component mount and when location changes
+  // Simple function to get shop ID from stored shop data
+  const getShopIdForSeller = (sellerId) => {
+    const shop = shopsData.find((shop) => shop.sellerId === sellerId);
+    console.log(`Getting shop for seller ${sellerId}:`, shop);
+    return shop?._id || null;
+  };
+
+  // Simple handleVisitShop function using stored shop data
+  const handleVisitShop = (product, e) => {
+    e.stopPropagation();
+
+    const sellerId = product.sellerDetails || product.sellerId;
+    if (!sellerId) {
+      showToast.error(
+        "Unable to visit shop. Seller information not available."
+      );
+      return;
+    }
+
+    console.log("Available shops data:", shopsData);
+    const shopId = getShopIdForSeller(sellerId);
+    console.log(`Shop ID for seller ${sellerId}:`, shopId);
+
+    if (shopId) {
+      // Navigate using the correct shop ID from shop._id
+      console.log(`Navigating to shop: ${shopId}`);
+      navigate(`/shop/${shopId}`);
+    } else {
+      // Fallback to seller ID if shop not found
+      console.log(`Shop not found, using seller ID: ${sellerId}`);
+      navigate(`/shop/${sellerId}`);
+    }
+  };
+
+  // State to track if URL parameters have been loaded
+  const [urlParamsLoaded, setUrlParamsLoaded] = useState(false);
+
+  // Read URL parameters on component mount
   useEffect(() => {
+    console.log(
+      "Reading URL parameters:",
+      Object.fromEntries(searchParams.entries())
+    );
+
     const categoryParam = searchParams.get("category");
     const searchParam = searchParams.get("search");
     const priceParam = searchParams.get("price");
@@ -199,70 +247,98 @@ const ProductCollection = () => {
     const sortParam = searchParams.get("sort");
     const pageParam = searchParams.get("page");
 
-    // Set category if valid category is passed
     if (categoryParam && categoryDefinitions[categoryParam]) {
+      console.log("Setting category from URL:", categoryParam);
       setSelectedCategory(categoryParam);
     }
-
-    // Set search term if passed
     if (searchParam) {
       setSearchTerm(searchParam);
     }
-
-    // Set price range if valid
     if (priceParam && priceRanges.find((range) => range.value === priceParam)) {
       setSelectedPriceRange(priceParam);
     }
-
-    // Set rating if valid
     if (
       ratingParam &&
       ratingFilters.find((rating) => rating.id === ratingParam)
     ) {
       setSelectedRating(ratingParam);
     }
-
-    // Set sort option if valid
     if (sortParam && sortOptions.find((option) => option.id === sortParam)) {
       setSortBy(sortParam);
     }
-
-    // Set page if valid
     if (pageParam && !isNaN(parseInt(pageParam))) {
       setCurrentPage(parseInt(pageParam));
     }
+
+    // Mark URL parameters as loaded
+    console.log("URL parameters loaded, enabling search");
+    setUrlParamsLoaded(true);
   }, [searchParams]);
 
   // Fetch initial data
   useEffect(() => {
     fetchCategoryData();
+
     if (authUser?._id) {
-      fetchCartItems(authUser._id, 1, 100); // Fetch cart items for checking
-      fetchWishlist(authUser._id); // Fetch wishlist data
+      fetchCartItems(authUser._id, 1, 100);
+      fetchWishlist(authUser._id);
     }
   }, [authUser, fetchCartItems, fetchWishlist]);
 
-  // Perform search when filters change
+  // Perform search when filters change (but only after URL params are loaded)
   useEffect(() => {
-    const performSearch = () => {
+    // Don't search until URL parameters have been processed
+    if (!urlParamsLoaded) return;
+
+    const performSearch = async () => {
+      console.log("Performing search with category:", selectedCategory);
+
       const searchFilters = {
         categoryMain: selectedCategory !== "all" ? selectedCategory : "",
         PriceRange: selectedPriceRange !== "all" ? selectedPriceRange : "",
         CustomerRating: selectedRating !== "all" ? parseInt(selectedRating) : 0,
-        color: "", // Can be added later
-        brandName: "", // Can be added later
+        color: "",
+        brandName: "",
       };
 
-      searchAllProducts(searchFilters, currentPage, itemsPerPage);
+      console.log("Search filters:", searchFilters);
+
+      try {
+        const result = await searchAllProducts(
+          searchFilters,
+          currentPage,
+          itemsPerPage
+        ).unwrap();
+
+        // Also fetch shop data for the current category
+        if (selectedCategory !== "all") {
+          const shopResult = await fetchStoresByCategory(
+            selectedCategory,
+            1,
+            50
+          ).unwrap();
+          if (shopResult?.data && Array.isArray(shopResult.data)) {
+            const shops = shopResult.data
+              .map((item) => item.shop)
+              .filter(Boolean);
+            console.log("Storing shops data from search:", shops);
+            setShopsData(shops);
+          }
+        }
+      } catch (error) {
+        console.error("Search failed:", error);
+      }
     };
 
     performSearch();
   }, [
+    urlParamsLoaded, // Add this dependency
     selectedCategory,
     selectedPriceRange,
     selectedRating,
     currentPage,
     searchAllProducts,
+    fetchStoresByCategory,
   ]);
 
   // Clear search results on unmount
@@ -338,21 +414,16 @@ const ProductCollection = () => {
     const productId = product._id;
     const isInWishlist = isItemInProductWishlist(productId);
 
-    // Set loading state
     setAddingToWishlist((prev) => new Set(prev).add(productId));
 
     try {
       if (isInWishlist) {
-        // Remove from wishlist
         await removeFromWishlist(authUser._id, productId);
-
         const productName =
           product.title || product.name || product.productName || "Item";
         showToast.success(`"${productName}" removed from wishlist`);
       } else {
-        // Add to wishlist
         await addToWishlist([productId], []);
-
         const productName =
           product.title || product.name || product.productName || "Item";
         showToast.success(`"${productName}" added to wishlist!`, {
@@ -361,7 +432,6 @@ const ProductCollection = () => {
         });
       }
 
-      // Refresh wishlist to update status
       await fetchWishlist(authUser._id);
     } catch (error) {
       console.error("Failed to update wishlist:", error);
@@ -371,7 +441,6 @@ const ProductCollection = () => {
         action: () => toggleWishlist(product, e),
       });
     } finally {
-      // Remove loading state
       setAddingToWishlist((prev) => {
         const newSet = new Set(prev);
         newSet.delete(productId);
@@ -380,21 +449,78 @@ const ProductCollection = () => {
     }
   };
 
-  // Check if product is in cart
-  const isProductInCart = (productId) => {
-    return isItemInCart(productId);
+  const handleAddToCart = async (product, e) => {
+    e.stopPropagation();
+
+    if (!authUser?._id) {
+      navigate("/login");
+      return;
+    }
+
+    if (isItemInCart(product._id)) {
+      showToast.cart("Item is already in your cart", {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
+      return;
+    }
+
+    setAddingToCart((prev) => new Set(prev).add(product._id));
+
+    try {
+      await addItemToCart(authUser._id, product._id, 1).unwrap();
+      await fetchCartItems(authUser._id, 1, 100);
+
+      const productName =
+        product.title || product.name || product.productName || "Item";
+      showToast.success(`"${productName}" added to cart successfully!`, {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+      showToast.error("Failed to add to cart. Please try again.", {
+        text: "Retry",
+        action: () => handleAddToCart(product, e),
+      });
+    } finally {
+      setAddingToCart((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(product._id);
+        return newSet;
+      });
+    }
   };
 
-  // Check if product is in wishlist
-  const isProductInWishlist = (productId) => {
-    return isItemInProductWishlist(productId);
+  const handleBuyNow = (product, e) => {
+    e.stopPropagation();
+    navigate(`/checkout?product=${product._id}&quantity=1`);
   };
 
-  // Get wishlist button content
+  const handleQuickView = (product, e) => {
+    e.stopPropagation();
+    navigate(`/product/${product._id}`);
+  };
+
+  const handleProductClick = (product) => {
+    navigate(`/product/${product._id}`);
+  };
+
+  const resetAllFilters = () => {
+    setSearchTerm("");
+    setSelectedCategory("all");
+    setSelectedPriceRange("all");
+    setSelectedRating("all");
+    setSortBy("featured");
+    setCurrentPage(1);
+    setSearchParams({}, { replace: true });
+  };
+
+  // Helper functions
   const getWishlistButtonContent = (product) => {
     const productId = product._id;
     const isLoading = addingToWishlist.has(productId);
-    const inWishlist = isProductInWishlist(productId);
+    const inWishlist = isItemInProductWishlist(productId);
 
     if (isLoading) {
       return {
@@ -416,122 +542,10 @@ const ProductCollection = () => {
     };
   };
 
-  // Handle add to cart - similar to wishlist page
-  const handleAddToCart = async (product, e) => {
-    e.stopPropagation();
-
-    if (!authUser?._id) {
-      navigate("/login");
-      return;
-    }
-
-    // Check if already in cart
-    if (isProductInCart(product._id)) {
-      showToast.cart("Item is already in your cart", {
-        text: "View Cart",
-        action: () => navigate("/shopping-cart"),
-      });
-      return;
-    }
-
-    // Set loading state
-    setAddingToCart((prev) => new Set(prev).add(product._id));
-
-    try {
-      await addItemToCart(authUser._id, product._id, 1).unwrap();
-
-      // Refresh cart items to update status
-      await fetchCartItems(authUser._id, 1, 100);
-
-      // Get product name with fallbacks
-      const productName =
-        product.title || product.name || product.productName || "Item";
-
-      showToast.success(`"${productName}" added to cart successfully!`, {
-        text: "View Cart",
-        action: () => navigate("/shopping-cart"),
-      });
-    } catch (error) {
-      console.error("Failed to add to cart:", error);
-      showToast.error("Failed to add to cart. Please try again.", {
-        text: "Retry",
-        action: () => handleAddToCart(product, e),
-      });
-    } finally {
-      // Remove loading state
-      setAddingToCart((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(product._id);
-        return newSet;
-      });
-    }
-  };
-
-  const handleBuyNow = (product, e) => {
-    e.stopPropagation();
-    navigate(`/checkout?product=${product._id}&quantity=1`);
-  };
-
-  const handleVisitShop = (product, e) => {
-    e.stopPropagation();
-    navigate(`/shop/${product.sellerDetails || product.sellerId}`);
-  };
-
-  const handleQuickView = (product, e) => {
-    e.stopPropagation();
-    navigate(`/product/${product._id}`);
-  };
-
-  const handleProductClick = (product) => {
-    navigate(`/product/${product._id}`);
-  };
-
-  // Reset all filters function
-  const resetAllFilters = () => {
-    setSearchTerm("");
-    setSelectedCategory("all");
-    setSelectedPriceRange("all");
-    setSelectedRating("all");
-    setSortBy("featured");
-    setCurrentPage(1);
-
-    // Clear URL parameters
-    setSearchParams({}, { replace: true });
-  };
-
-  // Get badge variant for product status
-  const getBadgeVariant = (status) => {
-    const variants = {
-      active: "success",
-      inactive: "secondary",
-      outOfStock: "danger",
-      new: "success",
-      hot: "danger",
-      popular: "primary",
-      trending: "warning",
-    };
-    return variants[status] || "default";
-  };
-
-  // Render stars for rating
-  const renderStars = (rating) => {
-    return [...Array(5)].map((_, i) => (
-      <Star
-        key={i}
-        className={`h-3 w-3 sm:h-4 sm:w-4 ${
-          i < Math.floor(rating || 0)
-            ? "text-yellow-400 fill-current"
-            : "text-gray-300"
-        }`}
-      />
-    ));
-  };
-
-  // Get cart button content
   const getCartButtonContent = (product) => {
     const productId = product._id;
     const isLoading = addingToCart.has(productId);
-    const inCart = isProductInCart(productId);
+    const inCart = isItemInCart(productId);
     const isOutOfStock = product.status === "outOfStock";
 
     if (isLoading) {
@@ -569,7 +583,6 @@ const ProductCollection = () => {
     };
   };
 
-  // Get product price
   const getProductPrice = (product) => {
     const variation = product.variations?.[0];
     return {
@@ -578,7 +591,6 @@ const ProductCollection = () => {
     };
   };
 
-  // Get product image
   const getProductImage = (product) => {
     if (product.images?.[0]?.url) {
       return product.images[0].url;
@@ -587,6 +599,19 @@ const ProductCollection = () => {
       return product.variations[0].images[0].url;
     }
     return "/placehold.png";
+  };
+
+  const renderStars = (rating) => {
+    return [...Array(5)].map((_, i) => (
+      <Star
+        key={i}
+        className={`h-3 w-3 sm:h-4 sm:w-4 ${
+          i < Math.floor(rating || 0)
+            ? "text-yellow-400 fill-current"
+            : "text-gray-300"
+        }`}
+      />
+    ));
   };
 
   // Loading state
@@ -610,7 +635,6 @@ const ProductCollection = () => {
 
   return (
     <section className="py-8 sm:py-12 lg:py-16 bg-gray-50 min-h-screen">
-      {/* Toast Notification Component */}
       <ToastNotification ref={toastRef} />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
@@ -649,7 +673,6 @@ const ProductCollection = () => {
 
         {/* Filters and Controls */}
         <Card className="p-4 sm:p-6 mb-6 sm:mb-8">
-          {/* Filter Toggle for Mobile */}
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900">
               Filters & Sorting
@@ -670,7 +693,6 @@ const ProductCollection = () => {
             </Button>
           </div>
 
-          {/* Filters */}
           <div
             className={`${showFilters ? "block" : "hidden"} md:block space-y-4`}
           >
@@ -704,7 +726,6 @@ const ProductCollection = () => {
 
             {/* Secondary Filters */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {/* Price Range */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                   Price Range
@@ -722,7 +743,6 @@ const ProductCollection = () => {
                 </select>
               </div>
 
-              {/* Rating */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                   Rating
@@ -740,7 +760,6 @@ const ProductCollection = () => {
                 </select>
               </div>
 
-              {/* Sort By */}
               <div className="sm:col-span-2 lg:col-span-1">
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                   Sort By
@@ -763,7 +782,6 @@ const ProductCollection = () => {
 
         {/* Results Info and View Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-3 sm:gap-4">
-          {/* Results Info */}
           <div className="text-xs sm:text-sm text-gray-600 order-2 sm:order-1">
             {searchPagination ? (
               <>
@@ -789,7 +807,6 @@ const ProductCollection = () => {
             )}
           </div>
 
-          {/* View Controls */}
           <div className="flex items-center gap-3 sm:gap-4 order-1 sm:order-2">
             <div className="flex items-center gap-2">
               <span className="text-xs sm:text-sm text-gray-600 hidden sm:inline">
@@ -887,6 +904,7 @@ const ProductCollection = () => {
                 const wishlistButton = getWishlistButtonContent(product);
                 const { price, originalPrice } = getProductPrice(product);
                 const productImage = getProductImage(product);
+
                 const discount =
                   originalPrice && originalPrice > price
                     ? Math.round(
@@ -921,9 +939,6 @@ const ProductCollection = () => {
                           e.target.src = "/placehold.png";
                         }}
                       />
-
-                      {/* Overlay gradient for better text readability */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                       {/* Top Badges */}
                       <div className="absolute top-2 sm:top-3 left-2 sm:left-3 flex flex-col gap-1">
@@ -971,7 +986,7 @@ const ProductCollection = () => {
                           disabled={addingToWishlist.has(product._id)}
                           className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-200 backdrop-blur-sm touch-manipulation shadow-lg disabled:opacity-70 ${wishlistButton.className}`}
                           aria-label={
-                            isProductInWishlist(product._id)
+                            isItemInProductWishlist(product._id)
                               ? "Remove from wishlist"
                               : "Add to wishlist"
                           }
@@ -1015,8 +1030,11 @@ const ProductCollection = () => {
                         <span
                           className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer font-medium truncate"
                           onClick={(e) => handleVisitShop(product, e)}
+                          title={`Visit Shop (Seller: ${
+                            product.sellerDetails || product.sellerId
+                          })`}
                         >
-                          {product.sellerDetails?.firstName || "Shop"}
+                          {product.brand || "Shop"}
                         </span>
                         {viewMode === "list" && (
                           <div className="flex items-center text-xs text-gray-500">
@@ -1147,6 +1165,7 @@ const ProductCollection = () => {
                             size="sm"
                             className="flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 touch-manipulation text-xs sm:text-sm py-1.5 sm:py-2 transition-all duration-200"
                             onClick={(e) => handleVisitShop(product, e)}
+                            title="Visit Shop"
                           >
                             <Store className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                             <span className="hidden sm:inline">Shop</span>
