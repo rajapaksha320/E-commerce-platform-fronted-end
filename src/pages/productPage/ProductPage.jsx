@@ -26,6 +26,9 @@ import {
   CheckCircle,
   Camera,
   Play,
+  AlertCircle,
+  Loader,
+  Building,
 } from "lucide-react";
 
 import {
@@ -34,267 +37,298 @@ import {
   ContactCard as Card,
 } from "../../components/ui/ContactUis/Uis";
 import Pagination from "../../components/ui/ContactUis/Pagination";
+import useUser from "../../hooks/useUser";
+import { useSelector } from "react-redux";
+import { selectUser as selectAuthUser } from "../../store/slices/authSlice";
 
 const ProductPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
+  const authUser = useSelector(selectAuthUser);
 
+  // Redux hooks
+  const {
+    currentListing,
+    listingDetailLoading,
+    listingDetailError,
+    fetchListingById,
+    resetListingDetail,
+    addItemToCart,
+    cartLoading,
+    isItemInCart,
+    isItemInProductWishlist,
+    quickToggleWishlist,
+    getCurrentListingData,
+    getListingVariations,
+    getDefaultVariation,
+    getListingImages,
+    getPrimaryImage,
+    listingDetailSummary,
+    fetchWishlist,
+    wishlist,
+    wishlistLoading,
+  } = useUser();
+
+  // Component state
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [selectedColor, setSelectedColor] = useState("");
-  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedVariation, setSelectedVariation] = useState(null);
   const [activeTab, setActiveTab] = useState("description");
   const [reviewsPage, setReviewsPage] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [selectedImageZoom, setSelectedImageZoom] = useState(false);
+  const [wishlistOperationLoading, setWishlistOperationLoading] =
+    useState(false);
 
-  // Mock product data - in real app, fetch based on productId
-  const product = {
-    id: productId,
-    name: "Wireless Bluetooth Headphones Pro Max",
-    brand: "TechAudio",
-    price: 179.99,
-    originalPrice: 249.99,
-    discount: 28,
-    rating: 4.8,
-    totalReviews: 1247,
-    inStock: true,
-    stockCount: 47,
-    sku: "TA-WBH-PM-001",
-    category: "Electronics > Audio > Headphones",
-    images: [
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=600&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1487215078519-e21cc028cb29?w=600&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=600&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=600&h=600&fit=crop",
-    ],
-    colors: [
-      { id: "black", name: "Midnight Black", hex: "#000000" },
-      { id: "white", name: "Pearl White", hex: "#FFFFFF" },
-      { id: "blue", name: "Ocean Blue", hex: "#1E40AF" },
-      { id: "red", name: "Crimson Red", hex: "#DC2626" },
-    ],
-    sizes: [{ id: "onesize", name: "One Size", available: true }],
-    description: `Experience premium audio quality with the Wireless Bluetooth Headphones Pro Max. Featuring advanced noise cancellation technology, premium comfort padding, and exceptional 30-hour battery life.
+  // Derived data
+  const listingData = getCurrentListingData();
+  const product = listingData?.listing;
+  const seller = listingData?.seller;
+  const variations = getListingVariations();
+  const defaultVariation = getDefaultVariation();
+  const productImages = getListingImages();
+  const primaryImage = getPrimaryImage();
 
-Built for audiophiles and professionals, these headphones deliver crystal-clear sound with deep bass and crisp highs. The ergonomic design ensures comfortable extended listening sessions.
+  // Get current variation data
+  const currentVariation = selectedVariation || defaultVariation;
+  const currentImages =
+    currentVariation?.images?.length > 0
+      ? currentVariation.images
+      : productImages;
 
-Perfect for travel, work, gaming, and daily entertainment. Compatible with all Bluetooth devices and includes premium carrying case.`,
+  // Check if product has variations
+  const hasVariations = product?.hasVariations;
 
-    features: [
-      "Active Noise Cancellation",
-      "30-Hour Battery Life",
-      "Premium Comfort Padding",
-      "Bluetooth 5.0 Technology",
-      "Quick Charge - 5min = 3 hours",
-      "Built-in Microphone",
-      "Foldable Design",
-      "Premium Carrying Case Included",
-    ],
+  // Fetch product data and wishlist
+  useEffect(() => {
+    if (productId) {
+      fetchListingById(productId);
+    }
 
-    specifications: {
-      Audio: {
-        "Driver Size": "40mm Dynamic",
-        "Frequency Response": "20Hz - 20kHz",
-        Impedance: "32 Ohms",
-        Sensitivity: "105dB SPL",
-        THD: "< 0.1%",
-      },
-      Connectivity: {
-        "Bluetooth Version": "5.0",
-        "Codecs Supported": "SBC, AAC, aptX",
-        Range: "Up to 30 feet",
-        "Multi-device": "Yes (2 devices)",
-      },
-      Battery: {
-        Playtime: "30 hours (ANC Off)",
-        "Playtime with ANC": "25 hours",
-        "Charging Time": "2 hours",
-        "Quick Charge": "5min = 3 hours",
-        "Battery Type": "Lithium-ion",
-      },
-      Physical: {
-        Weight: "250g",
-        Dimensions: "190 x 160 x 80mm",
-        Material: "Premium Plastic & Metal",
-        Foldable: "Yes",
-        "Color Options": "4 Available",
-      },
-    },
+    // Fetch user's wishlist if authenticated
+    if (authUser) {
+      fetchWishlist(authUser._id);
+    }
 
-    shipping: {
-      freeShipping: true,
-      fastDelivery: true,
-      estimatedDays: "2-3 business days",
-      returns: "30-day free returns",
-      warranty: "1-year manufacturer warranty",
-    },
+    return () => {
+      resetListingDetail();
+    };
+  }, [
+    productId,
+    authUser,
+    fetchListingById,
+    fetchWishlist,
+    resetListingDetail,
+  ]);
 
-    seller: {
-      name: "TechHub Electronics",
-      rating: 4.9,
-      totalSales: "50K+",
-      responseTime: "< 2 hours",
-      verified: true,
-    },
+  // Update wishlist status when wishlist data or product data changes
+  useEffect(() => {
+    if (authUser && productId && wishlist) {
+      const isInWishlist = isItemInProductWishlist(productId);
+      setIsWishlisted(isInWishlist);
+    }
+  }, [authUser, productId, wishlist, isItemInProductWishlist]);
+
+  // Set initial variation when data loads
+  useEffect(() => {
+    if (variations.length > 0 && !selectedVariation) {
+      setSelectedVariation(defaultVariation);
+    }
+  }, [variations, defaultVariation, selectedVariation]);
+
+  // Loading state
+  if (listingDetailLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading product details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (listingDetailError || !product) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Product Not Found
+          </h2>
+          <p className="text-gray-600 mb-4">
+            {listingDetailError ||
+              "The product you're looking for doesn't exist."}
+          </p>
+          <Button onClick={() => navigate(-1)} variant="primary">
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate pricing
+  const getCurrentPrice = () => {
+    if (!currentVariation) return 0;
+    return parseFloat(currentVariation.price || 0);
   };
 
-  // Mock reviews data
-  const allReviews = Array.from({ length: 127 }, (_, i) => ({
-    id: i + 1,
-    user: {
-      name: [
-        "John Smith",
-        "Sarah Johnson",
-        "Mike Chen",
-        "Emma Davis",
-        "Alex Rodriguez",
-      ][i % 5],
-      avatar: null,
-      verified: Math.random() > 0.3,
-      location: ["New York", "California", "Texas", "Florida", "Illinois"][
-        i % 5
-      ],
-    },
-    rating: Math.floor(Math.random() * 2) + 4, // 4-5 stars mostly
-    title: [
-      "Excellent sound quality!",
-      "Great value for money",
-      "Perfect for daily use",
-      "Amazing noise cancellation",
-      "Comfortable for long sessions",
-      "Best headphones I've owned",
-      "Worth every penny",
-    ][i % 7],
-    comment: [
-      "These headphones exceeded my expectations. The sound quality is fantastic and the noise cancellation works perfectly. Highly recommended!",
-      "Great build quality and comfortable to wear for hours. The battery life is impressive and charging is quick.",
-      "Perfect for my daily commute. The noise cancellation blocks out all the train noise. Sound is crisp and clear.",
-      "I've tried many headphones and these are by far the best. The bass is deep without being overwhelming.",
-      "Excellent customer service and fast shipping. The headphones arrived well-packaged and work flawlessly.",
-    ][i % 5],
-    date: new Date(
-      Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000
-    ).toLocaleDateString(),
-    helpful: Math.floor(Math.random() * 50),
-    verified: Math.random() > 0.2,
-    images:
-      Math.random() > 0.7
-        ? [
-            "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop",
-          ]
-        : [],
-  }));
+  const getOriginalPrice = () => {
+    if (!currentVariation) return 0;
+    return parseFloat(currentVariation.originalPrice || 0);
+  };
 
-  const reviewsPerPage = 10;
-  const totalReviewPages = Math.ceil(allReviews.length / reviewsPerPage);
-  const currentReviews = allReviews.slice(
-    (reviewsPage - 1) * reviewsPerPage,
-    reviewsPage * reviewsPerPage
-  );
+  const getDiscount = () => {
+    const current = getCurrentPrice();
+    const original = getOriginalPrice();
+    if (original > current) {
+      return Math.round(((original - current) / original) * 100);
+    }
+    return 0;
+  };
 
-  // Related products
-  const relatedProducts = [
-    {
-      id: 2,
-      name: "Wireless Earbuds Pro",
-      price: 129.99,
-      originalPrice: 179.99,
-      rating: 4.7,
-      image:
-        "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300&h=300&fit=crop",
-      badge: "Popular",
-    },
-    {
-      id: 3,
-      name: "Portable Speaker Max",
-      price: 89.99,
-      originalPrice: 129.99,
-      rating: 4.6,
-      image:
-        "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&h=300&fit=crop",
-      badge: "Best Seller",
-    },
-    {
-      id: 4,
-      name: "USB-C Fast Charger",
-      price: 29.99,
-      originalPrice: 49.99,
-      rating: 4.5,
-      image:
-        "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop",
-      badge: "New",
-    },
-    {
-      id: 5,
-      name: "Premium Cable Kit",
-      price: 19.99,
-      originalPrice: 34.99,
-      rating: 4.4,
-      image:
-        "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=300&h=300&fit=crop",
-      badge: "Sale",
-    },
-  ];
+  const getStockQuantity = () => {
+    return parseInt(currentVariation?.quantity || 0);
+  };
 
-  useEffect(() => {
-    setSelectedColor(product.colors[0]?.id || "");
-    setSelectedSize(product.sizes[0]?.id || "");
-  }, []);
+  // Get unique colors and sizes from variations
+  const getUniqueColors = () => {
+    if (!hasVariations) return [];
+    const colors = [];
+    variations.forEach((variation) => {
+      if (variation.color && Array.isArray(variation.color)) {
+        variation.color.forEach((color) => {
+          if (!colors.find((c) => c.hex === color)) {
+            colors.push({ id: color, name: color, hex: color });
+          }
+        });
+      }
+    });
+    return colors;
+  };
+
+  const getUniqueSizes = () => {
+    if (!hasVariations) return [];
+    const sizes = [];
+    variations.forEach((variation) => {
+      if (variation.sizes && Array.isArray(variation.sizes)) {
+        variation.sizes.forEach((size) => {
+          if (!sizes.find((s) => s.id === size)) {
+            sizes.push({ id: size, name: size, available: true });
+          }
+        });
+      }
+    });
+    return sizes;
+  };
+
+  const availableColors = getUniqueColors();
+  const availableSizes = getUniqueSizes();
+  const selectedColor = currentVariation?.color?.[0] || "";
+  const selectedSize = currentVariation?.sizes?.[0] || "";
+
+  // Handle variation selection
+  const handleVariationChange = (type, value) => {
+    if (!hasVariations) return;
+
+    // Find variation that matches the selected attributes
+    const newVariation = variations.find((variation) => {
+      if (type === "color") {
+        return variation.color?.includes(value);
+      } else if (type === "size") {
+        return variation.sizes?.includes(value);
+      }
+      return false;
+    });
+
+    if (newVariation) {
+      setSelectedVariation(newVariation);
+      setSelectedImage(0); // Reset to first image of new variation
+    }
+  };
 
   const tabs = [
     { id: "description", name: "Description", count: null },
     { id: "specifications", name: "Specifications", count: null },
-    { id: "reviews", name: "Reviews", count: product.totalReviews },
+    { id: "reviews", name: "Reviews", count: 0 },
     { id: "shipping", name: "Shipping & Returns", count: null },
   ];
 
   const handleQuantityChange = (action) => {
+    const maxQuantity = Math.min(getStockQuantity(), 10);
     if (action === "increase") {
-      setQuantity((prev) => Math.min(prev + 1, 10));
+      setQuantity((prev) => Math.min(prev + 1, maxQuantity));
     } else {
       setQuantity((prev) => Math.max(prev - 1, 1));
     }
   };
 
-  const handleAddToCart = () => {
-    console.log("Added to cart:", {
-      productId,
-      quantity,
-      color: selectedColor,
-      size: selectedSize,
-    });
+  const handleAddToCart = async () => {
+    if (!authUser) {
+      navigate("/login");
+      return;
+    }
+
+    if (!currentVariation) return;
+
+    try {
+      await addItemToCart(authUser._id, product._id, quantity);
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+    }
   };
 
   const handleBuyNow = () => {
-    navigate(
-      `/checkout?product=${productId}&quantity=${quantity}&color=${selectedColor}&size=${selectedSize}`
-    );
+    if (!authUser) {
+      navigate("/login");
+      return;
+    }
+    // Add to cart first, then navigate to checkout
+    handleAddToCart();
+    navigate("/checkout");
   };
 
-  const getBadgeVariant = (badge) => {
-    const variants = {
-      Popular: "warning",
-      "Best Seller": "success",
-      New: "primary",
-      Sale: "danger",
-    };
-    return variants[badge] || "default";
+  const handleWishlistToggle = async () => {
+    if (!authUser) {
+      navigate("/login");
+      return;
+    }
+
+    if (wishlistOperationLoading) return; // Prevent double-clicking
+
+    setWishlistOperationLoading(true);
+
+    try {
+      await quickToggleWishlist(authUser._id, product._id, "product");
+      // The state will be updated automatically by the useEffect that watches wishlist changes
+      // But we can also update it immediately for better UX
+      setIsWishlisted(!isWishlisted);
+    } catch (error) {
+      console.error("Error toggling wishlist:", error);
+      // Revert the state if there was an error
+      setIsWishlisted(isWishlisted);
+    } finally {
+      setWishlistOperationLoading(false);
+    }
   };
 
   const renderStars = (rating, size = "sm") => {
+    const numRating = parseFloat(rating || 0);
     return [...Array(5)].map((_, i) => (
       <Star
         key={i}
         className={`${size === "sm" ? "h-4 w-4" : "h-5 w-5"} ${
-          i < Math.floor(rating)
+          i < Math.floor(numRating)
             ? "text-yellow-400 fill-current"
             : "text-gray-300"
         }`}
       />
     ));
   };
+
+  const isInStock = getStockQuantity() > 0 && product.status === "active";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -316,28 +350,35 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
               <span className="hover:text-blue-600 cursor-pointer">Home</span>
               <span className="mx-2">/</span>
               <span className="hover:text-blue-600 cursor-pointer">
-                Electronics
+                {product.category?.main || "Products"}
               </span>
               <span className="mx-2">/</span>
               <span className="hover:text-blue-600 cursor-pointer">
-                Headphones
+                {product.category?.sub || "Items"}
               </span>
               <span className="mx-2">/</span>
-              <span className="text-gray-900">{product.name}</span>
+              <span className="text-gray-900 truncate max-w-xs">
+                {product.title}
+              </span>
             </div>
 
             <div className="flex items-center space-x-2">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsWishlisted(!isWishlisted)}
+                onClick={handleWishlistToggle}
+                disabled={wishlistOperationLoading}
                 className={`touch-manipulation ${
                   isWishlisted ? "text-red-600" : "text-gray-600"
                 }`}
               >
-                <Heart
-                  className={`h-4 w-4 ${isWishlisted ? "fill-current" : ""}`}
-                />
+                {wishlistOperationLoading ? (
+                  <Loader className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Heart
+                    className={`h-4 w-4 ${isWishlisted ? "fill-current" : ""}`}
+                  />
+                )}
               </Button>
               <Button variant="ghost" size="sm" className="touch-manipulation">
                 <Share2 className="h-4 w-4" />
@@ -353,20 +394,26 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
           <div className="space-y-4">
             {/* Main Image */}
             <div className="relative aspect-square rounded-xl overflow-hidden bg-white border border-gray-200">
-              <img
-                src={product.images[selectedImage]}
-                alt={product.name}
-                className="w-full h-full object-cover cursor-zoom-in"
-                onClick={() => setSelectedImageZoom(true)}
-              />
+              {currentImages && currentImages.length > 0 ? (
+                <img
+                  src={currentImages[selectedImage]?.url || primaryImage?.url}
+                  alt={currentImages[selectedImage]?.alt || product.title}
+                  className="w-full h-full object-cover cursor-zoom-in"
+                  onClick={() => setSelectedImageZoom(true)}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                  <Package className="h-16 w-16 text-gray-400" />
+                </div>
+              )}
 
               {/* Image Navigation */}
-              {product.images.length > 1 && (
+              {currentImages && currentImages.length > 1 && (
                 <>
                   <button
                     onClick={() =>
                       setSelectedImage((prev) =>
-                        prev === 0 ? product.images.length - 1 : prev - 1
+                        prev === 0 ? currentImages.length - 1 : prev - 1
                       )
                     }
                     className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg transition-all touch-manipulation"
@@ -376,7 +423,7 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
                   <button
                     onClick={() =>
                       setSelectedImage((prev) =>
-                        prev === product.images.length - 1 ? 0 : prev + 1
+                        prev === currentImages.length - 1 ? 0 : prev + 1
                       )
                     }
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg transition-all touch-manipulation"
@@ -393,25 +440,27 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
             </div>
 
             {/* Thumbnail Images */}
-            <div className="flex space-x-2 overflow-x-auto pb-2">
-              {product.images.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImage(index)}
-                  className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 transition-all touch-manipulation ${
-                    selectedImage === index
-                      ? "border-blue-600"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <img
-                    src={image}
-                    alt={`${product.name} ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
+            {currentImages && currentImages.length > 1 && (
+              <div className="flex space-x-2 overflow-x-auto pb-2">
+                {currentImages.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImage(index)}
+                    className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 transition-all touch-manipulation ${
+                      selectedImage === index
+                        ? "border-blue-600"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <img
+                      src={image.url}
+                      alt={image.alt || `${product.title} ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}
@@ -420,27 +469,26 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
             <div>
               <div className="flex items-center space-x-2 mb-2">
                 <span className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">
-                  {product.brand}
+                  {product.brand || seller?.businessInfo?.businessName}
                 </span>
-                <Badge variant="success" size="sm">
-                  Verified Brand
-                </Badge>
+                {seller?.businessInfo && (
+                  <Badge variant="success" size="sm">
+                    Verified Seller
+                  </Badge>
+                )}
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
-                {product.name}
+                {product.title}
               </h1>
               <div className="flex items-center space-x-4 mb-2">
                 <div className="flex items-center space-x-1">
-                  {renderStars(product.rating)}
+                  {renderStars(product.averageRating)}
                   <span className="text-sm font-medium text-gray-900 ml-1">
-                    {product.rating}
+                    {product.averageRating || 0}
                   </span>
                 </div>
                 <span className="text-sm text-gray-600">
-                  ({product.totalReviews.toLocaleString()} reviews)
-                </span>
-                <span className="text-sm text-gray-600">
-                  SKU: {product.sku}
+                  SKU: {currentVariation?.sku || product.id}
                 </span>
               </div>
             </div>
@@ -449,46 +497,55 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
             <div className="space-y-2">
               <div className="flex items-baseline space-x-3">
                 <span className="text-3xl font-bold text-gray-900">
-                  ${product.price}
+                  ${getCurrentPrice().toFixed(2)}
                 </span>
-                {product.originalPrice && (
+                {getOriginalPrice() > getCurrentPrice() && (
                   <span className="text-xl text-gray-500 line-through">
-                    ${product.originalPrice}
+                    ${getOriginalPrice().toFixed(2)}
                   </span>
                 )}
-                {product.discount && (
+                {getDiscount() > 0 && (
                   <Badge variant="danger" size="sm">
-                    -{product.discount}% OFF
+                    -{getDiscount()}% OFF
                   </Badge>
                 )}
               </div>
-              {product.discount && (
+              {getDiscount() > 0 && (
                 <p className="text-sm text-green-600 font-medium">
-                  You save ${(product.originalPrice - product.price).toFixed(2)}
+                  You save $
+                  {(getOriginalPrice() - getCurrentPrice()).toFixed(2)}
                 </p>
               )}
             </div>
 
             {/* Stock Status */}
             <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <span className="text-green-600 font-medium">
-                In Stock ({product.stockCount} available)
-              </span>
+              {isInStock ? (
+                <>
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="text-green-600 font-medium">
+                    In Stock ({getStockQuantity()} available)
+                  </span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  <span className="text-red-600 font-medium">Out of Stock</span>
+                </>
+              )}
             </div>
 
-            {/* Color Selection */}
-            {product.colors.length > 0 && (
+            {/* Variations - Colors */}
+            {hasVariations && availableColors.length > 0 && (
               <div>
                 <h3 className="text-sm font-medium text-gray-900 mb-3">
-                  Color:{" "}
-                  {product.colors.find((c) => c.id === selectedColor)?.name}
+                  Color: {selectedColor}
                 </h3>
                 <div className="flex space-x-3">
-                  {product.colors.map((color) => (
+                  {availableColors.map((color) => (
                     <button
                       key={color.id}
-                      onClick={() => setSelectedColor(color.id)}
+                      onClick={() => handleVariationChange("color", color.id)}
                       className={`w-8 h-8 rounded-full border-2 transition-all touch-manipulation ${
                         selectedColor === color.id
                           ? "border-blue-600 scale-110"
@@ -501,13 +558,37 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
                         <div className="w-full h-full rounded-full flex items-center justify-center">
                           <div
                             className={`w-2 h-2 rounded-full ${
-                              color.hex === "#FFFFFF"
+                              color.hex === "#FFFFFF" || color.hex === "#ffffff"
                                 ? "bg-gray-600"
                                 : "bg-white"
                             }`}
                           />
                         </div>
                       )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Variations - Sizes */}
+            {hasVariations && availableSizes.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 mb-3">
+                  Size: {selectedSize}
+                </h3>
+                <div className="flex space-x-2">
+                  {availableSizes.map((size) => (
+                    <button
+                      key={size.id}
+                      onClick={() => handleVariationChange("size", size.id)}
+                      className={`px-4 py-2 text-sm border rounded-lg transition-all touch-manipulation ${
+                        selectedSize === size.id
+                          ? "border-blue-600 bg-blue-50 text-blue-600"
+                          : "border-gray-300 hover:border-gray-400"
+                      }`}
+                    >
+                      {size.name}
                     </button>
                   ))}
                 </div>
@@ -523,7 +604,7 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
                 <div className="flex items-center border border-gray-300 rounded-lg">
                   <button
                     onClick={() => handleQuantityChange("decrease")}
-                    className="p-2 hover:bg-gray-100 transition-colors touch-manipulation"
+                    className="p-2 hover:bg-gray-100 transition-colors touch-manipulation disabled:opacity-50"
                     disabled={quantity <= 1}
                   >
                     <Minus className="h-4 w-4" />
@@ -533,14 +614,14 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
                   </span>
                   <button
                     onClick={() => handleQuantityChange("increase")}
-                    className="p-2 hover:bg-gray-100 transition-colors touch-manipulation"
-                    disabled={quantity >= 10}
+                    className="p-2 hover:bg-gray-100 transition-colors touch-manipulation disabled:opacity-50"
+                    disabled={quantity >= Math.min(getStockQuantity(), 10)}
                   >
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
                 <span className="text-sm text-gray-600">
-                  (Max 10 per order)
+                  (Max {Math.min(getStockQuantity(), 10)} per order)
                 </span>
               </div>
             </div>
@@ -552,33 +633,55 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
                   onClick={handleAddToCart}
                   className="flex-1 py-3 text-lg font-semibold touch-manipulation"
                   size="lg"
+                  disabled={!isInStock || cartLoading}
                 >
-                  <ShoppingCart className="h-5 w-5 mr-2" />
-                  Add to Cart
+                  {cartLoading ? (
+                    <Loader className="h-5 w-5 animate-spin mr-2" />
+                  ) : (
+                    <ShoppingCart className="h-5 w-5 mr-2" />
+                  )}
+                  {isItemInCart(product._id) ? "Added to Cart" : "Add to Cart"}
                 </Button>
                 <Button
                   onClick={handleBuyNow}
                   variant="outline"
                   className="flex-1 py-3 text-lg font-semibold border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white touch-manipulation"
                   size="lg"
+                  disabled={!isInStock}
                 >
                   Buy It Now
                 </Button>
               </div>
+
+              {/* Visit Shop Button */}
+              {seller && (
+                <Button
+                  onClick={() => navigate(`/shop/${seller._id}`)}
+                  variant="outline"
+                  className="w-full py-3 text-lg font-semibold border-gray-300 text-gray-700 hover:bg-blue-50 hover:text-gray-500 touch-manipulation"
+                  size="lg"
+                >
+                  <Building className="h-5 w-5 mr-2" />
+                  Visit {seller.businessInfo?.businessName || "Shop"}
+                </Button>
+              )}
             </div>
 
             {/* Key Features */}
-            <Card className="p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Key Features</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {product.features.slice(0, 6).map((feature, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">{feature}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
+            {product.productTags && product.productTags.length > 0 && (
+              <Card className="p-4">
+                <h3 className="font-semibold text-gray-900 mb-3">
+                  Product Tags
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {product.productTags.slice(0, 6).map((tag, index) => (
+                    <Badge key={index} variant="secondary" size="sm">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </Card>
+            )}
 
             {/* Shipping Info */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -589,7 +692,7 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
                     Free Shipping
                   </p>
                   <p className="text-xs text-green-600">
-                    {product.shipping.estimatedDays}
+                    {product.shippingClass?.returnPolicy || "Standard delivery"}
                   </p>
                 </div>
               </div>
@@ -600,7 +703,7 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
                     Easy Returns
                   </p>
                   <p className="text-xs text-blue-600">
-                    {product.shipping.returns}
+                    {product.shippingClass?.returnPolicy || "30"} days
                   </p>
                 </div>
               </div>
@@ -611,11 +714,67 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
                     Warranty
                   </p>
                   <p className="text-xs text-purple-600">
-                    {product.shipping.warranty}
+                    {product.shippingClass?.warranty || "Manufacturer warranty"}
                   </p>
                 </div>
               </div>
             </div>
+
+            {/* Shop Information Card */}
+            {seller && (
+              <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                      <Building className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        {seller.businessInfo?.businessName || "Shop"}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Trusted Seller •{" "}
+                        {seller.contactInfo?.city || "Location"}
+                        {seller.isActive && (
+                          <span className="ml-2 inline-flex items-center">
+                            <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                            Online
+                          </span>
+                        )}
+                      </p>
+                      {seller.businessInfo?.businessType && (
+                        <p className="text-xs text-gray-500 capitalize">
+                          {seller.businessInfo.businessType} Business
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => navigate(`/shop/${seller._id}`)}
+                    variant="primary"
+                    size="sm"
+                    className="flex items-center space-x-2"
+                  >
+                    <Building className="h-4 w-4" />
+                    <span>Visit Shop</span>
+                  </Button>
+                </div>
+
+                {/* Additional shop info */}
+                <div className="mt-3 pt-3 border-t border-blue-200 grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center space-x-2 text-gray-600">
+                    <MapPin className="h-4 w-4" />
+                    <span>
+                      {seller.contactInfo?.city || "Unknown location"}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-gray-600">
+                    <User className="h-4 w-4" />
+                    <span>Professional Seller</span>
+                  </div>
+                </div>
+              </Card>
+            )}
           </div>
         </div>
 
@@ -635,7 +794,7 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
                   }`}
                 >
                   {tab.name}
-                  {tab.count && (
+                  {tab.count !== null && (
                     <span className="ml-2 bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
                       {tab.count}
                     </span>
@@ -655,49 +814,82 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
                   </h3>
                   <div className="prose prose-sm max-w-none text-gray-700">
                     {product.description
-                      .split("\n\n")
+                      ?.split("\n\n")
                       .map((paragraph, index) => (
                         <p key={index} className="mb-4">
                           {paragraph}
                         </p>
-                      ))}
+                      )) || <p>No description available.</p>}
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    What's in the Box
-                  </h3>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {[
-                      "Wireless Headphones Pro Max",
-                      "Premium Carrying Case",
-                      "USB-C Charging Cable",
-                      "Audio Cable (3.5mm)",
-                      "Quick Start Guide",
-                      "Warranty Card",
-                    ].map((item, index) => (
-                      <li key={index} className="flex items-center space-x-2">
-                        <Package className="h-4 w-4 text-gray-600" />
-                        <span className="text-sm text-gray-700">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {/* Product Specifications from current variation */}
+                {currentVariation && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Product Details
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-sm text-gray-600">Weight</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {currentVariation.weight || product.weight || "N/A"}
+                        </span>
+                      </div>
+                      {currentVariation.dimensions && (
+                        <>
+                          <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                            <span className="text-sm text-gray-600">
+                              Length
+                            </span>
+                            <span className="text-sm font-medium text-gray-900">
+                              {currentVariation.dimensions.length}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                            <span className="text-sm text-gray-600">Width</span>
+                            <span className="text-sm font-medium text-gray-900">
+                              {currentVariation.dimensions.width}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                            <span className="text-sm text-gray-600">
+                              Height
+                            </span>
+                            <span className="text-sm font-medium text-gray-900">
+                              {currentVariation.dimensions.height}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === "specifications" && (
               <div className="space-y-6">
-                {Object.entries(product.specifications).map(
-                  ([category, specs]) => (
-                    <div key={category}>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <Zap className="h-5 w-5 mr-2 text-blue-600" />
-                        {category}
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {Object.entries(specs).map(([key, value]) => (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Zap className="h-5 w-5 mr-2 text-blue-600" />
+                    Product Specifications
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {currentVariation &&
+                      Object.entries({
+                        SKU: currentVariation.sku,
+                        Weight: currentVariation.weight || product.weight,
+                        Colors: currentVariation.color?.join(", "),
+                        Sizes: currentVariation.sizes?.join(", "),
+                        Price: `$${currentVariation.price}`,
+                        "Original Price": currentVariation.originalPrice
+                          ? `$${currentVariation.originalPrice}`
+                          : "N/A",
+                        Stock: currentVariation.quantity,
+                      })
+                        .filter(([key, value]) => value)
+                        .map(([key, value]) => (
                           <div
                             key={key}
                             className="flex justify-between items-center py-2 border-b border-gray-100"
@@ -708,137 +900,22 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
                             </span>
                           </div>
                         ))}
-                      </div>
-                    </div>
-                  )
-                )}
+                  </div>
+                </div>
               </div>
             )}
 
             {activeTab === "reviews" && (
               <div className="space-y-6">
-                {/* Reviews Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-gray-900 mb-2">
-                      {product.rating}
-                    </div>
-                    <div className="flex justify-center items-center space-x-1 mb-2">
-                      {renderStars(product.rating, "lg")}
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Based on {product.totalReviews.toLocaleString()} reviews
-                    </p>
-                  </div>
-
-                  <div className="col-span-2">
-                    <h4 className="font-medium text-gray-900 mb-3">
-                      Rating Distribution
-                    </h4>
-                    {[5, 4, 3, 2, 1].map((star) => {
-                      const percentage = Math.floor(Math.random() * 40 + 10); // Mock percentages
-                      return (
-                        <div
-                          key={star}
-                          className="flex items-center space-x-3 mb-2"
-                        >
-                          <span className="text-sm text-gray-600 w-8">
-                            {star} ★
-                          </span>
-                          <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-yellow-400 h-2 rounded-full"
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                          <span className="text-sm text-gray-600 w-10">
-                            {percentage}%
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                <div className="text-center py-8">
+                  <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No reviews yet
+                  </h3>
+                  <p className="text-gray-600">
+                    Be the first to review this product.
+                  </p>
                 </div>
-
-                {/* Reviews List */}
-                <div className="space-y-6">
-                  {currentReviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="border-b border-gray-200 pb-6"
-                    >
-                      <div className="flex items-start space-x-4">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                          {review.user.name.charAt(0)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <h5 className="font-medium text-gray-900">
-                              {review.user.name}
-                            </h5>
-                            {review.user.verified && (
-                              <Badge variant="success" size="sm">
-                                Verified Purchase
-                              </Badge>
-                            )}
-                            <span className="text-sm text-gray-500">
-                              • {review.user.location}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center space-x-2 mb-2">
-                            <div className="flex items-center">
-                              {renderStars(review.rating)}
-                            </div>
-                            <span className="text-sm text-gray-500">
-                              {review.date}
-                            </span>
-                          </div>
-
-                          <h6 className="font-medium text-gray-900 mb-2">
-                            {review.title}
-                          </h6>
-                          <p className="text-gray-700 text-sm mb-3">
-                            {review.comment}
-                          </p>
-
-                          {review.images.length > 0 && (
-                            <div className="flex space-x-2 mb-3">
-                              {review.images.map((image, index) => (
-                                <img
-                                  key={index}
-                                  src={image}
-                                  alt="Review"
-                                  className="w-16 h-16 rounded-lg object-cover border border-gray-200"
-                                />
-                              ))}
-                            </div>
-                          )}
-
-                          <div className="flex items-center space-x-4">
-                            <button className="flex items-center space-x-1 text-sm text-gray-600 hover:text-blue-600 touch-manipulation">
-                              <ThumbsUp className="h-4 w-4" />
-                              <span>Helpful ({review.helpful})</span>
-                            </button>
-                            <button className="flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-800 touch-manipulation">
-                              <MessageSquare className="h-4 w-4" />
-                              <span>Reply</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Reviews Pagination */}
-                <Pagination
-                  currentPage={reviewsPage}
-                  totalPages={totalReviewPages}
-                  onPageChange={setReviewsPage}
-                  itemsPerPage={reviewsPerPage}
-                  totalItems={allReviews.length}
-                />
               </div>
             )}
 
@@ -853,34 +930,18 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
                     <div className="space-y-3">
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
                         <span className="text-sm text-gray-600">
-                          Standard Delivery
+                          Shipping Class
                         </span>
                         <span className="text-sm font-medium text-gray-900">
-                          FREE
+                          {product.shippingClass?.shippingClass || "Standard"}
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
                         <span className="text-sm text-gray-600">
-                          Estimated Delivery
+                          Shipping Weight
                         </span>
                         <span className="text-sm font-medium text-gray-900">
-                          {product.shipping.estimatedDays}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-sm text-gray-600">
-                          Express Delivery
-                        </span>
-                        <span className="text-sm font-medium text-gray-900">
-                          $9.99 (Next Day)
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-sm text-gray-600">
-                          International Shipping
-                        </span>
-                        <span className="text-sm font-medium text-gray-900">
-                          Available
+                          {product.shippingClass?.shippingWeight || "N/A"}
                         </span>
                       </div>
                     </div>
@@ -894,34 +955,17 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
                     <div className="space-y-3">
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
                         <span className="text-sm text-gray-600">
-                          Return Period
+                          Return Policy
                         </span>
                         <span className="text-sm font-medium text-gray-900">
-                          30 Days
+                          {product.shippingClass?.returnPolicy || "30"} days
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-sm text-gray-600">
-                          Return Shipping
-                        </span>
+                        <span className="text-sm text-gray-600">Warranty</span>
                         <span className="text-sm font-medium text-gray-900">
-                          FREE
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-sm text-gray-600">
-                          Manufacturer Warranty
-                        </span>
-                        <span className="text-sm font-medium text-gray-900">
-                          1 Year
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-sm text-gray-600">
-                          Extended Warranty
-                        </span>
-                        <span className="text-sm font-medium text-blue-600 cursor-pointer">
-                          Available
+                          {product.shippingClass?.warranty ||
+                            "Manufacturer warranty"}
                         </span>
                       </div>
                     </div>
@@ -931,57 +975,6 @@ Perfect for travel, work, gaming, and daily entertainment. Compatible with all B
             )}
           </div>
         </Card>
-
-        {/* Related Products */}
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Related Products
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-            {relatedProducts.map((product) => (
-              <Card
-                key={product.id}
-                className="group cursor-pointer hover:shadow-lg transition-all duration-300"
-                onClick={() => navigate(`/product/${product.id}`)}
-                padding={false}
-              >
-                <div className="relative aspect-square overflow-hidden">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-2 left-2">
-                    <Badge variant={getBadgeVariant(product.badge)} size="sm">
-                      {product.badge}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="p-3 sm:p-4">
-                  <h3 className="font-medium text-gray-900 text-sm sm:text-base mb-2 line-clamp-2">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-center space-x-1 mb-2">
-                    {renderStars(product.rating)}
-                    <span className="text-xs text-gray-600 ml-1">
-                      {product.rating}
-                    </span>
-                  </div>
-                  <div className="flex items-baseline space-x-2">
-                    <span className="font-bold text-gray-900 text-sm sm:text-base">
-                      ${product.price}
-                    </span>
-                    {product.originalPrice && (
-                      <span className="text-xs text-gray-500 line-through">
-                        ${product.originalPrice}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

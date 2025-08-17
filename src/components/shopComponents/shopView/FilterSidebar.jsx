@@ -24,11 +24,8 @@ const FilterSidebar = ({
     categories: true,
     price: true,
     rating: true,
-    shipping: true,
-    availability: true,
     brand: false,
     color: false,
-    size: false,
   });
 
   const toggleSection = (section) => {
@@ -45,10 +42,8 @@ const FilterSidebar = ({
       newFilters.priceRange = value;
     } else if (filterType === "rating") {
       newFilters.rating = value;
-    } else if (filterType === "freeShipping" || filterType === "inStock") {
-      newFilters[filterType] = checked;
     } else {
-      // For multi-select filters like categories, brands, colors, sizes
+      // For multi-select filters like categories, brands, colors
       if (!newFilters[filterType]) {
         newFilters[filterType] = [];
       }
@@ -65,25 +60,31 @@ const FilterSidebar = ({
     onFiltersChange(newFilters);
   };
 
+  // Categories mapping for the API
   const categories = [
     { id: "electronics", name: "Electronics", count: 156 },
-    { id: "clothing", name: "Clothing", count: 324 },
-    { id: "accessories", name: "Accessories", count: 89 },
-    { id: "home", name: "Home & Garden", count: 67 },
-    { id: "sports", name: "Sports & Outdoors", count: 234 },
-    { id: "books", name: "Books", count: 45 },
-    { id: "toys", name: "Toys & Games", count: 78 },
+    { id: "fashion", name: "Fashion", count: 324 },
+    { id: "home", name: "Home & Garden", count: 89 },
+    { id: "sports", name: "Sports & Outdoors", count: 67 },
+    { id: "books", name: "Books", count: 234 },
+    { id: "toys", name: "Toys & Games", count: 45 },
+    { id: "beauty", name: "Beauty & Personal Care", count: 78 },
+    { id: "automotive", name: "Automotive", count: 56 },
   ];
 
+  // Common brands that might be in the system
   const brands = [
-    { id: "apple", name: "Apple", count: 45 },
-    { id: "samsung", name: "Samsung", count: 38 },
-    { id: "nike", name: "Nike", count: 67 },
-    { id: "adidas", name: "Adidas", count: 54 },
-    { id: "sony", name: "Sony", count: 29 },
-    { id: "lg", name: "LG", count: 23 },
+    { id: "Apple", name: "Apple", count: 45 },
+    { id: "Samsung", name: "Samsung", count: 38 },
+    { id: "Nike", name: "Nike", count: 67 },
+    { id: "Adidas", name: "Adidas", count: 54 },
+    { id: "Sony", name: "Sony", count: 29 },
+    { id: "LG", name: "LG", count: 23 },
+    { id: "HP", name: "HP", count: 31 },
+    { id: "Dell", name: "Dell", count: 28 },
   ];
 
+  // Color options
   const colors = [
     { id: "black", name: "Black", hex: "#000000", count: 89 },
     { id: "white", name: "White", hex: "#FFFFFF", count: 76 },
@@ -93,15 +94,8 @@ const FilterSidebar = ({
     { id: "yellow", name: "Yellow", hex: "#F59E0B", count: 32 },
     { id: "purple", name: "Purple", hex: "#8B5CF6", count: 28 },
     { id: "gray", name: "Gray", hex: "#6B7280", count: 67 },
-  ];
-
-  const sizes = [
-    { id: "xs", name: "XS", count: 23 },
-    { id: "s", name: "S", count: 45 },
-    { id: "m", name: "M", count: 67 },
-    { id: "l", name: "L", count: 56 },
-    { id: "xl", name: "XL", count: 34 },
-    { id: "xxl", name: "XXL", count: 28 },
+    { id: "pink", name: "Pink", hex: "#EC4899", count: 25 },
+    { id: "orange", name: "Orange", hex: "#F97316", count: 20 },
   ];
 
   const FilterSection = ({
@@ -143,8 +137,10 @@ const FilterSidebar = ({
       return count + filter.length;
     } else if (typeof filter === "boolean" && filter) {
       return count + 1;
-    } else if (filter && typeof filter === "object") {
+    } else if (filter && typeof filter === "object" && filter !== null) {
       return count + (filter.min || filter.max ? 1 : 0);
+    } else if (filter && typeof filter !== "object") {
+      return count + 1;
     }
     return count;
   }, 0);
@@ -234,10 +230,11 @@ const FilterSidebar = ({
           </div>
           <div className="space-y-2">
             {[
-              { label: "Under LKR 1000", min: 0, max: 1000 },
-              { label: "LKR 1000 to LKR 5000", min: 1000, max: 5000 },
-              { label: "LKR 5000 to $10000", min: 5000, max: 100000 },
-              { label: "Over LKR 10000", min: 10000, max: null },
+              { label: "Under LKR 1,000", min: 0, max: 1000 },
+              { label: "LKR 1,000 - LKR 5,000", min: 1000, max: 5000 },
+              { label: "LKR 5,000 - LKR 20,000", min: 5000, max: 20000 },
+              { label: "LKR 20,000 - LKR 50,000", min: 20000, max: 50000 },
+              { label: "Over LKR 50,000", min: 50000, max: null },
             ].map((range, index) => (
               <label
                 key={index}
@@ -304,54 +301,9 @@ const FilterSidebar = ({
         </div>
       </FilterSection>
 
-      {/* Shipping & Availability */}
-      {/* <FilterSection
-        title="Shipping & Availability"
-        icon={Truck}
-        sectionKey="shipping"
-      >
-        <div className="space-y-2">
-          <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-md p-1 -m-1 transition-colors">
-            <input
-              type="checkbox"
-              checked={filters.freeShipping || false}
-              onChange={(e) => {
-                updateFilter("freeShipping", null, e.target.checked);
-              }}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">Free Shipping</span>
-          </label>
-          <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-md p-1 -m-1 transition-colors">
-            <input
-              type="checkbox"
-              checked={filters.inStock || false}
-              onChange={(e) => {
-                updateFilter("inStock", null, e.target.checked);
-              }}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">In Stock</span>
-          </label>
-          <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-md p-1 -m-1 transition-colors">
-            <input
-              type="checkbox"
-              checked={filters.fastDelivery || false}
-              onChange={(e) => {
-                updateFilter("fastDelivery", null, e.target.checked);
-              }}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">
-              Fast Delivery (1-2 days)
-            </span>
-          </label>
-        </div>
-      </FilterSection> */}
-
       {/* Brands */}
       <FilterSection title="Brands" icon={Package} sectionKey="brand">
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-48 overflow-y-auto">
           {brands.map((brand) => (
             <label
               key={brand.id}
@@ -374,11 +326,11 @@ const FilterSidebar = ({
 
       {/* Colors */}
       <FilterSection title="Colors" icon={Palette} sectionKey="color">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 gap-3">
           {colors.map((color) => (
             <label
               key={color.id}
-              className="flex flex-col items-center cursor-pointer group p-1 rounded-md hover:bg-gray-50 transition-colors"
+              className="flex flex-col items-center cursor-pointer group p-2 rounded-md hover:bg-gray-50 transition-colors"
             >
               <input
                 type="checkbox"
@@ -389,9 +341,9 @@ const FilterSidebar = ({
                 className="sr-only"
               />
               <div
-                className={`w-8 h-8 rounded-full border-2 transition-all duration-200 ${
+                className={`w-8 h-8 rounded-full border-2 transition-all duration-200 mb-1 ${
                   filters.colors?.includes(color.id)
-                    ? "border-blue-600 scale-110"
+                    ? "border-blue-600 scale-110 shadow-md"
                     : "border-gray-300 group-hover:border-gray-400"
                 } ${color.hex === "#FFFFFF" ? "border-gray-400" : ""}`}
                 style={{ backgroundColor: color.hex }}
@@ -400,44 +352,21 @@ const FilterSidebar = ({
                   <div className="w-full h-full rounded-full flex items-center justify-center">
                     <div
                       className={`w-2 h-2 rounded-full ${
-                        color.hex === "#FFFFFF" ? "bg-gray-600" : "bg-white"
+                        color.hex === "#FFFFFF" || color.hex === "#F59E0B"
+                          ? "bg-gray-600"
+                          : "bg-white"
                       }`}
                     />
                   </div>
                 )}
               </div>
-              <span className="text-xs text-gray-600 mt-1">{color.name}</span>
+              <span className="text-xs text-gray-600 text-center leading-tight">
+                {color.name}
+              </span>
             </label>
           ))}
         </div>
       </FilterSection>
-
-      {/* Sizes */}
-      {/* <FilterSection title="Sizes" icon={Package} sectionKey="size">
-        <div className="grid grid-cols-3 gap-2">
-          {sizes.map((size) => (
-            <label key={size.id} className="cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filters.sizes?.includes(size.id) || false}
-                onChange={(e) => {
-                  updateFilter("sizes", size.id, e.target.checked);
-                }}
-                className="sr-only"
-              />
-              <div
-                className={`border-2 rounded-md p-2 text-center text-sm font-medium transition-all duration-200 hover:bg-gray-50 ${
-                  filters.sizes?.includes(size.id)
-                    ? "border-blue-600 bg-blue-50 text-blue-600"
-                    : "border-gray-300 hover:border-gray-400 text-gray-700"
-                }`}
-              >
-                {size.name}
-              </div>
-            </label>
-          ))}
-        </div>
-      </FilterSection> */}
     </div>
   );
 };

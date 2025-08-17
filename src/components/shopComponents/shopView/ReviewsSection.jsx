@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Star,
   ThumbsUp,
@@ -13,9 +13,12 @@ import {
   Package,
   Award,
   Calendar,
+  Loader,
+  AlertCircle,
 } from "lucide-react";
 import { Button, Badge, ContactCard as Card } from "../../ui/ContactUis/Uis";
 import Pagination from "../../ui/ContactUis/Pagination";
+import useUser from "../../../hooks/useUser";
 
 const ReviewsSection = ({ shopId, className = "" }) => {
   const [selectedFilter, setSelectedFilter] = useState("all");
@@ -24,10 +27,26 @@ const ReviewsSection = ({ shopId, className = "" }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const reviewsPerPage = 5;
 
-  // Mock data - in real app, this would come from props or API
+  // Redux hooks
+  const {
+    shopReviews,
+    reviewsLoading,
+    reviewsError,
+    reviewsPagination,
+    fetchShopReviews,
+  } = useUser();
+
+  // Fetch reviews when component mounts or shopId changes
+  useEffect(() => {
+    if (shopId) {
+      fetchShopReviews(shopId, currentPage, reviewsPerPage);
+    }
+  }, [shopId, currentPage, reviewsPerPage, fetchShopReviews]);
+
+  // Mock data for categories and distribution since API doesn't provide this yet
   const shopRatings = {
     overall: 4.6,
-    totalReviews: 1247,
+    totalReviews: shopReviews?.length || 0,
     categories: [
       {
         id: "shopping",
@@ -63,290 +82,41 @@ const ReviewsSection = ({ shopId, className = "" }) => {
       },
     ],
     distribution: [
-      { stars: 5, count: 672, percentage: 54 },
-      { stars: 4, count: 374, percentage: 30 },
-      { stars: 3, count: 125, percentage: 10 },
-      { stars: 2, count: 50, percentage: 4 },
-      { stars: 1, count: 26, percentage: 2 },
+      {
+        stars: 5,
+        count: Math.floor((shopReviews?.length || 0) * 0.54),
+        percentage: 54,
+      },
+      {
+        stars: 4,
+        count: Math.floor((shopReviews?.length || 0) * 0.3),
+        percentage: 30,
+      },
+      {
+        stars: 3,
+        count: Math.floor((shopReviews?.length || 0) * 0.1),
+        percentage: 10,
+      },
+      {
+        stars: 2,
+        count: Math.floor((shopReviews?.length || 0) * 0.04),
+        percentage: 4,
+      },
+      {
+        stars: 1,
+        count: Math.floor((shopReviews?.length || 0) * 0.02),
+        percentage: 2,
+      },
     ],
   };
 
-  // Extended mock reviews data for pagination demonstration
-  const allReviews = [
-    {
-      id: 1,
-      user: {
-        name: "Sarah Johnson",
-        avatar:
-          "https://images.unsplash.com/photo-1494790108755-2616b332c133?w=40&h=40&fit=crop&crop=face",
-        verified: true,
-      },
-      rating: 5,
-      date: "2024-01-15",
-      purchase: "Wireless Bluetooth Headphones",
-      review:
-        "Excellent product quality and fast shipping! The headphones arrived well-packaged and work perfectly. Customer service was very responsive when I had questions about the warranty.",
-      helpful: 23,
-      images: [
-        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop",
-        "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=100&h=100&fit=crop",
-      ],
-      categories: {
-        shopping: 5,
-        customer_service: 5,
-        product_quality: 5,
-        delivery: 4,
-      },
-    },
-    {
-      id: 2,
-      user: {
-        name: "Mike Chen",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face",
-        verified: true,
-      },
-      rating: 4,
-      date: "2024-01-12",
-      purchase: "Smart Fitness Watch",
-      review:
-        "Good product overall, but delivery took longer than expected. The watch itself is great quality and exactly as described. Would definitely shop here again.",
-      helpful: 15,
-      categories: {
-        shopping: 4,
-        customer_service: 4,
-        product_quality: 5,
-        delivery: 3,
-      },
-    },
-    {
-      id: 3,
-      user: {
-        name: "Emily Rodriguez",
-        avatar:
-          "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face",
-        verified: false,
-      },
-      rating: 5,
-      date: "2024-01-10",
-      purchase: "Premium Coffee Maker",
-      review:
-        "Amazing shopping experience! The coffee maker is exactly what I was looking for. Great communication from the seller and super fast shipping. Highly recommended!",
-      helpful: 31,
-      categories: {
-        shopping: 5,
-        customer_service: 5,
-        product_quality: 5,
-        delivery: 5,
-      },
-    },
-    {
-      id: 4,
-      user: {
-        name: "David Kim",
-        avatar:
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face",
-        verified: true,
-      },
-      rating: 5,
-      date: "2024-01-08",
-      purchase: "Gaming Mechanical Keyboard",
-      review:
-        "Outstanding keyboard! The build quality is exceptional and the RGB lighting is beautiful. Fast shipping and excellent packaging. This shop has become my go-to for tech products.",
-      helpful: 28,
-      categories: {
-        shopping: 5,
-        customer_service: 5,
-        product_quality: 5,
-        delivery: 5,
-      },
-    },
-    {
-      id: 5,
-      user: {
-        name: "Lisa Thompson",
-        avatar:
-          "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=40&h=40&fit=crop&crop=face",
-        verified: true,
-      },
-      rating: 4,
-      date: "2024-01-05",
-      purchase: "Portable Bluetooth Speaker",
-      review:
-        "Great sound quality for the price! The bass is impressive and it's very portable. Only complaint is that the battery life could be a bit longer, but overall very satisfied with my purchase.",
-      helpful: 19,
-      images: [
-        "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=100&h=100&fit=crop",
-      ],
-      categories: {
-        shopping: 4,
-        customer_service: 4,
-        product_quality: 4,
-        delivery: 4,
-      },
-    },
-    {
-      id: 6,
-      user: {
-        name: "Robert Wilson",
-        avatar:
-          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop&crop=face",
-        verified: false,
-      },
-      rating: 3,
-      date: "2024-01-03",
-      purchase: "Wireless Charging Pad",
-      review:
-        "The product works as expected but shipping was slower than advertised. Customer service was helpful when I inquired about the delay. The charging pad itself is decent quality.",
-      helpful: 8,
-      categories: {
-        shopping: 3,
-        customer_service: 4,
-        product_quality: 4,
-        delivery: 2,
-      },
-    },
-    {
-      id: 7,
-      user: {
-        name: "Jennifer Lee",
-        avatar:
-          "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=40&h=40&fit=crop&crop=face",
-        verified: true,
-      },
-      rating: 5,
-      date: "2024-01-01",
-      purchase: "Smart Home Camera",
-      review:
-        "Incredible product! The video quality is crystal clear and the setup was straightforward. The mobile app works flawlessly. Excellent customer support and lightning-fast delivery.",
-      helpful: 35,
-      images: [
-        "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=100&h=100&fit=crop",
-        "https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=100&h=100&fit=crop",
-      ],
-      categories: {
-        shopping: 5,
-        customer_service: 5,
-        product_quality: 5,
-        delivery: 5,
-      },
-    },
-    {
-      id: 8,
-      user: {
-        name: "Alex Parker",
-        avatar:
-          "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=40&h=40&fit=crop&crop=face",
-        verified: true,
-      },
-      rating: 4,
-      date: "2023-12-28",
-      purchase: "USB-C Fast Charger",
-      review:
-        "Fast charging works great and the cable quality is good. Delivery was prompt and packaging was secure. Would recommend this shop to others looking for reliable tech accessories.",
-      helpful: 12,
-      categories: {
-        shopping: 4,
-        customer_service: 4,
-        product_quality: 4,
-        delivery: 5,
-      },
-    },
-    {
-      id: 9,
-      user: {
-        name: "Maria Garcia",
-        avatar:
-          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=40&h=40&fit=crop&crop=face",
-        verified: false,
-      },
-      rating: 5,
-      date: "2023-12-25",
-      purchase: "Ergonomic Wireless Mouse",
-      review:
-        "Perfect for long work sessions! The ergonomic design really helps reduce hand strain. The wireless connection is stable and responsive. Great value for money and excellent service.",
-      helpful: 22,
-      categories: {
-        shopping: 5,
-        customer_service: 4,
-        product_quality: 5,
-        delivery: 4,
-      },
-    },
-    {
-      id: 10,
-      user: {
-        name: "John Davis",
-        avatar:
-          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=40&h=40&fit=crop&crop=face",
-        verified: true,
-      },
-      rating: 4,
-      date: "2023-12-22",
-      purchase: "Portable SSD Drive",
-      review:
-        "Great storage solution! Fast transfer speeds and compact design. The only minor issue was that the included cable was shorter than expected. Overall very satisfied with the purchase.",
-      helpful: 16,
-      categories: {
-        shopping: 4,
-        customer_service: 4,
-        product_quality: 5,
-        delivery: 4,
-      },
-    },
-    {
-      id: 11,
-      user: {
-        name: "Amanda Brown",
-        avatar:
-          "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=40&h=40&fit=crop&crop=face",
-        verified: true,
-      },
-      rating: 2,
-      date: "2023-12-20",
-      purchase: "Smartphone Stand",
-      review:
-        "The stand is functional but feels a bit flimsy. It does the job but I expected better build quality for the price. Customer service was responsive when I raised concerns.",
-      helpful: 5,
-      categories: {
-        shopping: 3,
-        customer_service: 4,
-        product_quality: 2,
-        delivery: 3,
-      },
-    },
-    {
-      id: 12,
-      user: {
-        name: "Chris Martinez",
-        avatar:
-          "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=40&h=40&fit=crop&crop=face",
-        verified: true,
-      },
-      rating: 5,
-      date: "2023-12-18",
-      purchase: "Bluetooth Tracking Device",
-      review:
-        "Works perfectly! Easy to set up and the tracking accuracy is excellent. The battery life is impressive and the app is user-friendly. Fast delivery and great customer service.",
-      helpful: 29,
-      categories: {
-        shopping: 5,
-        customer_service: 5,
-        product_quality: 5,
-        delivery: 5,
-      },
-    },
-  ];
-
   const filterOptions = [
-    { id: "all", name: "All Reviews", count: shopRatings.totalReviews },
+    { id: "all", name: "All Reviews", count: shopReviews?.length || 0 },
     { id: "5", name: "5 Stars", count: shopRatings.distribution[0].count },
     { id: "4", name: "4 Stars", count: shopRatings.distribution[1].count },
     { id: "3", name: "3 Stars", count: shopRatings.distribution[2].count },
     { id: "2", name: "2 Stars", count: shopRatings.distribution[3].count },
     { id: "1", name: "1 Star", count: shopRatings.distribution[4].count },
-    { id: "verified", name: "Verified Purchases", count: 892 },
-    { id: "with_images", name: "With Images", count: 156 },
   ];
 
   const sortOptions = [
@@ -359,45 +129,84 @@ const ReviewsSection = ({ shopId, className = "" }) => {
 
   // Filter and sort reviews
   const filteredAndSortedReviews = useMemo(() => {
-    let filtered = [...allReviews];
+    if (!shopReviews) return [];
+
+    let filtered = [...shopReviews];
 
     // Apply filters
     if (selectedFilter !== "all") {
       if (selectedFilter === "verified") {
-        filtered = filtered.filter((review) => review.user.verified);
+        // Filter verified purchases if we have this data
+        filtered = filtered.filter((review) => true); // Assume all are verified for now
       } else if (selectedFilter === "with_images") {
-        filtered = filtered.filter(
-          (review) => review.images && review.images.length > 0
-        );
+        // Filter reviews with images if we have this data
+        filtered = filtered.filter((review) => false); // No image data available yet
       } else {
         // Filter by rating
         const rating = parseInt(selectedFilter);
-        filtered = filtered.filter((review) => review.rating === rating);
+        filtered = filtered.filter((review) => {
+          const avgRating =
+            ((review.shoppingExperience || 0) +
+              (review.customerService || 0) +
+              (review.productQuality || 0) +
+              (review.deliverySpeed || 0)) /
+            4;
+          return Math.round(avgRating) === rating;
+        });
       }
     }
 
     // Apply sorting
     switch (sortBy) {
       case "oldest":
-        filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+        filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
         break;
       case "highest":
-        filtered.sort((a, b) => b.rating - a.rating);
+        filtered.sort((a, b) => {
+          const avgA =
+            ((a.shoppingExperience || 0) +
+              (a.customerService || 0) +
+              (a.productQuality || 0) +
+              (a.deliverySpeed || 0)) /
+            4;
+          const avgB =
+            ((b.shoppingExperience || 0) +
+              (b.customerService || 0) +
+              (b.productQuality || 0) +
+              (b.deliverySpeed || 0)) /
+            4;
+          return avgB - avgA;
+        });
         break;
       case "lowest":
-        filtered.sort((a, b) => a.rating - b.rating);
+        filtered.sort((a, b) => {
+          const avgA =
+            ((a.shoppingExperience || 0) +
+              (a.customerService || 0) +
+              (a.productQuality || 0) +
+              (a.deliverySpeed || 0)) /
+            4;
+          const avgB =
+            ((b.shoppingExperience || 0) +
+              (b.customerService || 0) +
+              (b.productQuality || 0) +
+              (b.deliverySpeed || 0)) /
+            4;
+          return avgA - avgB;
+        });
         break;
       case "helpful":
-        filtered.sort((a, b) => b.helpful - a.helpful);
+        // Sort by helpful votes if available, otherwise by date
+        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         break;
       case "newest":
       default:
-        filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         break;
     }
 
     return filtered;
-  }, [selectedFilter, sortBy]);
+  }, [shopReviews, selectedFilter, sortBy]);
 
   // Pagination calculations
   const totalPages = Math.ceil(
@@ -410,7 +219,7 @@ const ReviewsSection = ({ shopId, className = "" }) => {
   );
 
   // Reset page when filters change
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [selectedFilter, sortBy]);
 
@@ -434,11 +243,13 @@ const ReviewsSection = ({ shopId, className = "" }) => {
       lg: "h-6 w-6",
     };
 
+    const numRating = parseFloat(rating || 0);
+
     return [...Array(5)].map((_, i) => (
       <Star
         key={i}
         className={`${sizeClasses[size]} ${
-          i < Math.floor(rating)
+          i < Math.floor(numRating)
             ? "text-yellow-400 fill-current"
             : "text-gray-300"
         }`}
@@ -455,6 +266,60 @@ const ReviewsSection = ({ shopId, className = "" }) => {
     });
   };
 
+  const getAverageRating = (review) => {
+    const ratings = [
+      review.shoppingExperience,
+      review.customerService,
+      review.productQuality,
+      review.deliverySpeed,
+    ].filter((rating) => rating > 0);
+
+    if (ratings.length === 0) return 0;
+    return ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+  };
+
+  const getUserInitials = (name) => {
+    return name
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Loading state
+  if (reviewsLoading && !shopReviews) {
+    return (
+      <div className={`flex items-center justify-center py-12 ${className}`}>
+        <Loader className="h-8 w-8 animate-spin text-blue-600 mr-3" />
+        <span className="text-gray-600">Loading reviews...</span>
+      </div>
+    );
+  }
+
+  // Error state
+  if (reviewsError) {
+    return (
+      <div className={`${className}`}>
+        <Card className="text-center p-8" shadow="lg">
+          <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-600 mb-2">
+            Error Loading Reviews
+          </h3>
+          <p className="text-gray-500 mb-4">{reviewsError}</p>
+          <Button
+            onClick={() =>
+              fetchShopReviews(shopId, currentPage, reviewsPerPage)
+            }
+            variant="outline"
+          >
+            Try Again
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Overall Rating Summary */}
@@ -470,7 +335,7 @@ const ReviewsSection = ({ shopId, className = "" }) => {
                 {renderStars(shopRatings.overall, "lg")}
               </div>
               <p className="text-gray-600">
-                Based on {shopRatings.totalReviews.toLocaleString()} reviews
+                Based on {shopRatings.totalReviews} reviews
               </p>
             </div>
           </div>
@@ -602,120 +467,133 @@ const ReviewsSection = ({ shopId, className = "" }) => {
       <div className="reviews-list-section space-y-4">
         {currentReviews.length > 0 ? (
           <>
-            {currentReviews.map((review) => (
-              <Card key={review.id} shadow="lg" className="p-6">
-                <div className="flex items-start space-x-4">
-                  {/* User Avatar */}
-                  <div className="flex-shrink-0">
-                    <img
-                      src={review.user.avatar}
-                      alt={review.user.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                  </div>
+            {currentReviews.map((review) => {
+              const averageRating = getAverageRating(review);
 
-                  {/* Review Content */}
-                  <div className="flex-1">
-                    {/* User Info and Rating */}
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3">
-                      <div className="flex items-center space-x-2 mb-2 md:mb-0">
-                        <h4 className="font-semibold text-gray-900">
-                          {review.user.name}
-                        </h4>
-                        {review.user.verified && (
+              return (
+                <Card key={review._id} shadow="lg" className="p-6">
+                  <div className="flex items-start space-x-4">
+                    {/* User Avatar */}
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                        {getUserInitials(
+                          review.buyerId?.firstName && review.buyerId?.lastName
+                            ? `${review.buyerId.firstName} ${review.buyerId.lastName}`
+                            : "Anonymous User"
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Review Content */}
+                    <div className="flex-1">
+                      {/* User Info and Rating */}
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3">
+                        <div className="flex items-center space-x-2 mb-2 md:mb-0">
+                          <h4 className="font-semibold text-gray-900">
+                            {review.buyerId?.firstName &&
+                            review.buyerId?.lastName
+                              ? `${review.buyerId.firstName} ${review.buyerId.lastName}`
+                              : "Anonymous User"}
+                          </h4>
                           <Badge variant="success" size="sm">
                             <User className="h-3 w-3 mr-1" />
                             Verified
                           </Badge>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="flex items-center">
+                            {renderStars(averageRating)}
+                          </div>
+                          <span className="text-sm text-gray-600">
+                            {averageRating.toFixed(1)}/5
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Purchase Info */}
+                      <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-4 w-4" />
+                          <span>{formatDate(review.createdAt)}</span>
+                        </div>
+                        {review.listingId && (
+                          <div className="flex items-center space-x-1">
+                            <Package className="h-4 w-4" />
+                            <span>Product Review</span>
+                          </div>
                         )}
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="flex items-center">
-                          {renderStars(review.rating)}
-                        </div>
-                        <span className="text-sm text-gray-600">
-                          {review.rating}/5
-                        </span>
-                      </div>
-                    </div>
 
-                    {/* Purchase Info */}
-                    <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>{formatDate(review.date)}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Package className="h-4 w-4" />
-                        <span>Purchased: {review.purchase}</span>
-                      </div>
-                    </div>
-
-                    {/* Review Text */}
-                    <p className="text-gray-700 leading-relaxed mb-4">
-                      {review.review}
-                    </p>
-
-                    {/* Review Images */}
-                    {review.images && review.images.length > 0 && (
-                      <div className="flex space-x-2 mb-4">
-                        {review.images.map((image, index) => (
-                          <img
-                            key={index}
-                            src={image}
-                            alt={`Review image ${index + 1}`}
-                            className="w-16 h-16 rounded-lg object-cover border border-gray-200 hover:scale-105 transition-transform cursor-pointer"
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Category Ratings */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
-                      {Object.entries(review.categories).map(
-                        ([key, rating]) => {
-                          const category = shopRatings.categories.find(
-                            (c) => c.id === key
-                          );
-                          if (!category) return null;
-
-                          return (
-                            <div key={key} className="text-center">
-                              <div className="text-sm font-medium text-gray-700 mb-1">
-                                {category.name.split(" ")[0]}
-                              </div>
-                              <div className="flex items-center justify-center">
-                                {renderStars(rating, "sm")}
-                              </div>
-                            </div>
-                          );
-                        }
+                      {/* Review Text */}
+                      {review.review && (
+                        <p className="text-gray-700 leading-relaxed mb-4">
+                          {review.review}
+                        </p>
                       )}
-                    </div>
 
-                    {/* Review Actions */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <button className="flex items-center space-x-1 text-gray-600 hover:text-green-600 transition-colors">
-                          <ThumbsUp className="h-4 w-4" />
-                          <span className="text-sm">
-                            Helpful ({review.helpful})
-                          </span>
-                        </button>
-                        <button className="flex items-center space-x-1 text-gray-600 hover:text-red-600 transition-colors">
-                          <ThumbsDown className="h-4 w-4" />
-                          <span className="text-sm">Not Helpful</span>
-                        </button>
+                      {/* Category Ratings */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
+                        {[
+                          {
+                            key: "shoppingExperience",
+                            label: "Shopping",
+                            rating: review.shoppingExperience,
+                          },
+                          {
+                            key: "customerService",
+                            label: "Service",
+                            rating: review.customerService,
+                          },
+                          {
+                            key: "productQuality",
+                            label: "Quality",
+                            rating: review.productQuality,
+                          },
+                          {
+                            key: "deliverySpeed",
+                            label: "Delivery",
+                            rating: review.deliverySpeed,
+                          },
+                        ].map(
+                          ({ key, label, rating }) =>
+                            rating > 0 && (
+                              <div key={key} className="text-center">
+                                <div className="text-sm font-medium text-gray-700 mb-1">
+                                  {label}
+                                </div>
+                                <div className="flex items-center justify-center">
+                                  {renderStars(rating, "sm")}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {rating}/5
+                                </div>
+                              </div>
+                            )
+                        )}
                       </div>
-                      <Button variant="outline" size="sm">
-                        <MessageCircle className="h-4 w-4 mr-1" />
-                        Reply
-                      </Button>
+
+                      {/* Review Actions */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <button className="flex items-center space-x-1 text-gray-600 hover:text-green-600 transition-colors">
+                            <ThumbsUp className="h-4 w-4" />
+                            <span className="text-sm">Helpful (0)</span>
+                          </button>
+                          <button className="flex items-center space-x-1 text-gray-600 hover:text-red-600 transition-colors">
+                            <ThumbsDown className="h-4 w-4" />
+                            <span className="text-sm">Not Helpful</span>
+                          </button>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          <MessageCircle className="h-4 w-4 mr-1" />
+                          Reply
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
 
             {/* Pagination */}
             {totalPages > 1 && (
@@ -734,14 +612,21 @@ const ReviewsSection = ({ shopId, className = "" }) => {
           <Card className="text-center p-12" shadow="lg">
             <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-600 mb-2">
-              No Reviews Found
+              {selectedFilter !== "all" ? "No Reviews Found" : "No Reviews Yet"}
             </h3>
             <p className="text-gray-500 mb-6">
-              No reviews match your current filter criteria.
+              {selectedFilter !== "all"
+                ? "No reviews match your current filter criteria."
+                : "This shop hasn't received any reviews yet. Be the first to review!"}
             </p>
-            <Button onClick={() => setSelectedFilter("all")} variant="outline">
-              Show All Reviews
-            </Button>
+            {selectedFilter !== "all" && (
+              <Button
+                onClick={() => setSelectedFilter("all")}
+                variant="outline"
+              >
+                Show All Reviews
+              </Button>
+            )}
           </Card>
         )}
       </div>
