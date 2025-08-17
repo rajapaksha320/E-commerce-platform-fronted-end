@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useMemo, useEffect } from "react";
 import {
   Grid,
@@ -7,202 +8,299 @@ import {
   TrendingUp,
   ArrowRight,
   Package,
+  Store,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { Button, Badge, ContactCard as Card } from "../ui/ContactUis/Uis";
 import { Input, Select, SearchInput } from "../ui/InputUis/Uis";
 import Pagination from "../ui/ContactUis/Pagination";
+import useUser from "../../hooks/useUser";
 
 const CategoriesCollection = () => {
-  const [viewMode, setViewMode] = useState("grid");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedType, setSelectedType] = useState("all");
-  const [showAllTypes, setShowAllTypes] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [likedCategories, setLikedCategories] = useState(new Set());
   const navigate = useNavigate();
 
+  // Redux state and actions from useUser hook
+  const {
+    filteredStores,
+    storesPagination,
+    storesLoading,
+    storesError,
+    fetchStoresByCategory,
+    clearErrors,
+  } = useUser();
+
+  // UI States
+  const [viewMode, setViewMode] = useState("grid");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [likedCategories, setLikedCategories] = useState(new Set());
+  const [categoryData, setCategoryData] = useState(null);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+
   const itemsPerPage = 6;
-  const maxVisibleTypes = 6;
+  const maxVisibleCategories = 8;
 
-  const categoryTypes = [
-    { id: "all", name: "All Types", count: 24 },
-    { id: "trending", name: "Trending", count: 8 },
-    { id: "popular", name: "Most Popular", count: 6 },
-    { id: "new", name: "New Arrivals", count: 5 },
-    { id: "featured", name: "Featured", count: 4 },
-    { id: "seasonal", name: "Seasonal", count: 3 },
-    { id: "premium", name: "Premium", count: 2 },
-  ];
-
-  const categories = [
-    {
-      id: 1,
+  // Hardcoded category definitions with descriptions and images
+  const categoryDefinitions = {
+    electronics: {
       name: "Electronics & Technology",
-      slug: "electronics",
-      type: "trending",
-      image:
-        "https://images.unsplash.com/photo-1518717758536-85ae29035b6d?w=400&h=300&fit=crop",
       description:
         "Latest gadgets, smartphones, laptops, and cutting-edge technology products.",
-      products: 1245,
-      shops: 89,
-      rating: 4.8,
-      growth: "+15%",
+      image:
+        "https://images.unsplash.com/photo-1518717758536-85ae29035b6d?w=400&h=300&fit=crop",
       badge: "Hot",
       discount: "Up to 40% off",
+      growth: "+15%",
     },
-    {
-      id: 2,
+    fashion: {
       name: "Fashion & Apparel",
-      slug: "fashion",
-      type: "popular",
-      image:
-        "https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=300&fit=crop",
       description:
         "Trendy clothing, accessories, shoes, and fashion items for all styles.",
-      products: 2156,
-      shops: 156,
-      rating: 4.9,
-      growth: "+22%",
+      image:
+        "https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=300&fit=crop",
       badge: "Trending",
       discount: "25% off new arrivals",
+      growth: "+22%",
     },
-    {
-      id: 3,
+    home: {
       name: "Home & Garden",
-      slug: "home",
-      type: "featured",
-      image:
-        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop",
       description:
         "Furniture, decor, gardening supplies, and everything for your home.",
-      products: 892,
-      shops: 67,
-      rating: 4.7,
-      growth: "+8%",
+      image:
+        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop",
       badge: "Featured",
       discount: "Free shipping",
+      growth: "+8%",
     },
-    {
-      id: 4,
+    beauty: {
       name: "Health & Beauty",
-      slug: "beauty",
-      type: "trending",
-      image:
-        "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=300&fit=crop",
       description:
         "Skincare, makeup, wellness products, and health supplements.",
-      products: 756,
-      shops: 94,
-      rating: 4.6,
-      growth: "+18%",
+      image:
+        "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=300&fit=crop",
       badge: "Popular",
       discount: "Buy 2 Get 1 Free",
+      growth: "+18%",
     },
-    {
-      id: 5,
+    sports: {
       name: "Sports & Fitness",
-      slug: "sports",
-      type: "popular",
+      description: "Athletic equipment, workout gear, and sports accessories.",
       image:
         "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop",
-      description: "Athletic equipment, workout gear, and sports accessories.",
-      products: 634,
-      shops: 45,
-      rating: 4.8,
-      growth: "+12%",
       badge: "Athletic",
       discount: "20% off sports gear",
+      growth: "+12%",
     },
-    {
-      id: 6,
+    food: {
       name: "Food & Beverages",
-      slug: "food",
-      type: "new",
-      image:
-        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop",
       description:
         "Gourmet foods, organic products, beverages, and culinary delights.",
-      products: 445,
-      shops: 78,
-      rating: 4.5,
-      growth: "+25%",
+      image:
+        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop",
       badge: "Organic",
       discount: "15% off first order",
+      growth: "+25%",
     },
-    {
-      id: 7,
+    books: {
       name: "Books & Media",
-      slug: "books",
-      type: "featured",
+      description: "Books, audiobooks, movies, music, and educational content.",
       image:
         "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop",
-      description: "Books, audiobooks, movies, music, and educational content.",
-      products: 567,
-      shops: 34,
-      rating: 4.7,
-      growth: "+6%",
       badge: "Educational",
       discount: "30% off bestsellers",
+      growth: "+6%",
     },
-    {
-      id: 8,
+    automotive: {
       name: "Automotive",
-      slug: "automotive",
-      type: "premium",
-      image:
-        "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop",
       description:
         "Car parts, accessories, tools, and automotive maintenance products.",
-      products: 389,
-      shops: 28,
-      rating: 4.6,
-      growth: "+9%",
+      image:
+        "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop",
       badge: "Professional",
       discount: "10% off parts",
+      growth: "+9%",
     },
-    {
-      id: 9,
+    toys: {
       name: "Toys & Games",
-      slug: "toys",
-      type: "seasonal",
-      image:
-        "https://images.unsplash.com/photo-1558060370-d644479cb6f7?w=400&h=300&fit=crop",
       description:
         "Educational toys, board games, video games, and entertainment.",
-      products: 723,
-      shops: 52,
-      rating: 4.8,
-      growth: "+30%",
+      image:
+        "https://images.unsplash.com/photo-1558060370-d644479cb6f7?w=400&h=300&fit=crop",
       badge: "Family",
       discount: "Buy 3 Get 1 Free",
+      growth: "+30%",
     },
-  ];
+    jewelry: {
+      name: "Jewelry & Accessories",
+      description: "Fine jewelry, watches, accessories, and precious stones.",
+      image:
+        "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=300&fit=crop",
+      badge: "Luxury",
+      discount: "Special offers",
+      growth: "+10%",
+    },
+  };
 
-  // Filter categories based on search term and type
-  const filteredCategories = useMemo(() => {
-    let filtered = categories;
+  // Fetch category data from API to get real categoryCounts
+  const fetchCategoryData = async () => {
+    setIsLoadingCategories(true);
+    try {
+      // Call the API to get category counts - we can use any category since the API returns all counts
+      const result = await fetchStoresByCategory("fashion", 1, 1).unwrap();
 
-    // Filter by type first
-    if (selectedType !== "all") {
-      filtered = filtered.filter((category) => category.type === selectedType);
+      console.log("Full API response:", result);
+
+      // The API response structure is: { data: [{ categoryCounts: {...}, totalProductsInCategory: ... }] }
+      const responseData = result?.data?.[0];
+
+      if (responseData?.categoryCounts) {
+        setCategoryData({
+          categoryCounts: responseData.categoryCounts,
+          totalProductsInCategory: responseData.totalProductsInCategory || 0,
+        });
+        console.log("Category counts from API:", responseData.categoryCounts);
+        console.log(
+          "Total products in category:",
+          responseData.totalProductsInCategory
+        );
+      } else {
+        console.warn(
+          "No categoryCounts in API response, checking alternative paths"
+        );
+        console.log("Response data:", responseData);
+
+        // If no categoryCounts in expected location, set empty data
+        setCategoryData({
+          categoryCounts: {},
+          totalProductsInCategory: 0,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch category data:", error);
+      console.error("Error details:", error.message);
+
+      // On error, set empty data instead of hardcoded numbers
+      setCategoryData({
+        categoryCounts: {},
+        totalProductsInCategory: 0,
+      });
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
+  // Fetch category data on component mount
+  useEffect(() => {
+    fetchCategoryData();
+  }, []);
+
+  // Clear errors on unmount
+  useEffect(() => {
+    return () => {
+      clearErrors();
+    };
+  }, [clearErrors]);
+
+  // Build category types from real API data only
+  const categoryTypes = useMemo(() => {
+    if (
+      !categoryData?.categoryCounts ||
+      Object.keys(categoryData.categoryCounts).length === 0
+    ) {
+      return [{ id: "all", name: "All Categories", count: 0 }];
     }
 
-    // Then filter by search term
+    const counts = categoryData.categoryCounts;
+    const totalCount = Object.values(counts).reduce(
+      (sum, count) => sum + count,
+      0
+    );
+
+    const categories = [
+      { id: "all", name: "All Categories", count: totalCount },
+    ];
+
+    // Add categories that exist in both API data and our definitions
+    Object.entries(counts).forEach(([categoryKey, count]) => {
+      if (categoryDefinitions[categoryKey] && count > 0) {
+        categories.push({
+          id: categoryKey,
+          name: categoryDefinitions[categoryKey].name,
+          count: count, // Real count from backend
+        });
+      }
+    });
+
+    // Sort by count (highest first) - all numbers from backend
+    const sortedCategories = categories
+      .slice(1)
+      .sort((a, b) => b.count - a.count);
+    return [categories[0], ...sortedCategories];
+  }, [categoryData]);
+
+  // Generate detailed category data for display using real backend data
+  const generateCategoryDetails = useMemo(() => {
+    if (
+      !categoryData?.categoryCounts ||
+      Object.keys(categoryData.categoryCounts).length === 0
+    ) {
+      return [];
+    }
+
+    const counts = categoryData.categoryCounts;
+
+    return Object.entries(counts)
+      .filter(
+        ([categoryKey, count]) => categoryDefinitions[categoryKey] && count > 0
+      )
+      .map(([categoryKey, count], index) => {
+        const definition = categoryDefinitions[categoryKey];
+
+        return {
+          id: index + 1,
+          name: definition.name,
+          slug: categoryKey,
+          image: definition.image,
+          description: definition.description,
+          products: categoryData.totalProductsInCategory || 0, // Real count from backend
+          shops: count, // Real shop count from backend
+          rating: (4.2 + Math.random() * 0.8).toFixed(1), // Can be made dynamic later
+          growth: definition.growth, // Hardcoded for UI
+          badge: definition.badge, // Hardcoded for UI
+          discount: definition.discount, // Hardcoded for UI
+        };
+      })
+      .sort((a, b) => b.shops - a.shops); // Sort by real shop count from backend
+  }, [categoryData]);
+
+  // Filter categories based on search term and selected category
+  const filteredCategories = useMemo(() => {
+    let filtered = generateCategoryDetails;
+
+    // Filter by selected category
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter(
+        (category) => category.slug === selectedCategory
+      );
+    }
+
+    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(
         (category) =>
           category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          category.description
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          category.type.toLowerCase().includes(searchTerm.toLowerCase())
+          category.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     return filtered;
-  }, [searchTerm, selectedType]);
+  }, [generateCategoryDetails, searchTerm, selectedCategory]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
@@ -210,10 +308,10 @@ const CategoriesCollection = () => {
   const endIndex = startIndex + itemsPerPage;
   const currentCategories = filteredCategories.slice(startIndex, endIndex);
 
-  // Reset to first page when search or type changes
+  // Reset to first page when search or category changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedType]);
+  }, [searchTerm, selectedCategory]);
 
   const getBadgeVariant = (badge) => {
     const variants = {
@@ -226,6 +324,7 @@ const CategoriesCollection = () => {
       Educational: "primary",
       Professional: "default",
       Family: "warning",
+      Luxury: "default",
     };
     return variants[badge] || "default";
   };
@@ -250,24 +349,68 @@ const CategoriesCollection = () => {
 
   const handleBrowseCategory = (category, e) => {
     e.stopPropagation();
-    // Navigate to product collection with category filter
     navigate(`/product-collections?category=${category.slug}`);
   };
 
   const handleQuickView = (category, e) => {
     e.stopPropagation();
-    console.log("Quick view category:", category.id);
+    // Could show a modal with category preview or navigate to stores in that category
+    navigate(`/stores?category=${category.slug}`);
   };
 
   const handleCategoryClick = (category) => {
-    // Navigate to product collection with category filter
     navigate(`/product-collections?category=${category.slug}`);
   };
 
-  const typeOptions = categoryTypes.map((type) => ({
+  const categoryOptions = categoryTypes.map((type) => ({
     value: type.id,
     label: `${type.name} (${type.count})`,
   }));
+
+  const handleRetry = () => {
+    clearErrors();
+    fetchCategoryData();
+  };
+
+  // Loading state
+  if (isLoadingCategories) {
+    return (
+      <section className="py-16 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Loading Categories
+            </h2>
+            <p className="text-gray-600">
+              Please wait while we fetch the latest category data...
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Error state
+  if (storesError && !categoryData) {
+    return (
+      <section className="py-16 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Card className="text-center p-8 max-w-md mx-auto">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Failed to load categories
+            </h3>
+            <p className="text-gray-600 mb-4">{storesError}</p>
+            <Button onClick={handleRetry} className="inline-flex items-center">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </Card>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-16 bg-gray-50 min-h-screen">
@@ -281,6 +424,20 @@ const CategoriesCollection = () => {
             Discover our comprehensive collection of product categories
             featuring the best items and trusted sellers.
           </p>
+          {categoryData &&
+          Object.keys(categoryData.categoryCounts || {}).length > 0 ? (
+            <div className="mt-4 text-sm text-blue-600">
+              {Object.values(categoryData.categoryCounts).reduce(
+                (sum, count) => sum + count,
+                0
+              )}{" "}
+              total stores across all categories
+            </div>
+          ) : (
+            <div className="mt-4 text-sm text-gray-500">
+              Loading category data...
+            </div>
+          )}
         </div>
 
         {/* Search Bar */}
@@ -295,54 +452,61 @@ const CategoriesCollection = () => {
           </div>
         </div>
 
-        {/* Category Type Filter */}
+        {/* Category Filter */}
         <Card className="p-6 mb-8">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Category Types
+            Browse Categories
           </h3>
 
           {/* Mobile Dropdown */}
           <div className="block md:hidden mb-4">
             <Select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              options={typeOptions}
-              placeholder="Select category type"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              options={categoryOptions}
+              placeholder="Select category"
               size="md"
             />
           </div>
 
-          {/* Desktop Type Buttons */}
+          {/* Desktop Category Buttons */}
           <div className="hidden md:block">
             <div className="flex flex-wrap gap-3 mb-4">
               {categoryTypes
-                .slice(0, showAllTypes ? categoryTypes.length : maxVisibleTypes)
-                .map((type) => (
+                .slice(
+                  0,
+                  showAllCategories
+                    ? categoryTypes.length
+                    : maxVisibleCategories
+                )
+                .map((category) => (
                   <Button
-                    key={type.id}
-                    variant={selectedType === type.id ? "primary" : "outline"}
+                    key={category.id}
+                    variant={
+                      selectedCategory === category.id ? "primary" : "outline"
+                    }
                     size="sm"
-                    onClick={() => setSelectedType(type.id)}
+                    onClick={() => setSelectedCategory(category.id)}
                     className="flex items-center gap-2 touch-manipulation"
                   >
-                    <span>{type.name}</span>
+                    <span>{category.name}</span>
                     <Badge variant="default" size="sm">
-                      {type.count}
+                      {category.count}
                     </Badge>
                   </Button>
                 ))}
             </div>
 
             {/* Show More/Less Button */}
-            {categoryTypes.length > maxVisibleTypes && (
+            {categoryTypes.length > maxVisibleCategories && (
               <div className="flex justify-center">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowAllTypes(!showAllTypes)}
+                  onClick={() => setShowAllCategories(!showAllCategories)}
                   className="flex items-center gap-2 touch-manipulation"
                 >
-                  {showAllTypes ? (
+                  {showAllCategories ? (
                     <>
                       <span>Show Less</span>
                       <svg
@@ -362,8 +526,8 @@ const CategoriesCollection = () => {
                   ) : (
                     <>
                       <span>
-                        Show More Types (
-                        {categoryTypes.length - maxVisibleTypes} more)
+                        Show More Categories (
+                        {categoryTypes.length - maxVisibleCategories} more)
                       </span>
                       <svg
                         className="h-4 w-4"
@@ -393,10 +557,13 @@ const CategoriesCollection = () => {
             Showing {startIndex + 1}-
             {Math.min(endIndex, filteredCategories.length)} of{" "}
             {filteredCategories.length} categories
-            {selectedType !== "all" && (
+            {selectedCategory !== "all" && (
               <span className="ml-2 text-blue-600 font-medium">
                 in{" "}
-                {categoryTypes.find((type) => type.id === selectedType)?.name}
+                {
+                  categoryTypes.find((type) => type.id === selectedCategory)
+                    ?.name
+                }
               </span>
             )}
             {searchTerm && (
@@ -436,65 +603,94 @@ const CategoriesCollection = () => {
           </div>
         </div>
 
+        {/* No Categories from Backend */}
+        {!isLoadingCategories &&
+          categoryData &&
+          Object.keys(categoryData.categoryCounts || {}).length === 0 && (
+            <Card className="text-center py-12">
+              <div className="text-gray-400 mb-4">
+                <Store className="h-16 w-16 mx-auto" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                No categories available
+              </h3>
+              <p className="text-gray-500 mb-4">
+                There are currently no stores with categories in the system.
+              </p>
+              <Button
+                onClick={handleRetry}
+                className="inline-flex items-center"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            </Card>
+          )}
+
         {/* No Results Message */}
-        {filteredCategories.length === 0 && (
-          <Card className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <Package className="h-16 w-16 mx-auto" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">
-              No categories found
-            </h3>
-            <p className="text-gray-500 mb-4">
-              {searchTerm && selectedType !== "all"
-                ? `No categories found for "${searchTerm}" in ${
-                    categoryTypes.find((type) => type.id === selectedType)?.name
-                  }`
-                : searchTerm
-                ? `No categories found for "${searchTerm}"`
-                : selectedType !== "all"
-                ? `No categories found in ${
-                    categoryTypes.find((type) => type.id === selectedType)?.name
-                  }`
-                : "No categories found"}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              {searchTerm && (
-                <Button
-                  variant="outline"
-                  onClick={() => setSearchTerm("")}
-                  className="touch-manipulation"
-                >
-                  Clear Search
-                </Button>
-              )}
-              {selectedType !== "all" && (
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedType("all")}
-                  className="touch-manipulation"
-                >
-                  View All Types
-                </Button>
-              )}
-              {(searchTerm || selectedType !== "all") && (
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setSelectedType("all");
-                  }}
-                  className="touch-manipulation"
-                >
-                  Reset All Filters
-                </Button>
-              )}
-            </div>
-          </Card>
-        )}
+        {!isLoadingCategories &&
+          filteredCategories.length === 0 &&
+          categoryData &&
+          Object.keys(categoryData.categoryCounts || {}).length > 0 && (
+            <Card className="text-center py-12">
+              <div className="text-gray-400 mb-4">
+                <Package className="h-16 w-16 mx-auto" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                No categories found
+              </h3>
+              <p className="text-gray-500 mb-4">
+                {searchTerm && selectedCategory !== "all"
+                  ? `No categories found for "${searchTerm}" in ${
+                      categoryTypes.find((type) => type.id === selectedCategory)
+                        ?.name
+                    }`
+                  : searchTerm
+                  ? `No categories found for "${searchTerm}"`
+                  : selectedCategory !== "all"
+                  ? `No categories found in ${
+                      categoryTypes.find((type) => type.id === selectedCategory)
+                        ?.name
+                    }`
+                  : "No categories found"}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                {searchTerm && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setSearchTerm("")}
+                    className="touch-manipulation"
+                  >
+                    Clear Search
+                  </Button>
+                )}
+                {selectedCategory !== "all" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectedCategory("all")}
+                    className="touch-manipulation"
+                  >
+                    View All Categories
+                  </Button>
+                )}
+                {(searchTerm || selectedCategory !== "all") && (
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedCategory("all");
+                    }}
+                    className="touch-manipulation"
+                  >
+                    Reset All Filters
+                  </Button>
+                )}
+              </div>
+            </Card>
+          )}
 
         {/* Categories Grid */}
-        {filteredCategories.length > 0 && (
+        {!isLoadingCategories && filteredCategories.length > 0 && (
           <div
             className={`grid gap-6 mb-12 ${
               viewMode === "grid"
@@ -602,19 +798,7 @@ const CategoriesCollection = () => {
                       <span className="ml-1">products</span>
                     </div>
                     <div className="flex items-center text-sm text-gray-500">
-                      <svg
-                        className="h-4 w-4 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                        />
-                      </svg>
+                      <Store className="h-4 w-4 mr-2" />
                       <span className="font-medium">{category.shops}</span>
                       <span className="ml-1">shops</span>
                     </div>
@@ -641,15 +825,17 @@ const CategoriesCollection = () => {
         )}
 
         {/* Pagination */}
-        {filteredCategories.length > 0 && totalPages > 1 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            itemsPerPage={itemsPerPage}
-            totalItems={filteredCategories.length}
-          />
-        )}
+        {!isLoadingCategories &&
+          filteredCategories.length > 0 &&
+          totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              itemsPerPage={itemsPerPage}
+              totalItems={filteredCategories.length}
+            />
+          )}
       </div>
     </section>
   );
