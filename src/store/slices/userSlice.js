@@ -231,7 +231,7 @@ export const deleteWishlistItem = createAsyncThunk(
   }
 );
 
-// 📦 ORDER ASYNC THUNKS
+// ORDER ASYNC THUNKS
 export const placeOrder = createAsyncThunk(
   "user/placeOrder",
   async (orderData, { rejectWithValue }) => {
@@ -288,7 +288,7 @@ export const getShopReviews = createAsyncThunk(
   }
 );
 
-// 🏠 ADDRESS ASYNC THUNKS
+// ADDRESS ASYNC THUNKS
 export const getBuyerAddresses = createAsyncThunk(
   "user/getBuyerAddresses",
   async (buyerId, { rejectWithValue }) => {
@@ -345,7 +345,7 @@ export const deleteAddress = createAsyncThunk(
   }
 );
 
-// 👤 PROFILE ASYNC THUNKS
+// PROFILE ASYNC THUNKS
 export const updateUserProfile = createAsyncThunk(
   "user/updateUserProfile",
   async (profileData, { rejectWithValue }) => {
@@ -374,7 +374,7 @@ export const deleteUserAccount = createAsyncThunk(
   }
 );
 
-// 👤 GET USER PROFILE ASYNC THUNK
+// GET USER PROFILE ASYNC THUNK
 export const getUserProfile = createAsyncThunk(
   "user/getUserProfile",
   async (userId, { rejectWithValue }) => {
