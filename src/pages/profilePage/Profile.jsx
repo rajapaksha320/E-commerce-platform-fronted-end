@@ -449,8 +449,21 @@ const Profile = () => {
   };
 
   const validatePhone = (phone) => {
-    const phoneRegex = /^[+]?[1-9][\d]{0,15}$/;
-    return phoneRegex.test(phone.replace(/[\s\-()]/g, ""));
+    // Check if phone is a valid string
+    if (!phone || typeof phone !== 'string') {
+      return false;
+    }
+    
+    // Remove all spaces, dashes, and parentheses
+    const cleanedPhone = phone.replace(/[\s\-()]/g, "");
+    
+    // Validate Sri Lankan phone numbers:
+    // 1. Local format: 07XXXXXXXX (9-10 digits starting with 07)
+    // 2. International format: +947XXXXXXXX (11-12 digits starting with +947)
+    const localPhoneRegex = /^07\d{7,8}$/;
+    const internationalPhoneRegex = /^\+947\d{7,8}$/;
+    
+    return localPhoneRegex.test(cleanedPhone) || internationalPhoneRegex.test(cleanedPhone);
   };
 
   // Handle profile data changes
