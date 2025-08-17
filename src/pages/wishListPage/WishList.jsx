@@ -25,6 +25,8 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertCircle,
+  CheckCircle,
+  Bell,
 } from "lucide-react";
 
 import {
@@ -34,9 +36,7 @@ import {
 } from "../../components/ui/ContactUis/Uis";
 import useUser from "../../hooks/useUser";
 import { selectUser as selectAuthUser } from "../../store/slices/authSlice";
-import Pagination from "../../components/ui/Pagination"; 
-
-
+import Pagination from "../../components/ui/Pagination";
 
 const WishList = () => {
   const navigate = useNavigate();
@@ -50,6 +50,9 @@ const WishList = () => {
     fetchWishlist,
     removeFromWishlist,
     addItemToCart,
+    cartItems,
+    fetchCartItems,
+    isItemInCart,
     clearErrors,
   } = useUser();
 
@@ -60,18 +63,23 @@ const WishList = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
 
+  // Cart operation states
+  const [addingToCart, setAddingToCart] = useState(new Set());
+  const [notifications, setNotifications] = useState([]);
+
   // Pagination states
   const [productsPage, setProductsPage] = useState(1);
   const [shopsPage, setShopsPage] = useState(1);
   const productsPerPage = 8;
   const shopsPerPage = 6;
 
-  // Fetch wishlist on component mount
+  // Fetch wishlist and cart on component mount
   useEffect(() => {
     if (authUser?._id) {
       fetchWishlist(authUser._id);
+      fetchCartItems(authUser._id, 1, 100); // Fetch all cart items for checking
     }
-  }, [authUser, fetchWishlist]);
+  }, [authUser, fetchWishlist, fetchCartItems]);
 
   // Clear errors when component unmounts
   useEffect(() => {
@@ -186,9 +194,43 @@ const WishList = () => {
 
     try {
       await removeFromWishlist(authUser._id, itemId);
+      showNotification(`Item removed from wishlist`, "success");
     } catch (error) {
       console.error("Failed to remove from wishlist:", error);
+      showNotification(
+        "Failed to remove from wishlist. Please try again.",
+        "error"
+      );
     }
+  };
+
+  // Check if product is in cart
+  const isProductInCart = (productId) => {
+    return isItemInCart(productId);
+  };
+
+  // Show professional notification
+  const showNotification = (message, type = "success", action = null) => {
+    const id = Date.now();
+    const notification = {
+      id,
+      message,
+      type,
+      action,
+      timestamp: Date.now(),
+    };
+
+    setNotifications((prev) => [...prev, notification]);
+
+    // Auto-dismiss after 4 seconds
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    }, 4000);
+  };
+
+  // Remove notification manually
+  const removeNotification = (id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   // Handle add to cart
@@ -198,11 +240,45 @@ const WishList = () => {
       return;
     }
 
+    // Check if already in cart
+    if (isProductInCart(product._id)) {
+      showNotification("Item is already in your cart", "info", {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
+      return;
+    }
+
+    // Set loading state
+    setAddingToCart((prev) => new Set(prev).add(product._id));
+
     try {
-      await addItemToCart(authUser._id, product._id, 1);
-      // You can show a success message here
+      await addItemToCart(authUser._id, product._id, 1).unwrap();
+
+      // Refresh cart items to update status
+      await fetchCartItems(authUser._id, 1, 100);
+
+      showNotification(
+        `"${product.title}" added to cart successfully!`,
+        "success",
+        {
+          text: "View Cart",
+          action: () => navigate("/shopping-cart"),
+        }
+      );
     } catch (error) {
       console.error("Failed to add to cart:", error);
+      showNotification("Failed to add to cart. Please try again.", "error", {
+        text: "Retry",
+        action: () => handleAddToCart(product),
+      });
+    } finally {
+      // Remove loading state
+      setAddingToCart((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(product._id);
+        return newSet;
+      });
     }
   };
 
@@ -269,6 +345,48 @@ const WishList = () => {
     ));
   };
 
+  // Get cart button content
+  const getCartButtonContent = (product) => {
+    const productId = product._id;
+    const isLoading = addingToCart.has(productId);
+    const inCart = isProductInCart(productId);
+    const isOutOfStock = product.status === "outOfStock";
+
+    if (isLoading) {
+      return {
+        text: "Adding...",
+        icon: <Loader2 className="h-3 w-3 mr-1 animate-spin" />,
+        disabled: true,
+        variant: "primary",
+      };
+    }
+
+    if (inCart) {
+      return {
+        text: "In Cart",
+        icon: <CheckCircle className="h-3 w-3 mr-1" />,
+        disabled: false,
+        variant: "success",
+      };
+    }
+
+    if (isOutOfStock) {
+      return {
+        text: "Notify",
+        icon: <Bell className="h-3 w-3 mr-1" />,
+        disabled: true,
+        variant: "outline",
+      };
+    }
+
+    return {
+      text: "Add",
+      icon: <ShoppingCart className="h-3 w-3 mr-1" />,
+      disabled: false,
+      variant: "primary",
+    };
+  };
+
   // Loading state
   if (wishlistLoading) {
     return (
@@ -305,6 +423,167 @@ const WishList = () => {
           {shareMessage}
         </div>
       )}
+
+      {/* Professional Mobile-Responsive Toast Notifications */}
+      <div className="fixed top-16 sm:top-20 left-2 right-2 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 z-50 space-y-2 sm:w-full sm:max-w-md">
+        {notifications.map((notification) => (
+          <div
+            key={notification.id}
+            className={`
+              relative overflow-hidden rounded-lg sm:rounded-xl shadow-lg sm:shadow-2xl border backdrop-blur-sm
+              transform transition-all duration-500 ease-out
+              translate-y-0 opacity-100 scale-100
+              ${
+                notification.type === "success"
+                  ? "bg-white border-green-200 text-gray-800"
+                  : notification.type === "error"
+                  ? "bg-white border-red-200 text-gray-800"
+                  : "bg-white border-blue-200 text-gray-800"
+              }
+            `}
+            style={{
+              animation: "slideDown 0.5s ease-out",
+            }}
+          >
+            {/* Progress bar */}
+            <div
+              className={`absolute top-0 left-0 h-0.5 sm:h-1 ${
+                notification.type === "success"
+                  ? "bg-green-500"
+                  : notification.type === "error"
+                  ? "bg-red-500"
+                  : "bg-blue-500"
+              }`}
+              style={{
+                width: "100%",
+                animation: "progress 4s linear",
+              }}
+            />
+
+            <div className="p-3 sm:p-4">
+              <div className="flex items-start space-x-2 sm:space-x-3">
+                {/* Icon */}
+                <div
+                  className={`flex-shrink-0 p-1 sm:p-1.5 rounded-full ${
+                    notification.type === "success"
+                      ? "bg-green-100"
+                      : notification.type === "error"
+                      ? "bg-red-100"
+                      : "bg-blue-100"
+                  }`}
+                >
+                  {notification.type === "success" && (
+                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                  )}
+                  {notification.type === "error" && (
+                    <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
+                  )}
+                  {notification.type === "info" && (
+                    <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-900 leading-relaxed line-clamp-2">
+                    {notification.message}
+                  </p>
+
+                  {/* Action button */}
+                  {notification.action && (
+                    <button
+                      onClick={() => {
+                        notification.action.action();
+                        removeNotification(notification.id);
+                      }}
+                      className={`mt-1.5 sm:mt-2 text-xs sm:text-sm font-semibold underline-offset-2 hover:underline active:scale-95 transition-all duration-200 ${
+                        notification.type === "success"
+                          ? "text-green-700 hover:text-green-800 active:text-green-900"
+                          : notification.type === "error"
+                          ? "text-red-700 hover:text-red-800 active:text-red-900"
+                          : "text-blue-700 hover:text-blue-800 active:text-blue-900"
+                      }`}
+                    >
+                      {notification.action.text}
+                    </button>
+                  )}
+                </div>
+
+                {/* Close button */}
+                <button
+                  onClick={() => removeNotification(notification.id)}
+                  className="flex-shrink-0 p-1.5 sm:p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 active:bg-gray-200 active:scale-95 transition-all duration-200 touch-manipulation"
+                  aria-label="Close notification"
+                >
+                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <style jsx>{`
+        @keyframes slideDown {
+          from {
+            transform: translateY(-100%);
+            opacity: 0;
+            scale: 0.95;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+            scale: 1;
+          }
+        }
+
+        @keyframes progress {
+          from {
+            width: 100%;
+          }
+          to {
+            width: 0%;
+          }
+        }
+
+        /* Mobile-specific optimizations */
+        @media (max-width: 640px) {
+          @keyframes slideDown {
+            from {
+              transform: translateY(-100%);
+              opacity: 0;
+              scale: 0.98;
+            }
+            to {
+              transform: translateY(0);
+              opacity: 1;
+              scale: 1;
+            }
+          }
+        }
+
+        /* Ensure proper line clamping */
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        /* Touch-friendly interactions */
+        .touch-manipulation {
+          touch-action: manipulation;
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Prevent text selection on notification */
+        .notification-content {
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+        }
+      `}</style>
 
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
@@ -494,10 +773,13 @@ const WishList = () => {
                           src={
                             shop.shopMedia?.storeLogo ||
                             shop.shopMedia?.bannerImage ||
-                            "/api/placeholder/400/200"
+                            "/placehold.png"
                           }
                           alt={shop.basicInformation?.storeName || "Shop"}
                           className="w-full h-36 sm:h-48 object-cover rounded-lg mb-3 sm:mb-4"
+                          onError={(e) => {
+                            e.target.src = "/placehold.png";
+                          }}
                         />
                         <div className="absolute top-2 sm:top-3 left-2 sm:left-3">
                           <Badge
@@ -621,111 +903,122 @@ const WishList = () => {
                       : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1"
                   }`}
                 >
-                  {displayProducts.map((product) => (
-                    <Card
-                      key={product._id}
-                      className={`group hover:shadow-lg transition-all duration-300 ${
-                        viewMode === "list" ? "lg:flex lg:space-x-4" : ""
-                      }`}
-                    >
-                      <div
-                        className={`relative ${
-                          viewMode === "list" ? "lg:w-48 lg:flex-shrink-0" : ""
+                  {displayProducts.map((product) => {
+                    const cartButton = getCartButtonContent(product);
+
+                    return (
+                      <Card
+                        key={product._id}
+                        className={`group hover:shadow-lg transition-all duration-300 ${
+                          viewMode === "list" ? "lg:flex lg:space-x-4" : ""
                         }`}
                       >
-                        <img
-                          src={
-                            product.images?.[0]?.url ||
-                            "/api/placeholder/400/400"
-                          }
-                          alt={product.title || "Product"}
-                          className={`w-full object-cover rounded-lg ${
+                        <div
+                          className={`relative ${
                             viewMode === "list"
-                              ? "aspect-square lg:h-32 lg:w-32"
-                              : "aspect-square"
-                          } mb-2 sm:mb-3`}
-                        />
-                        <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2">
-                          <Badge
-                            variant={getBadgeVariant(product.status)}
-                            size="sm"
-                            className="text-xs"
-                          >
-                            {product.status || "Active"}
-                          </Badge>
-                        </div>
-                        <button
-                          onClick={() =>
-                            handleRemoveFromWishlist("products", product._id)
-                          }
-                          className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1 sm:p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-all group-hover:scale-110"
+                              ? "lg:w-48 lg:flex-shrink-0"
+                              : ""
+                          }`}
                         >
-                          <X className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-600 hover:text-red-600" />
-                        </button>
-                        {product.status === "outOfStock" && (
-                          <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                            <span className="text-white font-medium text-xs bg-red-600 px-2 py-1 rounded-full">
-                              Out of Stock
-                            </span>
+                          <img
+                            src={product.images?.[0]?.url || "/placehold.png"}
+                            alt={product.title || "Product"}
+                            className={`w-full object-cover rounded-lg ${
+                              viewMode === "list"
+                                ? "aspect-square lg:h-32 lg:w-32"
+                                : "aspect-square"
+                            } mb-2 sm:mb-3`}
+                            onError={(e) => {
+                              e.target.src = "/placehold.png";
+                            }}
+                          />
+                          <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2">
+                            <Badge
+                              variant={getBadgeVariant(product.status)}
+                              size="sm"
+                              className="text-xs"
+                            >
+                              {product.status || "Active"}
+                            </Badge>
                           </div>
-                        )}
-                      </div>
-
-                      <div
-                        className={`space-y-1.5 sm:space-y-2 ${
-                          viewMode === "list" ? "lg:flex-1" : ""
-                        }`}
-                      >
-                        <div>
-                          <p className="text-xs text-blue-600 font-medium">
-                            {product.brand}
-                          </p>
-                          <h3 className="font-medium text-gray-900 text-xs sm:text-sm line-clamp-2">
-                            {product.title}
-                          </h3>
-                        </div>
-
-                        <div className="flex items-center space-x-1">
-                          {renderStars(product.averageRating || 0)}
-                          <span className="text-xs text-gray-600">
-                            ({product.averageRating || 0})
-                          </span>
-                        </div>
-
-                        <div className="flex items-baseline space-x-1 sm:space-x-2">
-                          <span className="font-bold text-gray-900 text-sm sm:text-base">
-                            LKR {product.variations?.[0]?.price || "0"}
-                          </span>
-                          {product.variations?.[0]?.originalPrice && (
-                            <span className="text-xs sm:text-sm text-gray-500 line-through">
-                              LKR {product.variations[0].originalPrice}
-                            </span>
+                          <button
+                            onClick={() =>
+                              handleRemoveFromWishlist("products", product._id)
+                            }
+                            className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1 sm:p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-all group-hover:scale-110"
+                          >
+                            <X className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-600 hover:text-red-600" />
+                          </button>
+                          {product.status === "outOfStock" && (
+                            <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                              <span className="text-white font-medium text-xs bg-red-600 px-2 py-1 rounded-full">
+                                Out of Stock
+                              </span>
+                            </div>
                           )}
                         </div>
 
-                        <div className="flex space-x-1.5 sm:space-x-2 pt-1 sm:pt-2">
-                          <Button
-                            onClick={() => handleViewProduct(product._id)}
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 text-xs py-1.5"
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            View
-                          </Button>
-                          <Button
-                            onClick={() => handleAddToCart(product)}
-                            size="sm"
-                            className="flex-1 text-xs py-1.5"
-                            disabled={product.status === "outOfStock"}
-                          >
-                            <ShoppingCart className="h-3 w-3 mr-1" />
-                            {product.status === "outOfStock" ? "Notify" : "Add"}
-                          </Button>
+                        <div
+                          className={`space-y-1.5 sm:space-y-2 ${
+                            viewMode === "list" ? "lg:flex-1" : ""
+                          }`}
+                        >
+                          <div>
+                            <p className="text-xs text-blue-600 font-medium">
+                              {product.brand}
+                            </p>
+                            <h3 className="font-medium text-gray-900 text-xs sm:text-sm line-clamp-2">
+                              {product.title}
+                            </h3>
+                          </div>
+
+                          <div className="flex items-center space-x-1">
+                            {renderStars(product.averageRating || 0)}
+                            <span className="text-xs text-gray-600">
+                              ({product.averageRating || 0})
+                            </span>
+                          </div>
+
+                          <div className="flex items-baseline space-x-1 sm:space-x-2">
+                            <span className="font-bold text-gray-900 text-sm sm:text-base">
+                              LKR {product.variations?.[0]?.price || "0"}
+                            </span>
+                            {product.variations?.[0]?.originalPrice && (
+                              <span className="text-xs sm:text-sm text-gray-500 line-through">
+                                LKR {product.variations[0].originalPrice}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex space-x-1.5 sm:space-x-2 pt-1 sm:pt-2">
+                            <Button
+                              onClick={() => handleViewProduct(product._id)}
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 text-xs py-1.5"
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              View
+                            </Button>
+                            <Button
+                              onClick={() => handleAddToCart(product)}
+                              size="sm"
+                              variant={cartButton.variant}
+                              className={`flex-1 text-xs py-1.5 ${
+                                cartButton.variant === "success"
+                                  ? "bg-green-600 hover:bg-green-700 text-white"
+                                  : ""
+                              }`}
+                              disabled={cartButton.disabled}
+                            >
+                              {cartButton.icon}
+                              {cartButton.text}
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    );
+                  })}
                 </div>
 
                 {/* Products Pagination */}
