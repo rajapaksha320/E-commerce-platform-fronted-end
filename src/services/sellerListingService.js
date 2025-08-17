@@ -467,11 +467,8 @@ const sellerService = {
   },
 
   // Status mapping utilities
-  /**
-   * Map frontend status to backend status
-   * @param {string} frontendStatus - Frontend status
-   * @returns {string} - Backend status
-   */
+
+  // Map frontend status to backend status
   mapFrontendToBackendStatus: (frontendStatus) => {
     const statusMap = {
       'active': 'active',
@@ -485,11 +482,7 @@ const sellerService = {
     return statusMap[frontendStatus] || frontendStatus;
   },
 
-  /**
-   * Map backend status to frontend status
-   * @param {string} backendStatus - Backend status
-   * @returns {string} - Frontend status
-   */
+  //  Map backend status to frontend status
   mapBackendToFrontendStatus: (backendStatus) => {
     const statusMap = {
       'active': 'active',
