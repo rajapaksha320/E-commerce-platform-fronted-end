@@ -1,7 +1,7 @@
 import { useSelector, useDispatch } from "react-redux";
 import { useCallback } from "react";
 import {
-  // Actions
+  // Actions import
   getAllStores,
   filterStoresByCategory,
   getShopListings,
@@ -88,7 +88,7 @@ import {
 const useUser = () => {
   const dispatch = useDispatch();
 
-  // 🏪 STORE STATE
+  // STORE STATE
   const stores = useSelector(selectStores);
   const filteredStores = useSelector(selectFilteredStores);
   const storeListings = useSelector(selectStoreListings);
@@ -96,7 +96,7 @@ const useUser = () => {
   const storesLoading = useSelector(selectStoresLoading);
   const storesError = useSelector(selectStoresError);
 
-  // 🛒 CART STATE
+  // CART STATE
   const cartItems = useSelector(selectCartItems);
   const cartPagination = useSelector(selectCartPagination);
   const cartLoading = useSelector(selectCartLoading);
@@ -104,57 +104,57 @@ const useUser = () => {
   const cartItemCount = useSelector(selectCartItemCount);
   const cartTotal = useSelector(selectCartTotal);
 
-  // ❤️ WISHLIST STATE
+  // WISHLIST STATE
   const wishlist = useSelector(selectWishlist);
   const productWishlist = useSelector(selectProductWishlist);
   const shopWishlist = useSelector(selectShopWishlist);
   const wishlistLoading = useSelector(selectWishlistLoading);
   const wishlistError = useSelector(selectWishlistError);
 
-  // 📦 ORDERS STATE
+  // ORDERS STATE
   const orders = useSelector(selectOrders);
   const ordersPagination = useSelector(selectOrdersPagination);
   const ordersLoading = useSelector(selectOrdersLoading);
   const ordersError = useSelector(selectOrdersError);
 
-  // ⭐ REVIEWS STATE
+  // REVIEWS STATE
   const shopReviews = useSelector(selectShopReviews);
   const reviewsPagination = useSelector(selectReviewsPagination);
   const reviewsLoading = useSelector(selectReviewsLoading);
   const reviewsError = useSelector(selectReviewsError);
 
-  // 🏠 ADDRESS STATE
+  // ADDRESS STATE
   const addresses = useSelector(selectAddresses);
   const defaultAddress = useSelector(selectDefaultAddress);
   const addressesLoading = useSelector(selectAddressesLoading);
   const addressesError = useSelector(selectAddressesError);
 
-  // 👤 PROFILE STATE
+  // PROFILE STATE
   const userProfile = useSelector(selectUserProfile);
   const profileLoading = useSelector(selectProfileLoading);
   const profileError = useSelector(selectProfileError);
 
-  // 🔍 SEARCH STATE
+  // SEARCH STATE
   const searchResults = useSelector(selectSearchResults);
   const searchPagination = useSelector(selectSearchPagination);
   const searchLoading = useSelector(selectSearchLoading);
   const searchError = useSelector(selectSearchError);
   const lastSearchParams = useSelector(selectLastSearchParams);
 
-  // 🏪 STORE SEARCH STATE
+  // STORE SEARCH STATE
   const storeSearchResults = useSelector(selectStoreSearchResults);
   const storeSearchPagination = useSelector(selectStoreSearchPagination);
   const storeSearchLoading = useSelector(selectStoreSearchLoading);
   const storeSearchError = useSelector(selectStoreSearchError);
   const lastStoreSearchParams = useSelector(selectLastStoreSearchParams);
 
-  // 🔄 GENERAL STATE
+  // GENERAL STATE
   const loading = useSelector(selectUserLoading);
   const error = useSelector(selectUserError);
   const success = useSelector(selectUserSuccess);
   const message = useSelector(selectUserMessage);
 
-  // 🏪 STORE ACTIONS
+  // STORE ACTIONS
   const fetchAllStores = useCallback(
     (page = 1, pageSize = 10) => {
       return dispatch(getAllStores({ page, pageSize }));
@@ -176,7 +176,7 @@ const useUser = () => {
     [dispatch]
   );
 
-  // 🛒 CART ACTIONS
+  // CART ACTIONS
   const addItemToCart = useCallback(
     (buyerId, listingId, quantity = 1) => {
       return dispatch(addToCart({ buyerId, listingId, quantity }));
@@ -205,7 +205,7 @@ const useUser = () => {
     [dispatch]
   );
 
-  // ❤️ WISHLIST ACTIONS
+  // WISHLIST ACTIONS
   const fetchWishlist = useCallback(
     (userId) => {
       return dispatch(getWishlist(userId));
@@ -227,7 +227,7 @@ const useUser = () => {
     [dispatch]
   );
 
-  // 📦 ORDER ACTIONS
+  // ORDER ACTIONS
   const createOrder = useCallback(
     (orderData) => {
       return dispatch(placeOrder(orderData));
@@ -256,7 +256,7 @@ const useUser = () => {
     [dispatch]
   );
 
-  // 🏠 ADDRESS ACTIONS
+  // ADDRESS ACTIONS
   const fetchAddresses = useCallback(
     (buyerId) => {
       return dispatch(getBuyerAddresses(buyerId));
@@ -285,7 +285,7 @@ const useUser = () => {
     [dispatch]
   );
 
-  // 👤 PROFILE ACTIONS
+  // PROFILE ACTIONS
   const updateProfile = useCallback(
     (profileData) => {
       return dispatch(updateUserProfile(profileData));
@@ -307,7 +307,7 @@ const useUser = () => {
     [dispatch]
   );
 
-  // 🔍 SEARCH ACTIONS
+  // SEARCH ACTIONS
   const searchAllProducts = useCallback(
     (searchParams, page = 1, pageSize = 10) => {
       return dispatch(searchProducts({ searchParams, page, pageSize }));
@@ -324,7 +324,7 @@ const useUser = () => {
     [dispatch]
   );
 
-  // 🔄 UTILITY ACTIONS
+  // UTILITY ACTIONS
   const clearErrors = useCallback(() => {
     dispatch(clearError());
   }, [dispatch]);
@@ -365,7 +365,7 @@ const useUser = () => {
     dispatch(clearStoreSearchResults());
   }, [dispatch]);
 
-  // 🔍 HELPER FUNCTIONS
+  // HELPER FUNCTIONS
   const isItemInCart = useCallback(
     (listingId) => {
       return cartItems.some((item) => item.listingId === listingId);
@@ -416,7 +416,7 @@ const useUser = () => {
     [orders]
   );
 
-  // 🔍 SEARCH HELPER FUNCTIONS
+  // SEARCH HELPER FUNCTIONS
   const performSearch = useCallback(
     (filters = {}, page = 1, pageSize = 10) => {
       const searchParams = {
@@ -472,7 +472,7 @@ const useUser = () => {
     };
   }, [lastStoreSearchParams]);
 
-  // 🚀 BULK OPERATIONS
+  // BULK OPERATIONS
   const bulkAddToCart = useCallback(
     async (buyerId, items) => {
       const promises = items.map((item) =>
@@ -509,7 +509,7 @@ const useUser = () => {
     [dispatch]
   );
 
-  // 📱 QUICK ACTIONS
+  // QUICK ACTIONS
   const quickAddToCart = useCallback(
     (buyerId, listingId) => {
       return addItemToCart(buyerId, listingId, 1);
@@ -559,7 +559,7 @@ const useUser = () => {
     [createOrder]
   );
 
-  // 📊 COMPUTED VALUES
+  // COMPUTED VALUES
   const cartSummary = {
     itemCount: cartItemCount,
     total: cartTotal,
@@ -589,7 +589,7 @@ const useUser = () => {
   const addressesSummary = {
     total: addresses.length,
     hasDefault: !!defaultAddress,
-    maxReached: addresses.length >= 5, // API limit
+    maxReached: addresses.length >= 5,
   };
 
   const searchSummary = {
@@ -611,7 +611,7 @@ const useUser = () => {
   };
 
   return {
-    // 📊 STATE
+    // STATE
     stores,
     filteredStores,
     storeListings,
@@ -659,7 +659,7 @@ const useUser = () => {
     success,
     message,
 
-    // 🎬 ACTIONS
+    // ACTIONS
     fetchAllStores,
     fetchStoresByCategory,
     fetchShopListings,
@@ -694,7 +694,7 @@ const useUser = () => {
     resetSearchResults,
     resetStoreSearchResults,
 
-    // 🔍 HELPERS
+    // HELPERS
     isItemInCart,
     isItemInProductWishlist,
     isItemInShopWishlist,
@@ -703,7 +703,7 @@ const useUser = () => {
     getPendingReviewOrders,
     getOrdersByStatus,
 
-    // 📊 SUMMARIES
+    // SUMMARIES
     cartSummary,
     wishlistSummary,
     ordersSummary,
@@ -711,17 +711,17 @@ const useUser = () => {
     searchSummary,
     storeSearchSummary,
 
-    // 🚀 BULK OPERATIONS
+    // BULK OPERATIONS
     bulkAddToCart,
     bulkRemoveFromCart,
     bulkAddToWishlist,
 
-    // 📱 QUICK ACTIONS
+    // QUICK ACTIONS
     quickAddToCart,
     quickToggleWishlist,
     quickReorder,
 
-    // 🔍 SEARCH HELPERS
+    // SEARCH HELPERS
     performSearch,
     performStoreSearch,
     getSearchFilters,

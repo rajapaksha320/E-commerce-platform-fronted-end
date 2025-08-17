@@ -389,7 +389,7 @@ export const getUserProfile = createAsyncThunk(
   }
 );
 
-// 🔍 SEARCH & FILTER ASYNC THUNKS
+// SEARCH & FILTER ASYNC THUNKS
 export const searchProducts = createAsyncThunk(
   "user/searchProducts",
   async ({ searchParams, page = 1, pageSize = 10 }, { rejectWithValue }) => {
