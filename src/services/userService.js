@@ -25,6 +25,18 @@ const userService = {
     );
   },
 
+  // Get shop details by ID
+  getShopDetailsById: async (shopId) => {
+    return await axiosInstance.get(`/api/v1/store/get-store-by-id/${shopId}`);
+  },
+
+  // LISTING SERVICES
+
+  // Get listing by ID with seller info
+  getListingById: async (listingId) => {
+    return await axiosInstance.get(`/api/v1/listing/one-listing/${listingId}`);
+  },
+
   // CART SERVICES
 
   // Add item to cart
@@ -275,11 +287,6 @@ const userService = {
     return await axiosInstance.get(`/api/v1/store/${storeId}`);
   },
 
-  // Get listing by ID
-  getListingById: async (listingId) => {
-    return await axiosInstance.get(`/api/v1/listing/${listingId}`);
-  },
-
   // ANALYTICS HELPERS (if needed)
 
   // Get popular stores
@@ -392,7 +399,7 @@ const userService = {
       };
 
       listings.forEach((response, index) => {
-        const listing = response.data;
+        const listing = response.data.listing;
         if (listing.status !== "active") {
           validation.isValid = false;
           validation.unavailableItems.push(listing._id);
