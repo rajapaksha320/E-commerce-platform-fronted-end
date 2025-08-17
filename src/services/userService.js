@@ -240,6 +240,7 @@ const userService = {
       CustomerRating: searchParams.CustomerRating,
       color: searchParams.color,
       brandName: searchParams.brandName,
+      title: searchParams.title,
       page,
       pageSize,
     };
@@ -263,6 +264,7 @@ const userService = {
       CustomerRating: searchParams.CustomerRating,
       color: searchParams.color,
       brandName: searchParams.brandName,
+      title: searchParams.title,
       page,
       pageSize,
     };

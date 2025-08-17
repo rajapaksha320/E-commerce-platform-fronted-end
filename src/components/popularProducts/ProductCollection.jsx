@@ -233,6 +233,18 @@ const ProductCollection = () => {
   // State to track if URL parameters have been loaded
   const [urlParamsLoaded, setUrlParamsLoaded] = useState(false);
 
+  // Debounced search term
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  // Debounce search term to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   // Read URL parameters on component mount
   useEffect(() => {
     console.log(
@@ -292,6 +304,7 @@ const ProductCollection = () => {
 
     const performSearch = async () => {
       console.log("Performing search with category:", selectedCategory);
+      console.log("Search term:", debouncedSearchTerm);
 
       const searchFilters = {
         categoryMain: selectedCategory !== "all" ? selectedCategory : "",
@@ -299,6 +312,7 @@ const ProductCollection = () => {
         CustomerRating: selectedRating !== "all" ? parseInt(selectedRating) : 0,
         color: "",
         brandName: "",
+        title: debouncedSearchTerm || "", // Add title filter for search functionality
       };
 
       console.log("Search filters:", searchFilters);
@@ -332,11 +346,12 @@ const ProductCollection = () => {
 
     performSearch();
   }, [
-    urlParamsLoaded, // Add this dependency
+    urlParamsLoaded,
     selectedCategory,
     selectedPriceRange,
     selectedRating,
     currentPage,
+    debouncedSearchTerm, // Use debounced search term instead of immediate search term
     searchAllProducts,
     fetchStoresByCategory,
   ]);
@@ -375,7 +390,8 @@ const ProductCollection = () => {
 
   const handleSearchChange = (search) => {
     setSearchTerm(search);
-    updateURLParams({ search });
+    setCurrentPage(1); // Reset to first page when searching
+    updateURLParams({ search, page: 1 });
   };
 
   const handlePriceRangeChange = (priceRange) => {
@@ -662,11 +678,30 @@ const ProductCollection = () => {
               <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
               <input
                 type="text"
-                placeholder="Search products..."
+                placeholder="Search products by title..."
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 text-sm sm:text-lg border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-white shadow-sm touch-manipulation"
+                className="w-full pl-10 sm:pl-12 pr-12 sm:pr-16 py-3 sm:py-4 text-sm sm:text-lg border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-white shadow-sm touch-manipulation"
               />
+              {/* Loading indicator for search */}
+              {searchTerm !== debouncedSearchTerm && (
+                <div className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-blue-500" />
+                </div>
+              )}
+              {/* Clear search button */}
+              {searchTerm && searchTerm === debouncedSearchTerm && (
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setCurrentPage(1);
+                    updateURLParams({ search: "", page: 1 });
+                  }}
+                  className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ×
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -870,7 +905,11 @@ const ProductCollection = () => {
                 {searchTerm && (
                   <Button
                     variant="outline"
-                    onClick={() => handleSearchChange("")}
+                    onClick={() => {
+                      setSearchTerm("");
+                      setCurrentPage(1);
+                      updateURLParams({ search: "", page: 1 });
+                    }}
                     className="touch-manipulation"
                   >
                     Clear Search
