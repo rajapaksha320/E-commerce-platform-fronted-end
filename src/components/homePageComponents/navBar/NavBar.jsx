@@ -71,6 +71,8 @@ const NavBar = () => {
 
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
+  const mobileSearchRef = useRef(null);
+  const mobileDropdownRef = useRef(null);
 
   // Get user ID for fetching cart and wishlist
   const userId = user?._id || user?.userId;
@@ -106,11 +108,17 @@ const NavBar = () => {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
+      // Handle desktop search dropdown
       if (
         searchRef.current &&
         !searchRef.current.contains(event.target) &&
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
+        !dropdownRef.current.contains(event.target) &&
+        // Also check mobile search elements
+        (!mobileSearchRef.current ||
+          !mobileSearchRef.current.contains(event.target)) &&
+        (!mobileDropdownRef.current ||
+          !mobileDropdownRef.current.contains(event.target))
       ) {
         setIsSearchDropdownOpen(false);
         setIsSearchFocused(false);
@@ -136,6 +144,7 @@ const NavBar = () => {
     const value = e.target.value;
     setSearchQuery(value);
 
+    // Show dropdown when there's input or when focused
     if (value.length > 0 || isSearchFocused) {
       setIsSearchDropdownOpen(true);
     } else {
@@ -145,10 +154,12 @@ const NavBar = () => {
 
   const handleSearchFocus = () => {
     setIsSearchFocused(true);
+    // Show dropdown on focus even without query for search tips
     setIsSearchDropdownOpen(true);
   };
 
   const handleSearchBlur = () => {
+    // Delay hiding to allow for dropdown interactions
     setTimeout(() => {
       setIsSearchFocused(false);
       if (!searchQuery) {
@@ -173,6 +184,7 @@ const NavBar = () => {
   const handleProductSelect = (product) => {
     setIsSearchDropdownOpen(false);
     setIsSearchFocused(false);
+    setSearchQuery(""); // Clear search after selection
     navigate(`/product/${product.id}`);
   };
 
@@ -299,17 +311,6 @@ const NavBar = () => {
 
                 {/* Action Icons */}
                 <div className="flex items-center space-x-1 sm:space-x-2">
-                  {/* Notifications - Tablet and Desktop */}
-                  {/* <Button
-                    variant="ghost"
-                    className="hidden md:block relative p-2 xl:p-2.5 text-gray-600 hover:text-blue-600 transition-all duration-200 rounded-xl hover:bg-blue-50 group"
-                  >
-                    <Bell className="h-4 w-4 xl:h-5 xl:w-5" />
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-3 w-3 xl:h-4 xl:w-4 flex items-center justify-center animate-pulse text-[10px] xl:text-xs">
-                      2
-                    </span>
-                  </Button> */}
-
                   {/* Wishlist: Updated with real count */}
                   <Button
                     variant="ghost"
@@ -468,28 +469,6 @@ const NavBar = () => {
                                   {realWishlistCount || 0}
                                 </span>
                               </Button>
-                              {/* <Button
-                                variant="ghost"
-                                onClick={() => {
-                                  navigate("/track-parcel");
-                                  setIsProfileMenuOpen(false);
-                                }}
-                                className="flex items-center w-full px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 justify-start"
-                              >
-                                <LocateFixed className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
-                                Track Orders
-                              </Button> */}
-                              {/* <Button
-                                variant="ghost"
-                                onClick={() => {
-                                  navigate("/profile");
-                                  setIsProfileMenuOpen(false);
-                                }}
-                                className="flex items-center w-full px-4 xl:px-6 py-2.5 xl:py-3 text-xs xl:text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 justify-start"
-                              >
-                                <Settings className="h-4 w-4 xl:h-5 xl:w-5 mr-3" />
-                                Settings
-                              </Button> */}
 
                               {/* Seller-specific menu item */}
                               {userRole === "seller" && (
@@ -557,7 +536,7 @@ const NavBar = () => {
                   <div className="relative group">
                     <Input
                       type="text"
-                      placeholder="Search for products, brands and more..."
+                      placeholder="Search for products ..."
                       value={searchQuery}
                       onChange={handleSearchChange}
                       onFocus={handleSearchFocus}
@@ -592,24 +571,40 @@ const NavBar = () => {
         {/* Mobile Search */}
         <div className="md:hidden bg-gradient-to-r from-gray-50 to-blue-50/30 border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
-            <form onSubmit={handleSearchSubmit}>
-              <div className="relative">
-                <Input
-                  type="text"
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  className="w-full pl-4 pr-11 py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white shadow-sm text-sm placeholder-gray-400"
+            <div className="relative" ref={mobileSearchRef}>
+              <form onSubmit={handleSearchSubmit}>
+                <div className="relative">
+                  <Input
+                    type="text"
+                    placeholder="Search products..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onFocus={handleSearchFocus}
+                    onBlur={handleSearchBlur}
+                    className="w-full pl-4 pr-11 py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white shadow-sm text-sm placeholder-gray-400"
+                  />
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="absolute right-2 top-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-colors touch-manipulation"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </div>
+              </form>
+
+              {/* Mobile Search Dropdown */}
+              <div ref={mobileDropdownRef}>
+                <SearchDropdown
+                  searchQuery={searchQuery}
+                  isOpen={isSearchDropdownOpen}
+                  onClose={() => setIsSearchDropdownOpen(false)}
+                  onViewAll={handleViewAllResults}
+                  onProductSelect={handleProductSelect}
+                  isMobile={true}
                 />
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="absolute right-2 top-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-colors touch-manipulation"
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
 
