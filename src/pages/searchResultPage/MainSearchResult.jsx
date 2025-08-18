@@ -18,6 +18,8 @@ import {
   Package,
   Truck,
   MapPin,
+  Loader,
+  AlertCircle,
 } from "lucide-react";
 
 import {
@@ -27,17 +29,45 @@ import {
 } from "../../components/ui/ContactUis/Uis";
 import SearchFilters from "./SearchFilters";
 import Pagination from "../../components/ui/ContactUis/Pagination";
+import ToastNotification, {
+  useToast,
+} from "../../components/ui/ToastNotification";
+import useUser from "../../hooks/useUser";
+import { useSelector } from "react-redux";
+import { selectUser as selectAuthUser } from "../../store/slices/authSlice";
 
 const MainSearchResult = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const authUser = useSelector(selectAuthUser);
+
+  // Toast notification hook
+  const { toastRef, showToast } = useToast();
+
+  // Redux hooks
+  const {
+    searchResults,
+    searchPagination,
+    searchLoading,
+    searchError,
+    lastSearchParams,
+    searchAllProducts,
+    addItemToCart,
+    cartLoading,
+    quickToggleWishlist,
+    isItemInProductWishlist,
+    isItemInCart,
+    fetchWishlist,
+    removeFromWishlist,
+    resetSearchResults, // ✅ FIXED: Use resetSearchResults instead of clearSearchResults
+  } = useUser();
 
   const [viewMode, setViewMode] = useState("grid");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [sortBy, setSortBy] = useState("best_match");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const itemsPerPage = 10;
 
   const [filters, setFilters] = useState({
     categories: [],
@@ -54,227 +84,6 @@ const MainSearchResult = () => {
     conditions: [],
   });
 
-  // Extended mock products data
-  const allProducts = [
-    {
-      id: 1,
-      name: "Wireless Bluetooth Headphones Pro Max",
-      category: "electronics",
-      brand: "apple",
-      image:
-        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
-      price: 179.99,
-      originalPrice: 249.99,
-      rating: 4.8,
-      reviews: 234,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: true,
-      verified: true,
-      colors: ["black", "white", "blue"],
-      sizes: [],
-      locations: ["us"],
-      conditions: ["new"],
-      badge: "Best Seller",
-      discount: 28,
-      shop: "TechHub Electronics",
-    },
-    {
-      id: 2,
-      name: "Smart Fitness Watch Series 5 GPS",
-      category: "electronics",
-      brand: "samsung",
-      image:
-        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
-      price: 299.99,
-      originalPrice: 399.99,
-      rating: 4.7,
-      reviews: 189,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: false,
-      verified: true,
-      colors: ["black", "white", "red"],
-      sizes: ["s", "m", "l"],
-      locations: ["us", "ca"],
-      conditions: ["new"],
-      badge: "New Arrival",
-      discount: 25,
-      shop: "SportsTech Store",
-    },
-    {
-      id: 3,
-      name: "Portable Bluetooth Speaker Waterproof",
-      category: "electronics",
-      brand: "sony",
-      image:
-        "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&h=300&fit=crop",
-      price: 89.99,
-      originalPrice: 129.99,
-      rating: 4.6,
-      reviews: 156,
-      inStock: true,
-      freeShipping: false,
-      fastDelivery: true,
-      verified: false,
-      colors: ["black", "blue", "red"],
-      sizes: [],
-      locations: ["uk"],
-      conditions: ["new"],
-      badge: "Popular",
-      discount: 31,
-      shop: "Audio World",
-    },
-    {
-      id: 4,
-      name: "Gaming Mechanical Keyboard RGB",
-      category: "electronics",
-      brand: "lg",
-      image:
-        "https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=300&h=300&fit=crop",
-      price: 149.99,
-      originalPrice: 199.99,
-      rating: 4.9,
-      reviews: 278,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: true,
-      verified: true,
-      colors: ["black", "white"],
-      sizes: [],
-      locations: ["us"],
-      conditions: ["new"],
-      badge: "Premium",
-      discount: 25,
-      shop: "Gaming Central",
-    },
-    {
-      id: 5,
-      name: "Wireless Charging Pad 15W Fast",
-      category: "electronics",
-      brand: "apple",
-      image:
-        "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=300&h=300&fit=crop",
-      price: 49.99,
-      originalPrice: 79.99,
-      rating: 4.5,
-      reviews: 98,
-      inStock: false,
-      freeShipping: true,
-      fastDelivery: false,
-      verified: true,
-      colors: ["white", "black"],
-      sizes: [],
-      locations: ["us"],
-      conditions: ["new"],
-      badge: "Sale",
-      discount: 38,
-      shop: "AccessoryHub",
-    },
-    {
-      id: 6,
-      name: "Professional Running Shoes",
-      category: "clothing",
-      brand: "nike",
-      image:
-        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=300&fit=crop",
-      price: 129.99,
-      originalPrice: 179.99,
-      rating: 4.7,
-      reviews: 342,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: true,
-      verified: true,
-      colors: ["black", "white", "red", "blue"],
-      sizes: ["s", "m", "l", "xl"],
-      locations: ["us", "uk"],
-      conditions: ["new"],
-      badge: "Best Seller",
-      discount: 28,
-      shop: "Sports Galaxy",
-    },
-    {
-      id: 7,
-      name: "Vintage Leather Backpack",
-      category: "accessories",
-      brand: "nike",
-      image:
-        "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop",
-      price: 89.99,
-      originalPrice: 139.99,
-      rating: 4.6,
-      reviews: 167,
-      inStock: true,
-      freeShipping: false,
-      fastDelivery: false,
-      verified: false,
-      colors: ["black", "brown", "gray"],
-      sizes: [],
-      locations: ["ca"],
-      conditions: ["new"],
-      badge: "Trending",
-      discount: 36,
-      shop: "Leather Craft Co",
-    },
-    {
-      id: 8,
-      name: "Smart Home Security Camera 4K",
-      category: "electronics",
-      brand: "sony",
-      image:
-        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop",
-      price: 199.99,
-      originalPrice: 279.99,
-      rating: 4.8,
-      reviews: 289,
-      inStock: true,
-      freeShipping: true,
-      fastDelivery: true,
-      verified: true,
-      colors: ["white", "black"],
-      sizes: [],
-      locations: ["us", "uk", "au"],
-      conditions: ["new"],
-      badge: "Premium",
-      discount: 29,
-      shop: "SecureHome Tech",
-    },
-    // Additional products for pagination
-    ...Array.from({ length: 40 }, (_, i) => ({
-      id: 9 + i,
-      name: `Product ${9 + i} - ${
-        ["Wireless", "Smart", "Pro", "Max", "Ultra"][i % 5]
-      } Edition`,
-      category: ["electronics", "clothing", "accessories", "home"][i % 4],
-      brand: ["apple", "samsung", "nike", "sony", "lg"][i % 5],
-      image: `https://images.unsplash.com/photo-150574042${
-        8 + (i % 10)
-      }-b95a79798f07?w=300&h=300&fit=crop`,
-      price: 29.99 + i * 10,
-      originalPrice: 49.99 + i * 15,
-      rating: 3.5 + Math.random() * 1.5,
-      reviews: 50 + i * 5,
-      inStock: i % 7 !== 0,
-      freeShipping: i % 3 === 0,
-      fastDelivery: i % 4 === 0,
-      verified: i % 5 === 0,
-      colors: [
-        ["black", "white"],
-        ["blue", "red"],
-        ["green", "yellow"],
-      ][i % 3],
-      sizes: i % 2 === 0 ? ["s", "m", "l"] : [],
-      locations: [["us"], ["uk", "ca"], ["au", "de"]][i % 3],
-      conditions: ["new", "refurbished", "used"][i % 3]
-        ? [["new", "refurbished", "used"][i % 3]]
-        : ["new"],
-      badge: ["Featured", "Sale", "Popular", "New"][i % 4],
-      discount: 10 + (i % 30),
-      shop: `Store ${i + 1}`,
-    })),
-  ];
-
   const sortOptions = [
     { id: "best_match", name: "Best Match" },
     { id: "newest", name: "Newest First" },
@@ -286,126 +95,31 @@ const MainSearchResult = () => {
     { id: "popular", name: "Most Popular" },
   ];
 
-  // Filter and sort products
-  const filteredProducts = useMemo(() => {
-    let filtered = allProducts;
+  // ✅ INITIALIZE SEARCH from URL parameters on component mount
+  useEffect(() => {
+    const queryFromUrl = searchParams.get("q");
+    if (queryFromUrl && queryFromUrl !== searchQuery) {
+      setSearchQuery(queryFromUrl);
+    }
+  }, [searchParams]); // Run only on mount and URL changes
 
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (product) =>
-          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.shop.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
+  // ✅ PERFORM SEARCH when filters, query, or pagination changes
+  useEffect(() => {
+    const searchApiParams = {
+      categoryMain: filters.categories?.[0] || "",
+      PriceRange:
+        filters.priceRange?.min && filters.priceRange?.max
+          ? `${filters.priceRange.min}-${filters.priceRange.max}`
+          : "",
+      CustomerRating: filters.rating || 0,
+      color: filters.colors?.[0] || "",
+      brandName: filters.brands?.[0] || "",
+      title: searchQuery || "",
+    };
 
-    // Apply all filters
-    if (filters.categories.length > 0) {
-      filtered = filtered.filter((product) =>
-        filters.categories.includes(product.category)
-      );
-    }
-
-    if (filters.priceRange.min || filters.priceRange.max) {
-      filtered = filtered.filter((product) => {
-        const price = product.price;
-        const minCheck =
-          !filters.priceRange.min || price >= filters.priceRange.min;
-        const maxCheck =
-          !filters.priceRange.max || price <= filters.priceRange.max;
-        return minCheck && maxCheck;
-      });
-    }
-
-    if (filters.rating) {
-      filtered = filtered.filter((product) => product.rating >= filters.rating);
-    }
-
-    if (filters.freeShipping) {
-      filtered = filtered.filter((product) => product.freeShipping);
-    }
-    if (filters.inStock) {
-      filtered = filtered.filter((product) => product.inStock);
-    }
-    if (filters.fastDelivery) {
-      filtered = filtered.filter((product) => product.fastDelivery);
-    }
-    if (filters.verified) {
-      filtered = filtered.filter((product) => product.verified);
-    }
-
-    if (filters.brands.length > 0) {
-      filtered = filtered.filter((product) =>
-        filters.brands.includes(product.brand)
-      );
-    }
-
-    if (filters.colors.length > 0) {
-      filtered = filtered.filter((product) =>
-        product.colors.some((color) => filters.colors.includes(color))
-      );
-    }
-
-    if (filters.sizes.length > 0) {
-      filtered = filtered.filter((product) =>
-        product.sizes.some((size) => filters.sizes.includes(size))
-      );
-    }
-
-    if (filters.locations.length > 0) {
-      filtered = filtered.filter((product) =>
-        product.locations.some((location) =>
-          filters.locations.includes(location)
-        )
-      );
-    }
-
-    if (filters.conditions.length > 0) {
-      filtered = filtered.filter((product) =>
-        product.conditions.some((condition) =>
-          filters.conditions.includes(condition)
-        )
-      );
-    }
-
-    // Sort products
-    switch (sortBy) {
-      case "newest":
-        filtered = [...filtered].sort((a, b) => b.id - a.id);
-        break;
-      case "price_low":
-        filtered = [...filtered].sort((a, b) => a.price - b.price);
-        break;
-      case "price_high":
-        filtered = [...filtered].sort((a, b) => b.price - a.price);
-        break;
-      case "rating":
-        filtered = [...filtered].sort((a, b) => b.rating - a.rating);
-        break;
-      case "reviews":
-        filtered = [...filtered].sort((a, b) => b.reviews - a.reviews);
-        break;
-      case "discount":
-        filtered = [...filtered].sort(
-          (a, b) => (b.discount || 0) - (a.discount || 0)
-        );
-        break;
-      default:
-        break;
-    }
-
-    return filtered;
-  }, [allProducts, searchQuery, filters, sortBy]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentProducts = filteredProducts.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
+    // ✅ ALWAYS search - even with empty parameters to show all products
+    searchAllProducts(searchApiParams, currentPage, itemsPerPage);
+  }, [searchQuery, filters, currentPage, itemsPerPage, searchAllProducts]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -440,11 +154,63 @@ const MainSearchResult = () => {
       locations: [],
       conditions: [],
     });
+    setSearchQuery("");
   };
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // ✅ ADD TO CART functionality
+  const handleAddToCart = async (product) => {
+    if (!authUser) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      await addItemToCart(authUser._id, product._id, 1);
+      const productName = product.title || "Product";
+      showToast.success(`"${productName}" added to cart successfully!`, {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      showToast.error("Failed to add to cart. Please try again.");
+    }
+  };
+
+  // ✅ WISHLIST functionality
+  const handleToggleFavorite = async (product) => {
+    if (!authUser) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const productName = product.title || "Product";
+      const productId = product._id;
+      const wasInWishlist = isItemInProductWishlist(productId);
+
+      if (wasInWishlist) {
+        await removeFromWishlist(authUser._id, productId);
+        showToast.success(`"${productName}" removed from wishlist`);
+      } else {
+        await quickToggleWishlist(authUser._id, productId, "product");
+        showToast.success(`"${productName}" added to wishlist!`, {
+          text: "View Wishlist",
+          action: () => navigate("/wishlist"),
+        });
+      }
+
+      // Refresh wishlist data
+      await fetchWishlist(authUser._id);
+    } catch (error) {
+      console.error("Error toggling wishlist:", error);
+      showToast.error("Failed to update wishlist. Please try again.");
+    }
   };
 
   const getBadgeVariant = (badge) => {
@@ -460,216 +226,314 @@ const MainSearchResult = () => {
     return variants[badge] || "default";
   };
 
-  const renderProductCard = (product) => (
-    <Card
-      key={product.id}
-      className={`group overflow-hidden hover:shadow-lg transition-all duration-300 h-full cursor-pointer ${
-        viewMode === "list" ? "flex flex-col md:flex-row" : "flex flex-col"
-      }`}
-      padding={false}
-      onClick={() => navigate(`/product/${product.id}`)}
-    >
-      {/* Product Image */}
-      <div
-        className={`relative overflow-hidden flex-shrink-0 ${
-          viewMode === "list" ? "h-48 md:h-64 md:w-64" : "h-56 sm:h-64 md:h-72"
+  // ✅ GET PRODUCT BADGE based on real data
+  const getProductBadge = (product) => {
+    const variation = product.variations?.[0];
+    if (variation?.originalPrice > variation?.price) {
+      return "Sale";
+    }
+    if (
+      new Date(product.createdAt) >
+      new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    ) {
+      return "New Arrival";
+    }
+    if (product.status === "active") {
+      return "Featured";
+    }
+    return null;
+  };
+
+  // ✅ GET DISCOUNT PERCENTAGE
+  const getProductDiscount = (product) => {
+    const variation = product.variations?.[0];
+    if (variation?.originalPrice && variation?.price) {
+      const original = parseFloat(variation.originalPrice);
+      const current = parseFloat(variation.price);
+      if (original > current) {
+        return Math.round(((original - current) / original) * 100);
+      }
+    }
+    return 0;
+  };
+
+  // ✅ RENDER PRODUCT CARD with real API data structure
+  const renderProductCard = (product) => {
+    const variation = product.variations?.[0];
+    const price = parseFloat(variation?.price || 0);
+    const originalPrice = parseFloat(variation?.originalPrice || 0);
+    const badge = getProductBadge(product);
+    const discount = getProductDiscount(product);
+    const isInStock =
+      product.status === "active" && parseInt(variation?.quantity || 0) > 0;
+    const rating = parseFloat(product.averageRating || 0);
+    const isFavorite = authUser ? isItemInProductWishlist(product._id) : false;
+    const inCart = authUser ? isItemInCart(product._id) : false;
+    const isFreeShipping = product.shippingClass?.shippingClass === "free";
+    const isExpressShipping =
+      product.shippingClass?.shippingClass === "express";
+
+    return (
+      <Card
+        key={product._id}
+        className={`group overflow-hidden hover:shadow-lg transition-all duration-300 h-full cursor-pointer ${
+          viewMode === "list" ? "flex flex-col md:flex-row" : "flex flex-col"
         }`}
+        padding={false}
+        onClick={() => navigate(`/product/${product._id}`)}
       >
-        <img
-          src={product.image}
-          alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+        {/* Product Image */}
+        <div
+          className={`relative overflow-hidden flex-shrink-0 ${
+            viewMode === "list"
+              ? "h-48 md:h-64 md:w-64"
+              : "h-56 sm:h-64 md:h-72"
+          }`}
+        >
+          <img
+            src={
+              variation?.images?.[0]?.url ||
+              product.images?.[0]?.url ||
+              "/placeholder-product.jpg"
+            }
+            alt={product.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
 
-        {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
-          <Badge variant={getBadgeVariant(product.badge)} size="sm">
-            {product.badge}
-          </Badge>
-          {!product.inStock && (
-            <Badge variant="danger" size="sm">
-              Out of Stock
-            </Badge>
-          )}
-          {product.verified && (
-            <Badge variant="success" size="sm">
-              Verified
-            </Badge>
-          )}
-        </div>
-
-        {/* Discount Badge */}
-        {product.discount && (
-          <div className="absolute top-2 right-2">
-            <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-              -{product.discount}%
-            </div>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="absolute top-2 right-10 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 transition-colors touch-manipulation"
-            aria-label="Add to wishlist"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Heart className="h-4 w-4" />
-          </button>
-          <button
-            className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors touch-manipulation"
-            aria-label="Quick view"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Eye className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Quick Features */}
-        <div className="absolute bottom-2 left-2 flex gap-1 flex-wrap">
-          {product.freeShipping && (
-            <Badge variant="success" size="sm">
-              Free Ship
-            </Badge>
-          )}
-          {product.fastDelivery && (
-            <Badge variant="warning" size="sm">
-              Fast
-            </Badge>
-          )}
-        </div>
-      </div>
-
-      {/* Product Info */}
-      <div className="p-4 sm:p-5 md:p-6 flex flex-col flex-1">
-        {/* Shop Name */}
-        <div className="mb-2">
-          <span
-            className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              // Navigate to shop page logic here
-              console.log("Navigate to shop:", product.shop);
-            }}
-          >
-            {product.shop}
-          </span>
-        </div>
-
-        {/* Title */}
-        <div className="mb-3 h-12 sm:h-14 flex items-start">
-          <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight text-sm sm:text-base md:text-lg">
-            {product.name}
-          </h3>
-        </div>
-
-        {/* Rating */}
-        <div className="flex items-center gap-1 mb-3 sm:mb-4 h-5 sm:h-6">
-          <div className="flex items-center">
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                className={`h-4 w-4 sm:h-5 sm:w-5 ${
-                  i < Math.floor(product.rating)
-                    ? "text-yellow-400 fill-current"
-                    : "text-gray-300"
-                }`}
-              />
-            ))}
-          </div>
-          <span className="text-sm sm:text-base text-gray-600 whitespace-nowrap">
-            {product.rating.toFixed(1)} ({product.reviews})
-          </span>
-        </div>
-
-        {/* Features */}
-        <div className="mb-3 sm:mb-4 h-6 sm:h-7 flex items-center gap-2">
-          {product.freeShipping && (
-            <div className="flex items-center text-sm text-green-600">
-              <Truck className="h-4 w-4 mr-1" />
-              Free Ship
-            </div>
-          )}
-          {product.locations.length > 0 && (
-            <div className="flex items-center text-sm text-gray-500">
-              <MapPin className="h-4 w-4 mr-1" />
-              {product.locations[0].toUpperCase()}
-            </div>
-          )}
-        </div>
-
-        {/* Spacer */}
-        <div className="flex-1"></div>
-
-        {/* Price */}
-        <div className="flex items-center justify-between mb-4 sm:mb-5">
-          <div className="flex flex-col">
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
-                LKR {product.price}
-              </span>
-              {product.originalPrice && (
-                <span className="text-sm sm:text-base text-gray-500 line-through">
-                  LKR {product.originalPrice}
-                </span>
-              )}
-            </div>
-          </div>
-          {product.discount && (
-            <Badge variant="success" size="sm">
-              Save <span className="m-1">LKR</span> {(product.originalPrice - product.price).toFixed(2)}
-            </Badge>
-          )}
-        </div>
-
-        {/* Add to Cart & Buy Now Buttons - Side by Side */}
-        <div className="flex gap-2 sm:gap-3">
-          <Button
-            variant="primary"
-            size="sm"
-            className="flex-1 text-xs sm:text-sm py-3 sm:py-3.5 px-3 sm:px-4 touch-manipulation font-semibold"
-            disabled={!product.inStock}
-            onClick={(e) => {
-              e.stopPropagation();
-              // Add to cart logic here
-              console.log("Added to cart:", product.id);
-            }}
-          >
-            <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-            {product.inStock ? (
-              <>
-                <span className="hidden sm:inline">Add to Cart</span>
-                <span className="sm:hidden">Cart</span>
-              </>
-            ) : (
-              <>
-                <span className="hidden sm:inline">Out of Stock</span>
-                <span className="sm:hidden">No Stock</span>
-              </>
+          {/* Badges */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
+            {badge && (
+              <Badge variant={getBadgeVariant(badge)} size="sm">
+                {badge}
+              </Badge>
             )}
-          </Button>
+            {!isInStock && (
+              <Badge variant="danger" size="sm">
+                Out of Stock
+              </Badge>
+            )}
+            {product.status === "active" && (
+              <Badge variant="success" size="sm">
+                Available
+              </Badge>
+            )}
+          </div>
 
-          {product.inStock && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 text-xs sm:text-sm py-3 sm:py-3.5 px-3 sm:px-4 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors touch-manipulation font-semibold"
+          {/* Discount Badge */}
+          {discount > 0 && (
+            <div className="absolute top-2 right-2">
+              <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                -{discount}%
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="absolute top-2 right-10 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors touch-manipulation ${
+                isFavorite
+                  ? "bg-red-500 text-white"
+                  : "bg-white/90 text-gray-600 hover:text-red-500"
+              }`}
+              aria-label="Add to wishlist"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/checkout?product=${product.id}&quantity=1`);
+                handleToggleFavorite(product);
               }}
             >
-              <span className="hidden sm:inline">Buy It Now</span>
-              <span className="sm:hidden">Buy Now</span>
-            </Button>
-          )}
+              <Heart
+                className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`}
+              />
+            </button>
+            <button
+              className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors touch-manipulation"
+              aria-label="Quick view"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Handle quick view - could open modal
+              }}
+            >
+              <Eye className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Quick Features */}
+          <div className="absolute bottom-2 left-2 flex gap-1 flex-wrap">
+            {isFreeShipping && (
+              <Badge variant="success" size="sm">
+                Free Ship
+              </Badge>
+            )}
+            {isExpressShipping && (
+              <Badge variant="warning" size="sm">
+                Express
+              </Badge>
+            )}
+          </div>
         </div>
-      </div>
-    </Card>
-  );
+
+        {/* Product Info */}
+        <div className="p-4 sm:p-5 md:p-6 flex flex-col flex-1">
+          {/* Brand */}
+          {product.brand && (
+            <div className="mb-2">
+              <span className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">
+                {product.brand}
+              </span>
+            </div>
+          )}
+
+          {/* Title */}
+          <div className="mb-3 h-12 sm:h-14 flex items-start">
+            <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight text-sm sm:text-base md:text-lg">
+              {product.title}
+            </h3>
+          </div>
+
+          {/* Rating */}
+          <div className="flex items-center gap-1 mb-3 sm:mb-4 h-5 sm:h-6">
+            <div className="flex items-center">
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  className={`h-4 w-4 sm:h-5 sm:w-5 ${
+                    i < Math.floor(rating)
+                      ? "text-yellow-400 fill-current"
+                      : "text-gray-300"
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="text-sm sm:text-base text-gray-600 whitespace-nowrap">
+              {rating > 0 ? rating.toFixed(1) : "No rating"}
+            </span>
+          </div>
+
+          {/* Features */}
+          <div className="mb-3 sm:mb-4 h-6 sm:h-7 flex items-center gap-2">
+            {isFreeShipping && (
+              <div className="flex items-center text-sm text-green-600">
+                <Truck className="h-4 w-4 mr-1" />
+                Free Ship
+              </div>
+            )}
+            {product.category?.main && (
+              <div className="flex items-center text-sm text-gray-500">
+                <Package className="h-4 w-4 mr-1" />
+                {product.category.main}
+              </div>
+            )}
+          </div>
+
+          {/* Colors */}
+          {variation?.color && variation.color.length > 0 && (
+            <div className="mb-3 sm:mb-4 h-6 sm:h-7">
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-500">Colors:</span>
+                {variation.color.slice(0, 3).map((color, index) => (
+                  <div
+                    key={index}
+                    className="w-4 h-4 rounded-full border border-gray-300"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+                {variation.color.length > 3 && (
+                  <span className="text-xs text-gray-500">
+                    +{variation.color.length - 3}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Spacer */}
+          <div className="flex-1"></div>
+
+          {/* Price */}
+          <div className="flex items-center justify-between mb-4 sm:mb-5">
+            <div className="flex flex-col">
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
+                  LKR {price.toFixed(2)}
+                </span>
+                {originalPrice > price && (
+                  <span className="text-sm sm:text-base text-gray-500 line-through">
+                    LKR {originalPrice.toFixed(2)}
+                  </span>
+                )}
+              </div>
+            </div>
+            {discount > 0 && (
+              <Badge variant="success" size="sm">
+                Save LKR {(originalPrice - price).toFixed(2)}
+              </Badge>
+            )}
+          </div>
+
+          {/* Add to Cart & Buy Now Buttons - Side by Side */}
+          <div className="flex gap-2 sm:gap-3">
+            <Button
+              variant="primary"
+              size="sm"
+              className="flex-1 text-xs sm:text-sm py-3 sm:py-3.5 px-3 sm:px-4 touch-manipulation font-semibold"
+              disabled={!isInStock || cartLoading}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddToCart(product);
+              }}
+            >
+              <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              {cartLoading ? (
+                <Loader className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+              ) : inCart ? (
+                <>
+                  <span className="hidden sm:inline">Added to Cart</span>
+                  <span className="sm:hidden">Added</span>
+                </>
+              ) : isInStock ? (
+                <>
+                  <span className="hidden sm:inline">Add to Cart</span>
+                  <span className="sm:hidden">Cart</span>
+                </>
+              ) : (
+                <>
+                  <span className="hidden sm:inline">Out of Stock</span>
+                  <span className="sm:hidden">No Stock</span>
+                </>
+              )}
+            </Button>
+
+            {isInStock && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs sm:text-sm py-3 sm:py-3.5 px-3 sm:px-4 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors touch-manipulation font-semibold"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/checkout?product=${product._id}&quantity=1`);
+                }}
+              >
+                <span className="hidden sm:inline">Buy It Now</span>
+                <span className="sm:hidden">Buy Now</span>
+              </Button>
+            )}
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  // Get current page products from Redux state
+  const currentProducts = searchResults || [];
+  const totalItems = searchPagination?.totalItems || 0;
+  const totalPages = searchPagination?.totalPages || 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Toast Notification Component */}
+      <ToastNotification ref={toastRef} />
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
@@ -685,10 +549,10 @@ const MainSearchResult = () => {
             </Button>
             <div className="text-center flex-1 mx-4">
               <div className="text-sm sm:text-lg font-semibold text-gray-900">
-                Search Results
+                {searchQuery ? "Search Results" : "All Products"}
               </div>
               <div className="text-xs sm:text-sm text-gray-500">
-                {filteredProducts.length.toLocaleString()} products found
+                {totalItems.toLocaleString()} products found
                 {searchQuery && ` for "${searchQuery}"`}
               </div>
             </div>
@@ -705,7 +569,7 @@ const MainSearchResult = () => {
               filters={filters}
               onFiltersChange={handleFiltersChange}
               onClearFilters={handleClearFilters}
-              resultsCount={filteredProducts.length}
+              resultsCount={totalItems}
             />
           </div>
 
@@ -741,7 +605,7 @@ const MainSearchResult = () => {
                   </Button>
 
                   {/* Sort Dropdown */}
-                  <div className="flex-shrink-0">
+                  {/* <div className="flex-shrink-0">
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
@@ -753,7 +617,7 @@ const MainSearchResult = () => {
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </div> */}
 
                   {/* Search Bar - In the middle */}
                   <div className="flex-1 max-w-2xl">
@@ -801,12 +665,15 @@ const MainSearchResult = () => {
                 {/* Results Info */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-gray-200">
                   <div className="text-sm text-gray-600">
-                    Showing {startIndex + 1}-
-                    {Math.min(
-                      startIndex + itemsPerPage,
-                      filteredProducts.length
-                    )}{" "}
-                    of {filteredProducts.length.toLocaleString()} products
+                    {searchPagination ? (
+                      <>
+                        Showing {(currentPage - 1) * itemsPerPage + 1}-
+                        {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
+                        {totalItems.toLocaleString()} products
+                      </>
+                    ) : (
+                      `Showing ${currentProducts.length} products`
+                    )}
                   </div>
 
                   {/* Clear Filters Button */}
@@ -838,13 +705,34 @@ const MainSearchResult = () => {
                   filters={filters}
                   onFiltersChange={handleFiltersChange}
                   onClearFilters={handleClearFilters}
-                  resultsCount={filteredProducts.length}
+                  resultsCount={totalItems}
                 />
               </div>
             )}
 
             {/* Products Grid */}
-            {filteredProducts.length > 0 ? (
+            {searchLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader className="h-8 w-8 animate-spin text-blue-600 mr-3" />
+                <span className="text-gray-600">Searching products...</span>
+              </div>
+            ) : searchError ? (
+              <Card className="text-center p-8 sm:p-12">
+                <AlertCircle className="h-12 w-12 sm:h-16 sm:w-16 text-red-400 mx-auto mb-4" />
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-600 mb-2">
+                  Error Loading Products
+                </h3>
+                <p className="text-sm sm:text-base text-gray-500 mb-4">
+                  {searchError}
+                </p>
+                <Button
+                  onClick={() => window.location.reload()}
+                  className="touch-manipulation"
+                >
+                  Try Again
+                </Button>
+              </Card>
+            ) : currentProducts.length > 0 ? (
               <>
                 <div
                   className={`grid gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 ${
@@ -857,14 +745,16 @@ const MainSearchResult = () => {
                 </div>
 
                 {/* Pagination */}
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
-                  itemsPerPage={itemsPerPage}
-                  totalItems={filteredProducts.length}
-                  className="mt-6 sm:mt-8"
-                />
+                {searchPagination && searchPagination.totalPages > 1 && (
+                  <Pagination
+                    currentPage={searchPagination.currentPage}
+                    totalPages={searchPagination.totalPages}
+                    onPageChange={handlePageChange}
+                    itemsPerPage={itemsPerPage}
+                    totalItems={searchPagination.totalItems}
+                    className="mt-6 sm:mt-8"
+                  />
+                )}
               </>
             ) : (
               <Card className="text-center p-8 sm:p-12">
@@ -875,7 +765,17 @@ const MainSearchResult = () => {
                 <p className="text-sm sm:text-base text-gray-500 mb-4">
                   {searchQuery
                     ? `No results found for "${searchQuery}". Try different keywords or adjust your filters.`
-                    : "Try adjusting your search or filters to find what you're looking for."}
+                    : Object.values(filters).some((f) =>
+                        Array.isArray(f)
+                          ? f.length > 0
+                          : typeof f === "boolean"
+                          ? f
+                          : f && typeof f === "object"
+                          ? f.min || f.max
+                          : f
+                      )
+                    ? "No products match your current filters. Try adjusting your search criteria."
+                    : "No products available at the moment."}
                 </p>
                 <div className="space-y-3">
                   {searchQuery && (
@@ -887,12 +787,22 @@ const MainSearchResult = () => {
                       Clear Search
                     </Button>
                   )}
-                  <Button
-                    onClick={handleClearFilters}
-                    className="touch-manipulation"
-                  >
-                    Clear All Filters
-                  </Button>
+                  {Object.values(filters).some((f) =>
+                    Array.isArray(f)
+                      ? f.length > 0
+                      : typeof f === "boolean"
+                      ? f
+                      : f && typeof f === "object"
+                      ? f.min || f.max
+                      : f
+                  ) && (
+                    <Button
+                      onClick={handleClearFilters}
+                      className="touch-manipulation"
+                    >
+                      Clear All Filters
+                    </Button>
+                  )}
                 </div>
               </Card>
             )}

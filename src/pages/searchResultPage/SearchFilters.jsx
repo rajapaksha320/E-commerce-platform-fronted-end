@@ -28,8 +28,8 @@ const SearchFilters = ({
     categories: true,
     price: true,
     rating: true,
-    shipping: true,
-    availability: true,
+    shipping: false,
+    availability: false,
     brand: false,
     color: false,
     size: false,
@@ -76,6 +76,7 @@ const SearchFilters = ({
     onFiltersChange(newFilters);
   };
 
+  // ✅ UPDATED: Real categories that match API expectations
   const categories = [
     { id: "electronics", name: "Electronics", count: 1456 },
     { id: "clothing", name: "Clothing & Fashion", count: 2324 },
@@ -89,30 +90,34 @@ const SearchFilters = ({
     { id: "jewelry", name: "Jewelry & Watches", count: 334 },
   ];
 
+  // ✅ UPDATED: Brand names (not IDs) to match API expectations
   const brands = [
-    { id: "apple", name: "Apple", count: 245 },
-    { id: "samsung", name: "Samsung", count: 198 },
-    { id: "nike", name: "Nike", count: 167 },
-    { id: "adidas", name: "Adidas", count: 154 },
-    { id: "sony", name: "Sony", count: 129 },
-    { id: "lg", name: "LG", count: 123 },
-    { id: "microsoft", name: "Microsoft", count: 98 },
-    { id: "canon", name: "Canon", count: 87 },
-    { id: "hp", name: "HP", count: 76 },
-    { id: "dell", name: "Dell", count: 65 },
+    { id: "Apple", name: "Apple", count: 245 },
+    { id: "Samsung", name: "Samsung", count: 198 },
+    { id: "Nike", name: "Nike", count: 167 },
+    { id: "Adidas", name: "Adidas", count: 154 },
+    { id: "Sony", name: "Sony", count: 129 },
+    { id: "LG", name: "LG", count: 123 },
+    { id: "Microsoft", name: "Microsoft", count: 98 },
+    { id: "Canon", name: "Canon", count: 87 },
+    { id: "HP", name: "HP", count: 76 },
+    { id: "Dell", name: "Dell", count: 65 },
   ];
 
+  // ✅ UPDATED: Colors with hex values for API compatibility
   const colors = [
-    { id: "black", name: "Black", hex: "#000000", count: 289 },
-    { id: "white", name: "White", hex: "#FFFFFF", count: 276 },
-    { id: "blue", name: "Blue", hex: "#3B82F6", count: 165 },
-    { id: "red", name: "Red", hex: "#EF4444", count: 154 },
-    { id: "green", name: "Green", hex: "#10B981", count: 143 },
-    { id: "yellow", name: "Yellow", hex: "#F59E0B", count: 132 },
-    { id: "purple", name: "Purple", hex: "#8B5CF6", count: 128 },
-    { id: "gray", name: "Gray", hex: "#6B7280", count: 167 },
-    { id: "pink", name: "Pink", hex: "#EC4899", count: 89 },
-    { id: "orange", name: "Orange", hex: "#F97316", count: 76 },
+    { id: "#000000", name: "Black", hex: "#000000", count: 289 },
+    { id: "#FFFFFF", name: "White", hex: "#FFFFFF", count: 276 },
+    { id: "#3B82F6", name: "Blue", hex: "#3B82F6", count: 165 },
+    { id: "#EF4444", name: "Red", hex: "#EF4444", count: 154 },
+    { id: "#10B981", name: "Green", hex: "#10B981", count: 143 },
+    { id: "#F59E0B", name: "Yellow", hex: "#F59E0B", count: 132 },
+    { id: "#8B5CF6", name: "Purple", hex: "#8B5CF6", count: 128 },
+    { id: "#6B7280", name: "Gray", hex: "#6B7280", count: 167 },
+    { id: "#EC4899", name: "Pink", hex: "#EC4899", count: 89 },
+    { id: "#F97316", name: "Orange", hex: "#F97316", count: 76 },
+    { id: "#e2d7e2", name: "Light Pink", hex: "#e2d7e2", count: 45 }, // From API example
+    { id: "#306616", name: "Dark Green", hex: "#306616", count: 38 }, // From API example
   ];
 
   const sizes = [
@@ -243,7 +248,6 @@ const SearchFilters = ({
               <span className="text-sm text-gray-700 flex-1">
                 {category.name}
               </span>
-              <span className="text-xs text-gray-500">({category.count})</span>
             </label>
           ))}
         </div>
@@ -280,10 +284,11 @@ const SearchFilters = ({
           </div>
           <div className="space-y-2">
             {[
-              { label: "Under LKR 1000", min: 0, max: 1000 },
+              { label: "Under LKR 100", min: 0, max: 100 },
+              { label: "LKR 100 to LKR 500", min: 100, max: 500 },
+              { label: "LKR 500 to LKR 1000", min: 500, max: 1000 },
               { label: "LKR 1000 to LKR 5000", min: 1000, max: 5000 },
-              { label: "LKR 5000 to $10000", min: 5000, max: 100000 },
-              { label: "Over LKR 10000", min: 10000, max: null },
+              { label: "Over LKR 5000", min: 5000, max: null },
             ].map((range, index) => (
               <label
                 key={index}
@@ -350,62 +355,6 @@ const SearchFilters = ({
         </div>
       </FilterSection>
 
-      {/* Shipping & Availability */}
-      {/* <FilterSection
-        title="Shipping & Availability"
-        icon={Truck}
-        sectionKey="shipping"
-      >
-        <div className="space-y-2">
-          <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-md p-1 -m-1 transition-colors">
-            <input
-              type="checkbox"
-              checked={filters.freeShipping || false}
-              onChange={(e) => {
-                updateFilter("freeShipping", null, e.target.checked);
-              }}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">Free Shipping</span>
-          </label>
-          <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-md p-1 -m-1 transition-colors">
-            <input
-              type="checkbox"
-              checked={filters.inStock || false}
-              onChange={(e) => {
-                updateFilter("inStock", null, e.target.checked);
-              }}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">In Stock</span>
-          </label>
-          <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-md p-1 -m-1 transition-colors">
-            <input
-              type="checkbox"
-              checked={filters.fastDelivery || false}
-              onChange={(e) => {
-                updateFilter("fastDelivery", null, e.target.checked);
-              }}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">
-              Fast Delivery (1-2 days)
-            </span>
-          </label>
-          <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-md p-1 -m-1 transition-colors">
-            <input
-              type="checkbox"
-              checked={filters.verified || false}
-              onChange={(e) => {
-                updateFilter("verified", null, e.target.checked);
-              }}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">Verified Sellers</span>
-          </label>
-        </div>
-      </FilterSection> */}
-
       {/* Brands */}
       <FilterSection title="Brands" icon={Package} sectionKey="brand">
         <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -423,7 +372,6 @@ const SearchFilters = ({
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700 flex-1">{brand.name}</span>
-              <span className="text-xs text-gray-500">({brand.count})</span>
             </label>
           ))}
         </div>
@@ -431,11 +379,11 @@ const SearchFilters = ({
 
       {/* Colors */}
       <FilterSection title="Colors" icon={Palette} sectionKey="color">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 gap-3">
           {colors.map((color) => (
             <label
               key={color.id}
-              className="flex flex-col items-center cursor-pointer group p-1 rounded-md hover:bg-gray-50 transition-colors"
+              className="flex flex-col items-center cursor-pointer group p-2 rounded-md hover:bg-gray-50 transition-colors"
             >
               <input
                 type="checkbox"
@@ -457,17 +405,24 @@ const SearchFilters = ({
                   <div className="w-full h-full rounded-full flex items-center justify-center">
                     <div
                       className={`w-2 h-2 rounded-full ${
-                        color.hex === "#FFFFFF" ? "bg-gray-600" : "bg-white"
+                        color.hex === "#FFFFFF" ||
+                        color.hex === "#F59E0B" ||
+                        color.hex === "#e2d7e2"
+                          ? "bg-gray-600"
+                          : "bg-white"
                       }`}
                     />
                   </div>
                 )}
               </div>
-              <span className="text-xs text-gray-600 mt-1">{color.name}</span>
+              <span className="text-xs text-gray-600 mt-1 text-center leading-tight">
+                {color.name}
+              </span>
             </label>
           ))}
         </div>
       </FilterSection>
+
     </div>
   );
 };
