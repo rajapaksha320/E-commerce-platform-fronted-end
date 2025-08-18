@@ -71,7 +71,6 @@ const MainSearchResult = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // ✅ FIX: Add local loading state for cart operations (like in ShopView and WishList)
   const [addingToCart, setAddingToCart] = useState(new Set());
 
   const [filters, setFilters] = useState({
@@ -120,7 +119,6 @@ const MainSearchResult = () => {
       title: searchQuery || "",
     };
 
-    // ✅ ALWAYS search - even with empty parameters to show all products
     searchAllProducts(searchApiParams, currentPage, itemsPerPage);
   }, [searchQuery, filters, currentPage, itemsPerPage, searchAllProducts]);
 
@@ -165,7 +163,6 @@ const MainSearchResult = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ✅ FIX: Updated handleAddToCart to use local loading state
   const handleAddToCart = async (product) => {
     if (!authUser) {
       navigate("/login");
@@ -280,7 +277,6 @@ const MainSearchResult = () => {
     return 0;
   };
 
-  // ✅ FIX: New function to get cart button content (like in ShopView and WishList)
   const getCartButtonContent = (product) => {
     const productId = product._id;
     const isLoadingThisItem = addingToCart.has(productId);
@@ -344,7 +340,6 @@ const MainSearchResult = () => {
     const isExpressShipping =
       product.shippingClass?.shippingClass === "express";
 
-    // ✅ FIX: Use the new cart button content function
     const cartButton = getCartButtonContent(product);
 
     return (
@@ -376,11 +371,11 @@ const MainSearchResult = () => {
 
           {/* Badges */}
           <div className="absolute top-2 left-2 flex flex-col gap-1">
-            {badge && (
+            {/* {badge && (
               <Badge variant={getBadgeVariant(badge)} size="sm">
                 {badge}
               </Badge>
-            )}
+            )} */}
             {!isInStock && (
               <Badge variant="danger" size="sm">
                 Out of Stock
@@ -393,17 +388,9 @@ const MainSearchResult = () => {
             )}
           </div>
 
-          {/* Discount Badge */}
-          {discount > 0 && (
-            <div className="absolute top-2 right-2">
-              <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                -{discount}%
-              </div>
-            </div>
-          )}
 
           {/* Action Buttons */}
-          <div className="absolute top-2 right-10 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute top-2 right-5 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors touch-manipulation ${
                 isFavorite
@@ -545,7 +532,6 @@ const MainSearchResult = () => {
             )}
           </div>
 
-          {/* ✅ FIX: Updated Add to Cart & Buy Now Buttons */}
           <div className="flex gap-2 sm:gap-3">
             <Button
               variant={cartButton.variant}

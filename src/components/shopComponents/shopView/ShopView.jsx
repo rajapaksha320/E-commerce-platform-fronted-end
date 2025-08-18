@@ -548,7 +548,7 @@ const ShopView = () => {
           )}
 
           {/* Action Buttons */}
-          <div className="absolute top-2 right-10 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute top-10 right-3 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={(e) => {
                 e.stopPropagation();
