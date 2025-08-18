@@ -315,7 +315,7 @@ const ProductCollection = () => {
         CustomerRating: selectedRating !== "all" ? parseInt(selectedRating) : 0,
         color: "",
         brandName: "",
-        title: debouncedSearchTerm || "", // Add title filter for search functionality
+        title: debouncedSearchTerm || "", 
       };
 
       console.log("Search filters:", searchFilters);
@@ -354,7 +354,7 @@ const ProductCollection = () => {
     selectedPriceRange,
     selectedRating,
     currentPage,
-    debouncedSearchTerm, // Use debounced search term instead of immediate search term
+    debouncedSearchTerm, 
     searchAllProducts,
     fetchStoresByCategory,
   ]);
@@ -440,19 +440,16 @@ const ProductCollection = () => {
         product.title || product.name || product.productName || "Item";
 
       if (isInWishlist) {
-        // ✅ Don't use quickToggleWishlist for removal - use direct API
         await removeFromWishlist(authUser._id, productId);
         showToast.success(`"${productName}" removed from wishlist`);
       } else {
-        // ✅ For adding, use the corrected quickToggleWishlist
         await quickToggleWishlist(authUser._id, productId, "product");
         showToast.success(`"${productName}" added to wishlist!`, {
           text: "View Wishlist",
           action: () => navigate("/wishlist"),
         });
       }
-
-      // ✅ Force refresh wishlist data after operation
+      
       await fetchWishlist(authUser._id);
     } catch (error) {
       console.error("Failed to update wishlist:", error);
