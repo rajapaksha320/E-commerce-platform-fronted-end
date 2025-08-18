@@ -49,7 +49,7 @@ const PopularShops = () => {
 
   // Fetch stores data
   useEffect(() => {
-    fetchAllStores(1, 20); // Get more stores for better selection
+    fetchAllStores(1, 20); 
   }, [fetchAllStores]);
 
   // Process and categorize stores
@@ -79,7 +79,7 @@ const PopularShops = () => {
 
       setShopStats({
         totalStores: totalStores,
-        totalCustomers: Math.max(totalSales * 15, 1000), // Estimate customers from sales
+        totalCustomers: Math.max(totalSales * 15, 1000), 
         averageRating: averageRating,
       });
 
@@ -103,7 +103,7 @@ const PopularShops = () => {
           else if (rating >= 3.5) popularityScore += 60;
           else if (rating >= 3.0) popularityScore += 40;
           else if (rating >= 2.0) popularityScore += 20;
-          else popularityScore += 10; // Baseline
+          else popularityScore += 10;
 
           // 2. SALES PERFORMANCE
           const totalSales = parseInt(store.totalSales || 0);
@@ -112,8 +112,7 @@ const PopularShops = () => {
           else if (totalSales >= 20) popularityScore += 40;
           else if (totalSales >= 5) popularityScore += 25;
           else if (totalSales >= 1) popularityScore += 15;
-          else popularityScore += 5; // New stores get baseline
-
+          else popularityScore += 5;
           // 3. PRODUCT CATALOG SIZE
           const totalProducts = parseInt(store.totalProducts || 0);
           if (totalProducts >= 50) popularityScore += 50;
@@ -123,12 +122,12 @@ const PopularShops = () => {
           else if (totalProducts >= 5) popularityScore += 15;
           else popularityScore += 5;
 
-          // 4. STORE ESTABLISHMENT (Balanced - not too new, not too old)
+          // 4. STORE ESTABLISHMENT 
           if (daysSinceCreated >= 30 && daysSinceCreated <= 365)
-            popularityScore += 30; // Sweet spot
+            popularityScore += 30;
           else if (daysSinceCreated >= 14) popularityScore += 20;
           else if (daysSinceCreated >= 7) popularityScore += 15;
-          else popularityScore += 10; // Very new stores
+          else popularityScore += 10; 
 
           // 5. BUSINESS PROFESSIONALISM
           const businessType =
