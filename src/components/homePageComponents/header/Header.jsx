@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   ArrowRight,
   Search,
@@ -12,9 +12,40 @@ import {
 } from "lucide-react";
 import { Button, Card, Badge } from "../../ui";
 import { useNavigate } from "react-router-dom";
+import SearchDropdown from "../navBar/SearchDropdown";
 
 const Header = () => {
   const navigate = useNavigate();
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // Refs for search dropdown functionality
+  const searchRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target)
+      ) {
+        setIsSearchDropdownOpen(false);
+        setIsSearchFocused(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   const stats = [
     {
       icon: ShoppingBag,
@@ -70,12 +101,75 @@ const Header = () => {
     },
   ];
 
+  // Navigation handlers
   const handleShopping = () => {
     navigate("/shop-collections");
-  }
+  };
 
   const handleBrowseCategories = () => {
     navigate("/category-collections");
+  };
+
+  // Search handlers
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    // Show dropdown when there's input or when focused
+    if (value.length > 0 || isSearchFocused) {
+      setIsSearchDropdownOpen(true);
+    } else {
+      setIsSearchDropdownOpen(false);
+    }
+  };
+
+  const handleSearchFocus = () => {
+    setIsSearchFocused(true);
+    // Show dropdown on focus even without query for search tips
+    setIsSearchDropdownOpen(true);
+  };
+
+  const handleSearchBlur = () => {
+    // Delay hiding to allow for dropdown interactions
+    setTimeout(() => {
+      setIsSearchFocused(false);
+      if (!searchQuery) {
+        setIsSearchDropdownOpen(false);
+      }
+    }, 200);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      handleViewAllResults(searchQuery.trim());
+    }
+  };
+
+  const handleSearchClick = () => {
+    if (searchQuery.trim()) {
+      handleViewAllResults(searchQuery.trim());
+    }
+  };
+
+  const handleViewAllResults = (query) => {
+    setIsSearchDropdownOpen(false);
+    setIsSearchFocused(false);
+    navigate(`/search?q=${encodeURIComponent(query)}`);
+  };
+
+  const handleProductSelect = (product) => {
+    setIsSearchDropdownOpen(false);
+    setIsSearchFocused(false);
+    setSearchQuery(""); // Clear search after selection
+    navigate(`/product/${product.id}`);
+  };
+
+  // Handle Enter key press
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      handleSearchSubmit(e);
+    }
   };
 
   return (
@@ -117,22 +211,42 @@ const Header = () => {
               customers who trust us for their shopping needs.
             </p>
 
-            {/* Enhanced Search Bar */}
-            <div className="relative max-w-2xl mb-12 group">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-3xl blur opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
-              <div className="relative bg-white rounded-3xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                <input
-                  type="text"
-                  placeholder="What are you looking for today?"
-                  className="w-full pl-14 pr-32 py-5 text-lg border-0 rounded-3xl focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder:text-gray-400"
+            {/* Enhanced Search Bar with Dropdown Functionality */}
+            <div className="relative max-w-2xl mb-12 group" ref={searchRef}>
+              <form onSubmit={handleSearchSubmit}>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-3xl blur opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
+                <div className="relative bg-white rounded-3xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <input
+                    type="text"
+                    placeholder="What are you looking for today?"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onFocus={handleSearchFocus}
+                    onBlur={handleSearchBlur}
+                    onKeyPress={handleKeyPress}
+                    className="w-full pl-14 pr-32 py-5 text-lg border-0 rounded-3xl focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder:text-gray-400"
+                  />
+                  <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400" />
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={handleSearchClick}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 rounded-2xl h-12 px-6 shadow-md hover:shadow-lg transition-all duration-200"
+                  >
+                    Search
+                  </Button>
+                </div>
+              </form>
+
+              {/* Search Dropdown */}
+              <div ref={dropdownRef}>
+                <SearchDropdown
+                  searchQuery={searchQuery}
+                  isOpen={isSearchDropdownOpen}
+                  onClose={() => setIsSearchDropdownOpen(false)}
+                  onViewAll={handleViewAllResults}
+                  onProductSelect={handleProductSelect}
                 />
-                <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400" />
-                <Button
-                  size="lg"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 rounded-2xl h-12 px-6 shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  Search
-                </Button>
               </div>
             </div>
 

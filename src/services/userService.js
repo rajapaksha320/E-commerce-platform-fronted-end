@@ -479,20 +479,29 @@ const userService = {
   // Main search/filter across all stores
   searchProducts: async (searchParams, page = 1, pageSize = 10) => {
     const payload = {
-      categoryMain: searchParams.categoryMain,
-      PriceRange: searchParams.PriceRange,
-      CustomerRating: searchParams.CustomerRating,
-      color: searchParams.color,
-      brandName: searchParams.brandName,
-      title: searchParams.title,
+      categoryMain: searchParams.categoryMain || "",
+      PriceRange: searchParams.PriceRange || "",
+      CustomerRating: searchParams.CustomerRating || 0,
+      color: searchParams.color || "",
+      brandName: searchParams.brandName || "",
+      title: searchParams.title || "",
       page,
       pageSize,
     };
 
-    return await axiosInstance.post(
-      `/api/v1/category/main-filter?&page=${page}&pageSize=${pageSize}`,
-      payload
-    );
+    console.log("Search API payload:", payload);
+
+    try {
+      const response = await axiosInstance.post(
+        `/api/v1/category/main-filter?&page=${page}&pageSize=${pageSize}`,
+        payload
+      );
+      console.log("Search API response:", response.data);
+      return response;
+    } catch (error) {
+      console.error("Search API error:", error);
+      throw error;
+    }
   },
 
   // Search products in a specific store
@@ -503,20 +512,62 @@ const userService = {
     pageSize = 10
   ) => {
     const payload = {
-      categoryMain: searchParams.categoryMain,
-      PriceRange: searchParams.PriceRange,
-      CustomerRating: searchParams.CustomerRating,
-      color: searchParams.color,
-      brandName: searchParams.brandName,
-      title: searchParams.title,
+      categoryMain: searchParams.categoryMain || "",
+      PriceRange: searchParams.PriceRange || "",
+      CustomerRating: searchParams.CustomerRating || 0,
+      color: searchParams.color || "",
+      brandName: searchParams.brandName || "",
+      title: searchParams.title || "",
       page,
       pageSize,
     };
 
-    return await axiosInstance.post(
-      `/api/v1/category/main-filter?sellerId=${sellerId}&page=${page}&pageSize=${pageSize}`,
-      payload
-    );
+    console.log("Store search API payload:", payload);
+
+    try {
+      const response = await axiosInstance.post(
+        `/api/v1/category/main-filter?sellerId=${sellerId}&page=${page}&pageSize=${pageSize}`,
+        payload
+      );
+      console.log("Store search API response:", response.data);
+      return response;
+    } catch (error) {
+      console.error("Store search API error:", error);
+      throw error;
+    }
+  },
+
+  quickSearch: async (query, pageSize = 8) => {
+    if (!query || query.length < 2) {
+      return { data: { data: [] } };
+    }
+
+    try {
+      const payload = {
+        title: query,
+        brandName: "",
+        categoryMain: "",
+        PriceRange: "",
+        CustomerRating: 0,
+        color: "",
+        page: 1,
+        pageSize,
+      };
+
+      console.log("Quick search payload:", payload);
+
+      const response = await axiosInstance.post(
+        `/api/v1/category/main-filter?&page=1&pageSize=${pageSize}`,
+        payload
+      );
+
+      console.log("Quick search response:", response.data);
+      return response;
+    } catch (error) {
+      console.error("Quick search error:", error);
+      // Return empty results on error to prevent breaking the UI
+      return { data: { data: [] } };
+    }
   },
 
   // ✅ ENHANCED: Extract cart item metadata for orders with comprehensive data

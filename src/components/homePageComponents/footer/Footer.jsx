@@ -79,25 +79,6 @@ const Footer = () => {
               a great deal again.
             </p>
 
-            {/* Newsletter Form */}
-            <div className="max-w-lg mx-auto mb-8">
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-2 border border-white/20">
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="email"
-                    placeholder="Enter your email address"
-                    className="flex-1 px-6 py-4 rounded-xl text-white placeholder-blue-200 bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-white/30 text-lg"
-                  />
-                  <button className="px-8 py-4 text-lg bg-white text-blue-900 hover:bg-gray-50 hover:text-blue-800 hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold rounded-xl inline-flex items-center justify-center gap-2">
-                    Subscribe
-                    <ArrowRight className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-              <p className="text-blue-200 text-sm mt-3">
-                🔒 We respect your privacy. Unsubscribe at any time.
-              </p>
-            </div>
 
             {/* Newsletter Benefits */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
