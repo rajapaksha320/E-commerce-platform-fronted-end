@@ -106,31 +106,26 @@ const Orders = () => {
 
   // Updated status options to match backend enum
   const statusOptions = [
-    { value: "all", label: "All Orders", count: orders.length },
+    { value: "all", label: "All Orders" },
     {
       value: "pending",
       label: "Pending",
-      count: orders.filter((o) => o.orderStatus === "pending").length,
     },
     {
       value: "confirmed",
       label: "Confirmed",
-      count: orders.filter((o) => o.orderStatus === "confirmed").length,
     },
     {
       value: "shipped",
       label: "Shipped",
-      count: orders.filter((o) => o.orderStatus === "shipped").length,
     },
     {
       value: "delivered",
       label: "Delivered",
-      count: orders.filter((o) => o.orderStatus === "delivered").length,
     },
     {
       value: "cancelled",
       label: "Cancelled",
-      count: orders.filter((o) => o.orderStatus === "cancelled").length,
     },
   ];
 
@@ -299,6 +294,26 @@ const Orders = () => {
     return parseFloat(defaultVariation?.price || 0);
   };
 
+  // ✅ FIXED: Format shipping address to handle string response from API
+  const formatShippingAddress = (shippingAddress) => {
+    if (!shippingAddress) return "No shipping address";
+
+    // ✅ If shippingAddress is a string (as from your API), return it directly
+    if (typeof shippingAddress === "string") {
+      return shippingAddress;
+    }
+
+    // Handle if shippingAddress is an object (legacy support)
+    if (typeof shippingAddress === "object") {
+      const addr = shippingAddress;
+      return `${addr.streetAddress || ""}, ${addr.city || ""}, ${
+        addr.state || ""
+      } ${addr.zipCode || ""}`.replace(/^,\s*|,\s*$/g, ""); // Clean up leading/trailing commas
+    }
+
+    return "Shipping address provided";
+  };
+
   // Transform order data for display
   const getOrderDisplayData = (order) => {
     console.log("Processing order for display:", order);
@@ -311,15 +326,7 @@ const Orders = () => {
       total: order.totalAmount || 0,
       items: order.listings || order.listingIds || [], // Use listings if available, fallback to listingIds
       stores: order.stores || [],
-      shippingAddress: order.shippingAddress
-        ? typeof order.shippingAddress === "object"
-          ? `${order.shippingAddress.streetAddress || ""}, ${
-              order.shippingAddress.city || ""
-            }, ${order.shippingAddress.state || ""} ${
-              order.shippingAddress.zipCode || ""
-            }`
-          : "Shipping address provided"
-        : "No shipping address",
+      shippingAddress: formatShippingAddress(order.shippingAddress), // ✅ Use updated function
       trackingNumber: order.trackingNumber || null,
       estimatedDelivery: order.estimatedDelivery,
       actualDelivery: order.actualDelivery,
@@ -411,10 +418,6 @@ const Orders = () => {
                     <Loader2 className="h-4 w-4 animate-spin text-blue-600 ml-2" />
                   )}
                 </h1>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  {filteredOrders.length}{" "}
-                  {filteredOrders.length === 1 ? "order" : "orders"} found
-                </p>
               </div>
             </div>
           </div>
@@ -585,18 +588,21 @@ const Orders = () => {
                       ))}
                     </div>
 
-                    {/* Shipping Info */}
-                    {orderData.shippingAddress && (
-                      <div className="flex items-start space-x-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-                        <MapPin className="h-4 w-4 mt-0.5 text-blue-600" />
-                        <div>
-                          <span className="font-medium text-blue-900">
-                            Shipping to:
-                          </span>
-                          <p>{orderData.shippingAddress}</p>
+                    {/* ✅ FIXED: Shipping Info - Now properly displays string addresses */}
+                    {orderData.shippingAddress &&
+                      orderData.shippingAddress !== "No shipping address" && (
+                        <div className="flex items-start space-x-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                          <MapPin className="h-4 w-4 mt-0.5 text-blue-600 flex-shrink-0" />
+                          <div className="flex-1">
+                            <span className="font-medium text-blue-900">
+                              Shipping to:
+                            </span>
+                            <p className="mt-1 text-gray-700">
+                              {orderData.shippingAddress}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
                     {/* Cancelled Info */}
                     {orderData.status === "cancelled" &&

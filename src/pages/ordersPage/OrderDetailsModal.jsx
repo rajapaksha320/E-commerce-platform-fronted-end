@@ -151,19 +151,30 @@ const OrderDetailsModal = ({
     }
   };
 
-  // Format shipping address
+  // ✅ FIXED: Format shipping address to handle string response from API
   const formatShippingAddress = () => {
     if (!order.shippingAddress) return "No shipping address";
 
-    // Handle if shippingAddress is an object
-    if (typeof order.shippingAddress === "object") {
-      const addr = order.shippingAddress;
-      return `${addr.streetAddress || ""}, ${addr.city || ""}, ${
-        addr.state || ""
-      } ${addr.zipCode || ""}`;
+    // ✅ If shippingAddress is a string (as from your API), return it directly
+    if (typeof order.shippingAddress === "string") {
+      return order.shippingAddress;
     }
 
-    // Handle if shippingAddress is a string or ID
+    // Handle if shippingAddress is an object (legacy support)
+    if (typeof order.shippingAddress === "object") {
+      const addr = order.shippingAddress;
+      const addressParts = [
+        addr.streetAddress,
+        addr.city,
+        addr.state,
+        addr.zipCode,
+      ].filter(Boolean); // Remove empty/null/undefined values
+
+      return addressParts.length > 0
+        ? addressParts.join(", ")
+        : "Shipping address provided";
+    }
+
     return "Shipping address provided";
   };
 
@@ -177,6 +188,7 @@ const OrderDetailsModal = ({
 
   const orderNumber = order.orderNumber || `#ORD-${order._id.slice(-6)}`;
   const orderItems = getOrderItems();
+  const shippingAddress = formatShippingAddress();
 
   return (
     <div className="fixed inset-0 bg-transparent backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -283,14 +295,15 @@ const OrderDetailsModal = ({
                     Shipping Information
                   </h3>
                   <div className="space-y-3">
+                    {/* ✅ FIXED: Shipping Address Display */}
                     <div className="flex items-start space-x-2">
-                      <MapPin className="h-4 w-4 text-gray-500 mt-1" />
-                      <div>
+                      <MapPin className="h-4 w-4 text-gray-500 mt-1 flex-shrink-0" />
+                      <div className="flex-1">
                         <p className="text-gray-900 font-medium">
                           Delivery Address
                         </p>
-                        <p className="text-gray-600 text-sm">
-                          {formatShippingAddress()}
+                        <p className="text-gray-600 text-sm mt-1 leading-relaxed">
+                          {shippingAddress}
                         </p>
                       </div>
                     </div>
