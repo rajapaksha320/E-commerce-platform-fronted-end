@@ -94,7 +94,6 @@ import {
   selectUserError,
   selectUserSuccess,
   selectUserMessage,
-  // ✅ NEW: Enhanced cart selectors
   selectCartStores,
   selectCartSellers,
   selectCartMetadata,
@@ -131,7 +130,7 @@ const useUser = () => {
   const cartItemCount = useSelector(selectCartItemCount);
   const cartTotal = useSelector(selectCartTotal);
 
-  // ✅ NEW: Enhanced cart data
+  // cart data
   const cartStores = useSelector(selectCartStores);
   const cartSellers = useSelector(selectCartSellers);
   const cartMetadata = useSelector(selectCartMetadata);
@@ -254,7 +253,7 @@ const useUser = () => {
     [dispatch]
   );
 
-  // ✅ NEW: Bulk remove cart items
+  // Bulk remove cart items
   const bulkRemoveCartItems = useCallback(
     async (cartItemIds) => {
       try {
@@ -269,7 +268,7 @@ const useUser = () => {
     [dispatch]
   );
 
-  // ✅ NEW: Clear entire cart
+  // Clear entire cart
   const clearUserCart = useCallback(() => {
     return dispatch(clearCart());
   }, [dispatch]);
@@ -475,7 +474,7 @@ const useUser = () => {
     [cartItems]
   );
 
-  // ✅ NEW: Enhanced cart helper functions
+  // Enhanced cart helper functions
   const getCartItemDetails = useCallback(
     (cartItemId) => {
       const item = cartItems.find((item) => item._id === cartItemId);
@@ -505,7 +504,7 @@ const useUser = () => {
     [cartItems]
   );
 
-  // ✅ NEW: Get order data for selected items
+  // Get order data for selected items
   const getOrderDataForItems = useCallback(
     (selectedItemIds = []) => {
       const cartItemsState = cartItems;
@@ -541,7 +540,7 @@ const useUser = () => {
     [cartItems]
   );
 
-  // ✅ ENHANCED: Get checkout items with full data
+  // Get checkout items with full data
   const getCheckoutItems = useCallback(
     (selectedItemIds = []) => {
       if (selectedItemIds.length === 0) {
@@ -555,7 +554,7 @@ const useUser = () => {
     [cartForCheckout]
   );
 
-  // ✅ NEW: Validate cart items for checkout
+  // Validate cart items for checkout
   const validateCartForCheckout = useCallback(
     (selectedItemIds = []) => {
       const itemsToCheck =
@@ -625,7 +624,7 @@ const useUser = () => {
     [cartItems]
   );
 
-  // ✅ ENHANCED: Helper to prepare order payload
+  // Helper to prepare order payload
   const prepareOrderPayload = useCallback(
     (
       selectedItemIds,
@@ -836,7 +835,7 @@ const useUser = () => {
     [addItemToCart]
   );
 
-  // ✅ FIXED: quickToggleWishlist - Now properly handles adding/removing without replacing
+  // quickToggleWishlist
   const quickToggleWishlist = useCallback(
     (userId, itemId, itemType = "product") => {
       if (itemType === "product") {
@@ -844,7 +843,6 @@ const useUser = () => {
         if (isInWishlist) {
           return removeFromWishlist(userId, itemId);
         } else {
-          // ✅ FIX: Get existing product IDs and add the new one
           const existingProductIds = productWishlist.reduce((ids, list) => {
             return [...ids, ...list.items.map((item) => item._id)];
           }, []);
@@ -866,7 +864,6 @@ const useUser = () => {
         if (isInWishlist) {
           return removeFromWishlist(userId, itemId);
         } else {
-          // ✅ FIX: Get existing shop IDs and add the new one
           const existingShopIds = shopWishlist.reduce((ids, list) => {
             return [...ids, ...list.items.map((item) => item._id)];
           }, []);
@@ -918,7 +915,6 @@ const useUser = () => {
     isEmpty: cartItemCount === 0,
   };
 
-  // ✅ ENHANCED: Updated cartSummary with new data
   const enhancedCartSummary = {
     ...cartSummary,
     metadata: cartMetadata,
@@ -1051,8 +1047,6 @@ const useUser = () => {
     error,
     success,
     message,
-
-    // ✅ NEW: Enhanced cart data
     cartStores,
     cartSellers,
     cartMetadata,
@@ -1115,8 +1109,6 @@ const useUser = () => {
     getShopContactInfo,
     getShopBasicInfo,
     getShopMedia,
-
-    // ✅ NEW: Enhanced helper functions
     getCartItemDetails,
     getOrderDataForItems,
     getCheckoutItems,
