@@ -63,7 +63,6 @@ const CheckoutPage = () => {
     createOrder,
     removeCartItem,
     clearErrors,
-    // ✅ NEW: Enhanced cart functions
     getCheckoutItems,
     validateCartForCheckout,
     prepareOrderPayload,
@@ -113,7 +112,7 @@ const CheckoutPage = () => {
     }
   }, [addresses, selectedAddress]);
 
-  // ✅ UPDATED: Handle checkout items with enhanced data
+  // Handle checkout items with  data
   useEffect(() => {
     const productId = searchParams.get("product");
     const quantity = parseInt(searchParams.get("quantity")) || 1;
@@ -126,7 +125,7 @@ const CheckoutPage = () => {
       );
       setCheckoutItems(location.state.selectedItems);
     } else if (location.state?.selectedItemIds && location.state?.fromCart) {
-      // ✅ NEW: Use enhanced checkout items getter
+      // Use  checkout items getter
       const selectedItems = getCheckoutItems(location.state.selectedItemIds);
       console.log("Using selected items by IDs:", selectedItems);
       setCheckoutItems(selectedItems);
@@ -196,7 +195,7 @@ const CheckoutPage = () => {
     }
   };
 
-  // ✅ FIXED: Prepare shipping address string from address object
+  // Prepare shipping address string from address object
   const prepareShippingAddress = (address) => {
     if (!address) return null;
 
@@ -251,7 +250,7 @@ const CheckoutPage = () => {
     setIsPlacingOrder(true);
 
     try {
-      // ✅ ENHANCED: Use new order preparation function
+      // Use new order preparation function
       const selectedItemIds = checkoutItems.map((item) => item._id);
 
       // Validate checkout items first
@@ -285,13 +284,13 @@ const CheckoutPage = () => {
         itemCount: checkoutItems.length,
       };
 
-      // ✅ FIXED: Prepare order payload with shipping address object
+      // Prepare order payload with shipping address object
       const orderPayload = {
         buyerId: authUser._id,
         listingIds: orderDataFromCart.listingIds,
         storeIds: orderDataFromCart.storeIds,
         sellerIds: orderDataFromCart.sellerIds,
-        shippingAddress: prepareShippingAddress(selectedAddress), // ✅ FIXED: Send address object, not ID
+        shippingAddress: prepareShippingAddress(selectedAddress), 
         shippingOption: selectedShipping,
         totalAmount: total,
       };
@@ -308,7 +307,7 @@ const CheckoutPage = () => {
       const response = await createOrder(orderPayload);
       console.log("Order response:", response);
 
-      // ✅ FIX: Remove items from cart individually (for selected items)
+      // Remove items from cart individually (for selected items)
       if (location.state?.fromCart) {
         try {
           // Remove only the items that were checked out
@@ -323,7 +322,7 @@ const CheckoutPage = () => {
         }
       }
 
-      // ✅ FIX: Prepare success modal data properly
+      // Prepare success modal data properly
       const successOrderData = {
         orderId:
           response.payload?.order?._id ||
@@ -348,7 +347,7 @@ const CheckoutPage = () => {
       setShowSuccessModal(true);
       showToast.success("Order placed successfully!");
 
-      // ✅ FIX: Clear checkout items to prevent "No items" message
+      // Clear checkout items to prevent "No items" message
       setCheckoutItems([]);
     } catch (error) {
       console.error("Error placing order:", error);
@@ -362,7 +361,7 @@ const CheckoutPage = () => {
     }
   };
 
-  // ✅ FIX: Handle success modal close
+  // Handle success modal close
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
     setOrderData(null);
@@ -370,7 +369,7 @@ const CheckoutPage = () => {
     navigate("/orders");
   };
 
-  // ✅ ENHANCED: Calculate totals using enhanced cart data
+  // Calculate totals using enhanced cart data
   const subtotal = checkoutItems.reduce((sum, item) => {
     const price = parseFloat(
       item.price || item.listing?.variations?.[0]?.price || 0
@@ -420,7 +419,7 @@ const CheckoutPage = () => {
     );
   }
 
-  // ✅ FIX: Only show "No items" if we're not showing success modal
+  // Only show "No items" if we're not showing success modal
   if (checkoutItems.length === 0 && !showSuccessModal) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -703,7 +702,7 @@ const CheckoutPage = () => {
                   </Card>
                 )}
 
-                {/* ✅ NEW: Order metadata display */}
+                {/* Order metadata display */}
                 {cartMetadata && (
                   <Card>
                     <h3 className="font-bold text-gray-900 mb-4">
