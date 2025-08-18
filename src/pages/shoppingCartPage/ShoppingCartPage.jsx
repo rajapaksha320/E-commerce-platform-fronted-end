@@ -16,6 +16,9 @@ import {
   Clock,
   Loader2,
   AlertCircle,
+  Check,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 
 import {
@@ -24,8 +27,11 @@ import {
   ContactCard as Card,
 } from "../../components/ui/ContactUis/Uis";
 import Pagination from "../../components/ui/ContactUis/Pagination";
+import ToastNotification, {
+  useToast,
+} from "../../components/ui/ToastNotification";
 import { useNavigate } from "react-router-dom";
-import useUser from "../../hooks/useUser"; // Your custom hook
+import useUser from "../../hooks/useUser";
 import { useSelector } from "react-redux";
 import {
   selectUser,
@@ -36,6 +42,7 @@ const ShoppingCartPage = () => {
   const navigate = useNavigate();
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const currentUser = useSelector(selectUser);
+  const { toastRef, showToast } = useToast();
 
   // Redux user hook
   const {
@@ -46,6 +53,11 @@ const ShoppingCartPage = () => {
     cartPagination,
     cartItemCount,
     cartTotal,
+
+    // ✅ NEW: Enhanced cart data
+    cartMetadata,
+    cartStores,
+    cartSellers,
 
     // Wishlist state
     productWishlist,
@@ -58,17 +70,21 @@ const ShoppingCartPage = () => {
     addToWishlist,
     clearErrors,
 
+    // ✅ NEW: Enhanced helper functions
+    getCartItemDetails,
+    validateCartForCheckout,
+
     // Helper functions
     isItemInCart,
     getCartItemByListing,
     cartSummary,
   } = useUser();
 
-  // Local state for pagination
+  // Local state for pagination and selection
   const [currentPage, setCurrentPage] = useState(1);
-  const [savedPage, setSavedPage] = useState(1);
+  const [selectedItems, setSelectedItems] = useState(new Set());
+  const [selectAll, setSelectAll] = useState(false);
   const itemsPerPage = 10;
-  const savedItemsPerPage = 6;
 
   // Get user ID
   const userId = currentUser?._id || currentUser?.userId;
@@ -81,6 +97,19 @@ const ShoppingCartPage = () => {
     }
   }, [isAuthenticated, buyerId, currentPage, fetchCartItems]);
 
+  // Update select all state when cart items change
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      const allSelected = cartItems.every((item) =>
+        selectedItems.has(item._id)
+      );
+      setSelectAll(allSelected);
+    } else {
+      setSelectAll(false);
+      setSelectedItems(new Set());
+    }
+  }, [cartItems, selectedItems]);
+
   // Clear errors on unmount
   useEffect(() => {
     return () => {
@@ -88,12 +117,90 @@ const ShoppingCartPage = () => {
     };
   }, [clearErrors]);
 
-  // Handle navigation to checkout
-  const handleNavigateCheckout = () => {
-    navigate("/checkout");
+  // Handle individual item selection
+  const handleItemSelect = (itemId, isSelected) => {
+    const newSelected = new Set(selectedItems);
+    if (isSelected) {
+      newSelected.add(itemId);
+    } else {
+      newSelected.delete(itemId);
+    }
+    setSelectedItems(newSelected);
   };
 
-  // Update item quantity
+  // Handle select all toggle
+  const handleSelectAll = (isSelected) => {
+    setSelectAll(isSelected);
+    if (isSelected) {
+      setSelectedItems(new Set(cartItems.map((item) => item._id)));
+    } else {
+      setSelectedItems(new Set());
+    }
+  };
+
+  // ✅ ENHANCED: Handle navigation to checkout with selected items
+  const handleNavigateCheckout = () => {
+    if (selectedItems.size === 0) {
+      showToast.error("Please select at least one item to checkout");
+      return;
+    }
+
+    // Get selected cart items with full data
+    const selectedCartItems = cartItems.filter((item) =>
+      selectedItems.has(item._id)
+    );
+
+    // ✅ ENHANCED: Validate selected items before checkout
+    try {
+      const validation = validateCartForCheckout(Array.from(selectedItems));
+      if (!validation.isValid) {
+        showToast.error(
+          `Cannot proceed to checkout: ${validation.errors.join(", ")}`
+        );
+        return;
+      }
+
+      if (validation.warnings.length > 0) {
+        // Show warnings but allow checkout
+        validation.warnings.forEach((warning) => {
+          showToast.warning(warning);
+        });
+      }
+    } catch (error) {
+      console.error("Validation error:", error);
+      showToast.error("Error validating cart items");
+      return;
+    }
+
+    console.log(
+      "Navigating to checkout with selected items:",
+      selectedCartItems
+    );
+    console.log("Selected metadata:", {
+      itemCount: selectedCartItems.length,
+      totalValue: selectedCartItems.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      ),
+      storeCount: new Set(
+        selectedCartItems.map((item) => item.storeId).filter(Boolean)
+      ).size,
+      sellerCount: new Set(
+        selectedCartItems.map((item) => item.sellerId).filter(Boolean)
+      ).size,
+    });
+
+    // ✅ FIX: Navigate to checkout with selected items in state
+    navigate("/checkout", {
+      state: {
+        selectedItems: selectedCartItems,
+        fromCart: true,
+        selectedItemIds: Array.from(selectedItems), // Also pass the IDs for reference
+      },
+    });
+  };
+
+  // ✅ ENHANCED: Update item quantity with enhanced data
   const updateQuantity = async (cartItemId, newQuantity) => {
     if (newQuantity <= 0) {
       await removeItem(cartItemId);
@@ -101,26 +208,56 @@ const ShoppingCartPage = () => {
     }
 
     try {
-      await updateCartItemQuantity(cartItemId, newQuantity).unwrap();
+      // Get item details for validation
+      const itemDetails = getCartItemDetails(cartItemId);
+      if (itemDetails && newQuantity > itemDetails.availableStock) {
+        showToast.warning(
+          `Only ${itemDetails.availableStock} units available for ${itemDetails.name}`
+        );
+        return;
+      }
+
+      await updateCartItemQuantity(cartItemId, newQuantity);
       // Refresh cart items
       if (buyerId) {
         fetchCartItems(buyerId, currentPage, itemsPerPage);
       }
+      showToast.success("Quantity updated");
     } catch (error) {
       console.error("Failed to update quantity:", error);
+      showToast.error("Failed to update quantity");
     }
   };
 
-  // Remove item from cart
+  // Remove item from cart with pagination fix
   const removeItem = async (cartItemId) => {
     try {
-      await removeCartItem(cartItemId).unwrap();
-      // Refresh cart items after removal
-      if (buyerId) {
-        fetchCartItems(buyerId, currentPage, itemsPerPage);
+      await removeCartItem(cartItemId);
+
+      // Remove from selected items if it was selected
+      const newSelected = new Set(selectedItems);
+      newSelected.delete(cartItemId);
+      setSelectedItems(newSelected);
+
+      // ✅ FIX: Check if this was the last item on current page
+      if (cartItems.length === 1 && currentPage > 1) {
+        // Go to previous page
+        const newPage = currentPage - 1;
+        setCurrentPage(newPage);
+        if (buyerId) {
+          fetchCartItems(buyerId, newPage, itemsPerPage);
+        }
+      } else {
+        // Refresh current page
+        if (buyerId) {
+          fetchCartItems(buyerId, currentPage, itemsPerPage);
+        }
       }
+
+      showToast.success("Item removed from cart");
     } catch (error) {
       console.error("Failed to remove item:", error);
+      showToast.error("Failed to remove item");
     }
   };
 
@@ -129,11 +266,13 @@ const ShoppingCartPage = () => {
     try {
       const listingId = item.listing?._id || item.listingId;
       if (listingId) {
-        await addToWishlist([listingId], []).unwrap();
+        await addToWishlist([listingId], []);
         await removeItem(item._id);
+        showToast.success("Item saved to wishlist");
       }
     } catch (error) {
       console.error("Failed to save for later:", error);
+      showToast.error("Failed to save for later");
     }
   };
 
@@ -143,6 +282,9 @@ const ShoppingCartPage = () => {
     if (buyerId) {
       fetchCartItems(buyerId, page, itemsPerPage);
     }
+    // Clear selections when changing pages
+    setSelectedItems(new Set());
+    setSelectAll(false);
   };
 
   // Get badge variant
@@ -172,8 +314,34 @@ const ShoppingCartPage = () => {
     ));
   };
 
-  // Get item details from cart item
+  // ✅ ENHANCED: Get item details with enhanced cart data
   const getItemDetails = (cartItem) => {
+    // Use enhanced cart data if available
+    if (cartItem.productName && cartItem.price !== undefined) {
+      return {
+        id: cartItem._id,
+        name: cartItem.productName,
+        brand: cartItem.productBrand,
+        price: cartItem.price,
+        originalPrice: cartItem.originalPrice,
+        quantity: cartItem.quantity,
+        image: cartItem.productImage,
+        inStock: cartItem.inStock,
+        availableStock: cartItem.availableStock,
+        rating: cartItem.listing?.averageRating || 4.0,
+        totalReviews: cartItem.listing?.totalReviews || 0,
+        badge: cartItem.productTags?.[0] || null,
+        shippingFree:
+          cartItem.listing?.shippingClass?.shippingClass === "standard",
+        listingId: cartItem.listingId,
+        storeId: cartItem.storeId,
+        sellerId: cartItem.sellerId,
+        storeName: cartItem.storeName,
+        category: cartItem.category,
+      };
+    }
+
+    // Fallback to original logic for backward compatibility
     const listing = cartItem.listing;
     const defaultVariation =
       listing?.variations?.find((v) => v.isDefault) || listing?.variations?.[0];
@@ -191,23 +359,31 @@ const ShoppingCartPage = () => {
         listing?.images?.find((img) => img.isPrimary)?.url ||
         listing?.images?.[0]?.url ||
         "/placehold.png",
-      inStock: listing?.status === "active" && defaultVariation?.stock > 0,
+      inStock: listing?.status === "active" && defaultVariation?.quantity > 0,
+      availableStock: parseInt(defaultVariation?.quantity || 0),
       rating: listing?.averageRating || 4.0,
       totalReviews: listing?.totalReviews || 0,
       badge: listing?.badge || null,
       shippingFree:
         listing?.freeShipping || defaultVariation?.freeShipping || false,
       listingId: listing?._id,
+      storeId: cartItem.store?._id,
+      sellerId: cartItem.store?.sellerId,
+      storeName: cartItem.store?.basicInformation?.storeName,
     };
   };
 
-  // Calculate totals
-  const subtotal = cartItems.reduce((sum, item) => {
+  // ✅ ENHANCED: Calculate totals for selected items only
+  const selectedCartItems = cartItems.filter((item) =>
+    selectedItems.has(item._id)
+  );
+
+  const subtotal = selectedCartItems.reduce((sum, item) => {
     const details = getItemDetails(item);
     return sum + details.price * details.quantity;
   }, 0);
 
-  const shipping = cartItems.some((item) => {
+  const shipping = selectedCartItems.some((item) => {
     const details = getItemDetails(item);
     return !details.shippingFree;
   })
@@ -218,7 +394,10 @@ const ShoppingCartPage = () => {
   const finalShipping = freeShipping ? 0 : shipping;
   const tax = subtotal * 0.08;
   const total = subtotal + finalShipping + tax;
-  const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0) - 1;
+  const selectedItemCount = selectedCartItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
 
   // Get pagination info
   const totalPages = cartPagination?.totalPages || 1;
@@ -278,6 +457,8 @@ const ShoppingCartPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <ToastNotification ref={toastRef} />
+
       {/* Mobile-First Header */}
       <div className="bg-white/90 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -298,17 +479,33 @@ const ShoppingCartPage = () => {
                   <span className="sm:hidden">Cart</span>
                 </h1>
                 <p className="text-xs sm:text-sm text-gray-600">
-                  {itemCount} {itemCount === 1 ? "item" : "items"}
+                  {cartItems.length} {cartItems.length === 1 ? "item" : "items"}
+                  {selectedItems.size > 0 && (
+                    <span className="text-blue-600">
+                      {" "}
+                      • {selectedItems.size} selected
+                    </span>
+                  )}
+                  {/* ✅ NEW: Enhanced cart metadata display */}
+                  {cartMetadata && (
+                    <span className="text-gray-500">
+                      {" "}
+                      • {cartMetadata.uniqueStores}{" "}
+                      {cartMetadata.uniqueStores === 1 ? "store" : "stores"}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
-            {/* Mobile Cart Total */}
+            {/* Mobile Cart Total - Selected Items */}
             <div className="sm:hidden">
               <div className="text-right">
                 <p className="text-lg font-bold text-blue-600">
                   LKR {total.toFixed(2)}
                 </p>
-                <p className="text-xs text-gray-500">Total</p>
+                <p className="text-xs text-gray-500">
+                  {selectedItems.size > 0 ? "Selected" : "Total"}
+                </p>
               </div>
             </div>
           </div>
@@ -344,33 +541,86 @@ const ShoppingCartPage = () => {
           <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-8">
             {/* Cart Items - Mobile First */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Cart Header */}
+              {/* Cart Header with Select All */}
               <div className="flex items-center justify-between">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                  Cart Items
-                  {cartLoading && (
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-600 ml-2 inline" />
+                <div className="flex items-center space-x-4">
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                    Cart Items
+                    {cartLoading && (
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-600 ml-2 inline" />
+                    )}
+                  </h2>
+
+                  {/* Select All Checkbox */}
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleSelectAll(!selectAll)}
+                      className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                      disabled={cartLoading}
+                    >
+                      {selectAll ? (
+                        <CheckSquare className="h-4 w-4 text-blue-600" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
+                      <span className="hidden sm:inline">Select All</span>
+                      <span className="sm:hidden">All</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Badge variant="primary" size="sm">
+                    {cartItems.length} items
+                  </Badge>
+                  {selectedItems.size > 0 && (
+                    <Badge variant="success" size="sm">
+                      {selectedItems.size} selected
+                    </Badge>
                   )}
-                </h2>
-                <Badge variant="primary" size="sm">
-                  {itemCount} items
-                </Badge>
+                  {/* ✅ NEW: Enhanced badges */}
+                  {cartMetadata && cartMetadata.uniqueStores > 1 && (
+                    <Badge variant="secondary" size="sm">
+                      {cartMetadata.uniqueStores} stores
+                    </Badge>
+                  )}
+                </div>
               </div>
 
               {/* Cart Items List */}
               <div className="space-y-4 sm:space-y-6">
                 {cartItems.map((cartItem) => {
                   const item = getItemDetails(cartItem);
+                  const isSelected = selectedItems.has(item.id);
 
                   return (
                     <Card
                       key={item.id}
-                      className="p-4 sm:p-6 hover:shadow-md transition-shadow duration-200"
+                      className={`p-4 sm:p-6 hover:shadow-md transition-all duration-200 ${
+                        isSelected ? "ring-2 ring-blue-500 bg-blue-50" : ""
+                      } ${!item.inStock ? "opacity-75 bg-gray-50" : ""}`}
                     >
                       <div className="space-y-4">
                         {/* Mobile Layout */}
                         <div className="sm:hidden">
                           <div className="flex space-x-4">
+                            {/* Selection Checkbox */}
+                            <div className="flex-shrink-0 pt-1">
+                              <button
+                                onClick={() =>
+                                  handleItemSelect(item.id, !isSelected)
+                                }
+                                className="p-1"
+                                disabled={cartLoading || !item.inStock}
+                              >
+                                {isSelected ? (
+                                  <CheckSquare className="h-5 w-5 text-blue-600" />
+                                ) : (
+                                  <Square className="h-5 w-5 text-gray-400" />
+                                )}
+                              </button>
+                            </div>
+
                             {/* Image */}
                             <div className="flex-shrink-0 relative">
                               <img
@@ -409,6 +659,13 @@ const ShoppingCartPage = () => {
                                 {item.name}
                               </h3>
 
+                              {/* ✅ NEW: Store information */}
+                              {item.storeName && (
+                                <p className="text-xs text-gray-500 mb-1">
+                                  Store: {item.storeName}
+                                </p>
+                              )}
+
                               {/* Rating */}
                               <div className="flex items-center space-x-1 mb-2">
                                 {renderStars(item.rating)}
@@ -429,6 +686,13 @@ const ShoppingCartPage = () => {
                                   </span>
                                 )}
                               </div>
+
+                              {/* Stock info */}
+                              {item.inStock && item.availableStock < 5 && (
+                                <p className="text-xs text-orange-600 mb-2">
+                                  Only {item.availableStock} left in stock
+                                </p>
+                              )}
 
                               {item.shippingFree && (
                                 <div className="flex items-center text-green-600 text-xs mb-2">
@@ -473,7 +737,11 @@ const ShoppingCartPage = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="p-1 h-8 w-8"
-                                disabled={!item.inStock || cartLoading}
+                                disabled={
+                                  !item.inStock ||
+                                  cartLoading ||
+                                  item.quantity >= item.availableStock
+                                }
                               >
                                 <Plus className="h-3 w-3" />
                               </Button>
@@ -507,6 +775,23 @@ const ShoppingCartPage = () => {
                         {/* Desktop Layout */}
                         <div className="hidden sm:block">
                           <div className="flex space-x-6">
+                            {/* Selection Checkbox */}
+                            <div className="flex-shrink-0 pt-2">
+                              <button
+                                onClick={() =>
+                                  handleItemSelect(item.id, !isSelected)
+                                }
+                                className="p-1"
+                                disabled={cartLoading || !item.inStock}
+                              >
+                                {isSelected ? (
+                                  <CheckSquare className="h-5 w-5 text-blue-600" />
+                                ) : (
+                                  <Square className="h-5 w-5 text-gray-400" />
+                                )}
+                              </button>
+                            </div>
+
                             {/* Image */}
                             <div className="flex-shrink-0 relative">
                               <img
@@ -545,6 +830,12 @@ const ShoppingCartPage = () => {
                                 <h3 className="font-semibold text-gray-900 text-base lg:text-lg mb-2">
                                   {item.name}
                                 </h3>
+                                {/* ✅ NEW: Store information */}
+                                {item.storeName && (
+                                  <p className="text-sm text-gray-500 mb-2">
+                                    Store: {item.storeName}
+                                  </p>
+                                )}
                               </div>
 
                               <div className="flex items-center space-x-1 mb-3">
@@ -565,6 +856,13 @@ const ShoppingCartPage = () => {
                                   </span>
                                 )}
                               </div>
+
+                              {/* Stock info */}
+                              {item.inStock && item.availableStock < 5 && (
+                                <p className="text-sm text-orange-600 mb-3">
+                                  Only {item.availableStock} left in stock
+                                </p>
+                              )}
 
                               {item.shippingFree && (
                                 <div className="flex items-center text-green-600 text-sm mb-4">
@@ -600,11 +898,22 @@ const ShoppingCartPage = () => {
                                     variant="ghost"
                                     size="sm"
                                     className="p-2"
-                                    disabled={!item.inStock || cartLoading}
+                                    disabled={
+                                      !item.inStock ||
+                                      cartLoading ||
+                                      item.quantity >= item.availableStock
+                                    }
                                   >
                                     <Plus className="h-4 w-4" />
                                   </Button>
                                 </div>
+
+                                {/* Available Stock Display */}
+                                {item.inStock && (
+                                  <span className="text-sm text-gray-500">
+                                    / {item.availableStock} available
+                                  </span>
+                                )}
 
                                 {/* Action Buttons */}
                                 <div className="flex items-center space-x-2">
@@ -659,19 +968,23 @@ const ShoppingCartPage = () => {
               )}
             </div>
 
-            {/* Order Summary - Mobile Optimized */}
+            {/* Order Summary - Selected Items Only */}
             <div className="lg:col-span-1 order-first lg:order-last">
               <div className="lg:sticky lg:top-24 space-y-4 sm:space-y-6">
-                {/* Mobile Checkout Button */}
+                {/* ✅ UPDATED: Mobile Checkout Button */}
                 <div className="sm:hidden">
                   <Button
                     className="w-full"
                     size="lg"
                     onClick={handleNavigateCheckout}
-                    disabled={cartItems.length === 0 || cartLoading}
+                    disabled={selectedItems.size === 0 || cartLoading}
                   >
                     <CreditCard className="h-5 w-5 mr-2" />
-                    Checkout - LKR {total.toFixed(2)}
+                    {selectedItems.size === 0
+                      ? "Select Items to Checkout"
+                      : `Checkout (${selectedItems.size}) - LKR ${total.toFixed(
+                          2
+                        )}`}
                   </Button>
                 </div>
 
@@ -679,57 +992,115 @@ const ShoppingCartPage = () => {
                 <Card>
                   <h3 className="text-lg font-bold text-gray-900 mb-6">
                     Order Summary
+                    {selectedItems.size > 0 && (
+                      <Badge variant="primary" size="sm" className="ml-2">
+                        {selectedItems.size} selected
+                      </Badge>
+                    )}
                   </h3>
 
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">
-                        Subtotal ({itemCount} items)
-                      </span>
-                      <span className="font-semibold">
-                        LKR {subtotal.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Shipping</span>
-                      <span
-                        className={
-                          finalShipping === 0
-                            ? "text-green-600 font-semibold"
-                            : "font-semibold"
-                        }
+                  {selectedItems.size === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500 text-sm mb-2">
+                        Select items to see order summary
+                      </p>
+                      <Button
+                        onClick={() => handleSelectAll(true)}
+                        variant="outline"
+                        size="sm"
                       >
-                        {finalShipping === 0
-                          ? "Free"
-                          : `LKR ${finalShipping.toFixed(2)}`}
-                      </span>
+                        Select All Items
+                      </Button>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Tax</span>
-                      <span className="font-semibold">
-                        LKR {tax.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="border-t border-gray-200 pt-3">
-                      <div className="flex justify-between text-base font-bold">
-                        <span>Total</span>
-                        <span className="text-blue-600">
-                          LKR {total.toFixed(2)}
+                  ) : (
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">
+                          Subtotal ({selectedItemCount} items)
+                        </span>
+                        <span className="font-semibold">
+                          LKR {subtotal.toFixed(2)}
                         </span>
                       </div>
-                    </div>
-                  </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Shipping</span>
+                        <span
+                          className={
+                            finalShipping === 0
+                              ? "text-green-600 font-semibold"
+                              : "font-semibold"
+                          }
+                        >
+                          {finalShipping === 0
+                            ? "Free"
+                            : `LKR ${finalShipping.toFixed(2)}`}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Tax</span>
+                        <span className="font-semibold">
+                          LKR {tax.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="border-t border-gray-200 pt-3">
+                        <div className="flex justify-between text-base font-bold">
+                          <span>Total</span>
+                          <span className="text-blue-600">
+                            LKR {total.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
 
-                  {/* Desktop Checkout */}
+                      {/* ✅ NEW: Enhanced summary with store info */}
+                      {selectedCartItems.length > 0 && (
+                        <div className="mt-4 pt-3 border-t border-gray-100">
+                          <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                            <div>
+                              <span>Stores: </span>
+                              <span className="font-medium">
+                                {
+                                  new Set(
+                                    selectedCartItems
+                                      .map(
+                                        (item) => getItemDetails(item).storeId
+                                      )
+                                      .filter(Boolean)
+                                  ).size
+                                }
+                              </span>
+                            </div>
+                            <div>
+                              <span>Sellers: </span>
+                              <span className="font-medium">
+                                {
+                                  new Set(
+                                    selectedCartItems
+                                      .map(
+                                        (item) => getItemDetails(item).sellerId
+                                      )
+                                      .filter(Boolean)
+                                  ).size
+                                }
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ✅ UPDATED: Desktop Checkout */}
                   <div className="mt-6 space-y-4 hidden sm:block">
                     <Button
                       className="w-full"
                       size="lg"
                       onClick={handleNavigateCheckout}
-                      disabled={cartItems.length === 0 || cartLoading}
+                      disabled={selectedItems.size === 0 || cartLoading}
                     >
                       <CreditCard className="h-5 w-5 mr-2" />
-                      Proceed to Checkout
+                      {selectedItems.size === 0
+                        ? "Select Items to Checkout"
+                        : `Checkout (${selectedItems.size} items)`}
                     </Button>
 
                     <div className="grid grid-cols-2 gap-3 text-xs text-gray-600">
@@ -744,8 +1115,8 @@ const ShoppingCartPage = () => {
                     </div>
                   </div>
 
-                  {/* Free Shipping Progress */}
-                  {!freeShipping && subtotal < 75 && (
+                  {/* Free Shipping Progress - Selected Items */}
+                  {selectedItems.size > 0 && !freeShipping && subtotal < 75 && (
                     <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                       <div className="flex items-center text-blue-700 text-sm mb-2">
                         <Truck className="h-4 w-4 mr-2" />

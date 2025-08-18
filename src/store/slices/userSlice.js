@@ -414,7 +414,6 @@ export const deleteUserAccount = createAsyncThunk(
   }
 );
 
-// GET USER PROFILE ASYNC THUNK
 export const getUserProfile = createAsyncThunk(
   "user/getUserProfile",
   async (userId, { rejectWithValue }) => {
@@ -631,6 +630,7 @@ const userSlice = createSlice({
         state.cartError = action.payload;
       });
 
+    // ✅ ENHANCED: Cart items processing with full data
     builder
       .addCase(getCartItems.pending, (state) => {
         state.cartLoading = true;
@@ -638,7 +638,62 @@ const userSlice = createSlice({
       })
       .addCase(getCartItems.fulfilled, (state, action) => {
         state.cartLoading = false;
-        state.cartItems = action.payload.cartData;
+
+        // ✅ ENHANCED: Process cart items with store and seller data
+        const rawCartData = action.payload.cartData || [];
+
+        // Process each cart item to ensure all required data is available
+        state.cartItems = rawCartData.map((item) => {
+          // Extract store information
+          const store = item.store || {};
+          const storeId = store._id || store.storeId;
+          const sellerId = store.sellerId || item.listing?.sellerDetails;
+
+          // Extract listing information
+          const listing = item.listing || {};
+          const defaultVariation =
+            listing.variations?.find((v) => v.isDefault) ||
+            listing.variations?.[0];
+
+          return {
+            ...item,
+            // ✅ Add normalized store/seller information
+            storeId: storeId,
+            sellerId: sellerId,
+            storeName: store.basicInformation?.storeName || "Unknown Store",
+
+            // ✅ Add normalized listing information
+            productName: listing.title || "Unknown Product",
+            productBrand: listing.brand || "Unknown Brand",
+            productImage:
+              listing.images?.find((img) => img.isPrimary)?.url ||
+              listing.images?.[0]?.url ||
+              defaultVariation?.images?.[0]?.url,
+
+            // ✅ Add pricing information from variations
+            price: parseFloat(defaultVariation?.price || 0),
+            originalPrice: parseFloat(
+              defaultVariation?.originalPrice || defaultVariation?.price || 0
+            ),
+
+            // ✅ Add stock and status information
+            inStock:
+              listing.status === "active" &&
+              parseInt(defaultVariation?.quantity || 0) > 0,
+            productStatus: listing.status || "unknown",
+            availableStock: parseInt(defaultVariation?.quantity || 0),
+
+            // ✅ Add product metadata
+            category: listing.category,
+            productTags: listing.productTags || [],
+            hasVariations: listing.hasVariations || false,
+
+            // ✅ Keep original nested objects for detailed access
+            listing: listing,
+            store: store,
+          };
+        });
+
         state.cartPagination = {
           totalItems: action.payload.totalItems,
           totalPages: action.payload.totalPages,
@@ -1013,11 +1068,129 @@ export const selectCartPagination = (state) => state.user.cartPagination;
 export const selectCartLoading = (state) => state.user.cartLoading;
 export const selectCartError = (state) => state.user.cartError;
 export const selectCartItemCount = (state) => state.user.cartItems.length;
+
+// ✅ ENHANCED: Cart total selector with new data structure
 export const selectCartTotal = (state) => {
   return state.user.cartItems.reduce((total, item) => {
-    const price = item.listing?.variations?.[0]?.price || 0;
-    return total + parseFloat(price) * item.quantity;
+    // Use the normalized price or fall back to listing data
+    const price =
+      item.price ||
+      parseFloat(
+        item.listing?.variations?.find((v) => v.isDefault)?.price || 0
+      );
+    return total + price * item.quantity;
   }, 0);
+};
+
+// ✅ NEW: Enhanced cart selectors for checkout
+export const selectCartStores = (state) => {
+  const stores = new Map();
+  state.user.cartItems.forEach((item) => {
+    if (item.storeId && !stores.has(item.storeId)) {
+      stores.set(item.storeId, {
+        id: item.storeId,
+        name: item.storeName,
+        sellerId: item.sellerId,
+        storeData: item.store,
+      });
+    }
+  });
+  return Array.from(stores.values());
+};
+
+export const selectCartSellers = (state) => {
+  const sellers = new Set();
+  state.user.cartItems.forEach((item) => {
+    if (item.sellerId) {
+      sellers.add(item.sellerId);
+    }
+  });
+  return Array.from(sellers);
+};
+
+export const selectCartMetadata = (state) => {
+  const items = state.user.cartItems;
+
+  return {
+    totalItems: items.length,
+    totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
+    totalValue: items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    ),
+    uniqueStores: new Set(items.map((item) => item.storeId).filter(Boolean))
+      .size,
+    uniqueSellers: new Set(items.map((item) => item.sellerId).filter(Boolean))
+      .size,
+    categories: [
+      ...new Set(items.map((item) => item.category?.main).filter(Boolean)),
+    ],
+    inStockCount: items.filter((item) => item.inStock).length,
+    outOfStockCount: items.filter((item) => !item.inStock).length,
+  };
+};
+
+// ✅ ENHANCED: Cart item helpers for checkout
+export const selectCartForCheckout = (state) => {
+  return state.user.cartItems.map((item) => ({
+    // Cart item basics
+    _id: item._id,
+    listingId: item.listingId,
+    quantity: item.quantity,
+
+    // Store/Seller info for order
+    storeId: item.storeId,
+    sellerId: item.sellerId,
+    storeName: item.storeName,
+
+    // Product info for display
+    name: item.productName,
+    brand: item.productBrand,
+    image: item.productImage,
+    price: item.price,
+    originalPrice: item.originalPrice,
+
+    // Status info
+    inStock: item.inStock,
+    availableStock: item.availableStock,
+
+    // Full objects for detailed access
+    listing: item.listing,
+    store: item.store,
+  }));
+};
+
+// ✅ HELPER: Extract order data from cart items
+export const selectOrderDataFromCart = (state, selectedItemIds = []) => {
+  const cartItems = state.user.cartItems;
+
+  // Filter by selected items if provided, otherwise use all
+  const itemsToProcess =
+    selectedItemIds.length > 0
+      ? cartItems.filter((item) => selectedItemIds.includes(item._id))
+      : cartItems;
+
+  const listingIds = itemsToProcess
+    .map((item) => item.listingId)
+    .filter(Boolean);
+  const storeIds = [
+    ...new Set(itemsToProcess.map((item) => item.storeId).filter(Boolean)),
+  ];
+  const sellerIds = [
+    ...new Set(itemsToProcess.map((item) => item.sellerId).filter(Boolean)),
+  ];
+
+  return {
+    listingIds,
+    storeIds,
+    sellerIds,
+    totalAmount: itemsToProcess.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    ),
+    itemCount: itemsToProcess.reduce((sum, item) => sum + item.quantity, 0),
+    items: itemsToProcess,
+  };
 };
 
 // Wishlist selectors

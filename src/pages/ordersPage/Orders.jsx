@@ -437,7 +437,7 @@ const Orders = () => {
                   : "You haven't placed any orders yet. Start shopping to see your orders here!"}
               </p>
               <Button
-                onClick={() => navigate("/shop-collection")}
+                onClick={() => navigate("/shop-collections")}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 Start Shopping
