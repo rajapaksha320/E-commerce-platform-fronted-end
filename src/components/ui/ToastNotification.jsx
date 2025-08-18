@@ -16,6 +16,7 @@ import {
 
 const ToastNotification = forwardRef((props, ref) => {
   const [notifications, setNotifications] = useState([]);
+  const maxNotifications = 3; // Maximum number of toasts to show at once
 
   // Expose methods to parent components
   useImperativeHandle(ref, () => ({
@@ -35,7 +36,18 @@ const ToastNotification = forwardRef((props, ref) => {
         timestamp: Date.now(),
       };
 
-      setNotifications((prev) => [...prev, notification]);
+      setNotifications((prev) => {
+        let newNotifications = [...prev];
+
+        // Remove oldest notifications if we exceed the limit
+        if (newNotifications.length >= maxNotifications) {
+          const excessCount = newNotifications.length - maxNotifications + 1;
+          newNotifications = newNotifications.slice(excessCount);
+        }
+
+        // Add new notification
+        return [...newNotifications, notification];
+      });
 
       // Auto-dismiss after specified duration
       setTimeout(() => {
@@ -153,7 +165,7 @@ const ToastNotification = forwardRef((props, ref) => {
     <>
       {/* Toast Container */}
       <div className="fixed top-16 sm:top-20 left-2 right-2 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 z-50 space-y-2 sm:w-full sm:max-w-md pointer-events-none">
-        {notifications.map((notification) => (
+        {notifications.map((notification, index) => (
           <div
             key={notification.id}
             className={`
@@ -164,6 +176,7 @@ const ToastNotification = forwardRef((props, ref) => {
             `}
             style={{
               animation: "slideDown 0.5s ease-out",
+              zIndex: 1000 - index, // Ensure newer toasts appear on top
             }}
           >
             {/* Progress bar */}

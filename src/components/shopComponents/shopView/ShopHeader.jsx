@@ -19,20 +19,72 @@ import {
   Building,
 } from "lucide-react";
 import { Button, Badge, ContactCard as Card } from "../../ui/ContactUis/Uis";
+import useUser from "../../../hooks/useUser";
+import { useSelector } from "react-redux";
+import { selectUser as selectAuthUser } from "../../../store/slices/authSlice";
 
-const ShopHeader = ({ shop, className = "" }) => {
+const ShopHeader = ({
+  shop,
+  className = "",
+  onWishlistUpdate,
+  realStats = {
+    reviewCount: 0,
+    productCount: 0,
+    averageRating: 0,
+    totalSales: 0,
+  },
+}) => {
   const navigate = useNavigate();
+  const authUser = useSelector(selectAuthUser);
+
+  // Redux hooks for wishlist management
+  const {
+    quickToggleWishlist,
+    isItemInShopWishlist,
+    fetchWishlist, // Add this to refresh wishlist after action
+  } = useUser();
 
   if (!shop) return null;
 
-  const handleViewAllProducts = () => {
-    // This will be handled by the parent component tab switching
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // Check if shop is in wishlist
+  const isInWishlist = authUser ? isItemInShopWishlist(shop._id) : false;
 
-  const handleContactShop = () => {
-    // You can implement contact functionality here
-    console.log("Contact shop:", shop._id);
+  const handleWishlistToggle = async () => {
+    if (!authUser?._id) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      // Store the current state before toggle
+      const wasInWishlist = isInWishlist;
+
+      await quickToggleWishlist(authUser._id, shop._id, "shop");
+
+      // Refresh wishlist to ensure state is updated immediately
+      await fetchWishlist(authUser._id);
+
+      // Call the callback to show toast notification in parent component
+      if (onWishlistUpdate) {
+        const shopName = shop.basicInformation?.storeName || "Shop";
+        if (wasInWishlist) {
+          onWishlistUpdate(`"${shopName}" removed from wishlist`, "success");
+        } else {
+          onWishlistUpdate(`"${shopName}" added to wishlist!`, "success", {
+            text: "View Wishlist",
+            action: () => navigate("/wishlist"),
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error toggling wishlist:", error);
+      if (onWishlistUpdate) {
+        onWishlistUpdate(
+          "Failed to update wishlist. Please try again.",
+          "error"
+        );
+      }
+    }
   };
 
   const renderRatingStars = (rating) => {
@@ -66,6 +118,11 @@ const ShopHeader = ({ shop, className = "" }) => {
 
   const statusBadge = getStatusBadge();
 
+  const displayRating = realStats.averageRating || 0;
+  const displayReviewCount = realStats.reviewCount || 0;
+  const displayProductCount = realStats.productCount || 0;
+  const displaySalesCount = realStats.totalSales || shop.totalSales || 0;
+
   return (
     <div
       className={`bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden ${className}`}
@@ -97,17 +154,28 @@ const ShopHeader = ({ shop, className = "" }) => {
           <Button
             variant="outline"
             size="sm"
-            className="bg-white/90 backdrop-blur-sm border-white/20 hover:bg-white"
+            onClick={handleWishlistToggle}
+            className={`bg-white/90 backdrop-blur-sm border-white/20 transition-all duration-200 hover:!bg-white hover:!border-red-300 ${
+              isInWishlist
+                ? "text-red-600 border-red-200 bg-red-50/90 hover:!text-red-500"
+                : "text-gray-600 hover:!text-red-500"
+            }`}
           >
-            <Heart className="h-4 w-4 mr-1" />
-            Follow
+            <Heart
+              className={`h-4 w-4 mr-1 transition-all duration-200 ${
+                isInWishlist ? "fill-current scale-110" : ""
+              }`}
+            />
+            <span className="font-medium">
+              {isInWishlist ? "Saved" : "Save"}
+            </span>
           </Button>
           <Button
             variant="outline"
             size="sm"
-            className="bg-white/90 backdrop-blur-sm border-white/20 hover:bg-white"
+            className="bg-white/90 backdrop-blur-sm border-white/20 text-gray-600 hover:bg-white hover:border-gray-300 transition-all duration-200 group"
           >
-            <Share2 className="h-4 w-4" />
+            <Share2 className="h-4 w-4 group-hover:text-blue-500 transition-colors duration-200" />
           </Button>
         </div>
       </div>
@@ -163,29 +231,34 @@ const ShopHeader = ({ shop, className = "" }) => {
                   </p>
                 )}
 
-                {/* Rating and Stats */}
+
                 <div className="flex flex-wrap items-center gap-6 mb-6">
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center">
-                      {renderRatingStars(shop.rating)}
+                      {renderRatingStars(displayRating)}
                     </div>
                     <span className="font-semibold text-gray-900">
-                      {shop.rating || 0}
+                      {displayRating.toFixed(1)}
                     </span>
-                    <span className="text-gray-600">(0 reviews)</span>
+                    <span className="text-gray-600">
+                      ({displayReviewCount}{" "}
+                      {displayReviewCount === 1 ? "review" : "reviews"})
+                    </span>
                   </div>
 
                   <div className="flex items-center space-x-1 text-gray-600">
                     <Package className="h-4 w-4" />
                     <span className="text-sm">
-                      {shop.totalProducts || 0} products
+                      {displayProductCount}{" "}
+                      {displayProductCount === 1 ? "product" : "products"}
                     </span>
                   </div>
 
                   <div className="flex items-center space-x-1 text-gray-600">
                     <ShoppingBag className="h-4 w-4" />
                     <span className="text-sm">
-                      {shop.totalSales || 0} sales
+                      {displaySalesCount}{" "}
+                      {displaySalesCount === 1 ? "sale" : "sales"}
                     </span>
                   </div>
 
@@ -248,28 +321,6 @@ const ShopHeader = ({ shop, className = "" }) => {
                   )}
                 </div>
               </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col space-y-2 mt-4 md:mt-0 md:ml-4 w-full md:w-auto">
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={handleContactShop}
-                  className="w-full md:w-auto"
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Contact Shop
-                </Button>
-                <Button
-                  variant="outline"
-                  size="md"
-                  onClick={handleViewAllProducts}
-                  className="w-full md:w-auto"
-                >
-                  <Package className="h-4 w-4 mr-2" />
-                  View Products
-                </Button>
-              </div>
             </div>
           </div>
         </div>
@@ -286,7 +337,6 @@ const ShopHeader = ({ shop, className = "" }) => {
           </div>
         )}
 
-        {/* Shop Quick Stats */}
         <div className="mt-6 pt-6 border-t border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Shop Information
@@ -295,7 +345,7 @@ const ShopHeader = ({ shop, className = "" }) => {
             <div className="bg-blue-50 p-4 rounded-lg text-center">
               <Package className="h-6 w-6 text-blue-600 mx-auto mb-2" />
               <div className="text-xl font-bold text-blue-600">
-                {shop.totalProducts || 0}
+                {displayProductCount}
               </div>
               <div className="text-sm text-blue-700">Total Products</div>
             </div>
@@ -303,7 +353,7 @@ const ShopHeader = ({ shop, className = "" }) => {
             <div className="bg-green-50 p-4 rounded-lg text-center">
               <ShoppingBag className="h-6 w-6 text-green-600 mx-auto mb-2" />
               <div className="text-xl font-bold text-green-600">
-                {shop.totalSales || 0}
+                {displaySalesCount}
               </div>
               <div className="text-sm text-green-700">Total Sales</div>
             </div>
@@ -311,17 +361,17 @@ const ShopHeader = ({ shop, className = "" }) => {
             <div className="bg-yellow-50 p-4 rounded-lg text-center">
               <Star className="h-6 w-6 text-yellow-600 mx-auto mb-2" />
               <div className="text-xl font-bold text-yellow-600">
-                {shop.rating || 0}
+                {displayRating.toFixed(1)}
               </div>
               <div className="text-sm text-yellow-700">Shop Rating</div>
             </div>
 
             <div className="bg-purple-50 p-4 rounded-lg text-center">
-              <Calendar className="h-6 w-6 text-purple-600 mx-auto mb-2" />
+              <MessageCircle className="h-6 w-6 text-purple-600 mx-auto mb-2" />
               <div className="text-xl font-bold text-purple-600">
-                {new Date(shop.createdAt).getFullYear()}
+                {displayReviewCount}
               </div>
-              <div className="text-sm text-purple-700">Established</div>
+              <div className="text-sm text-purple-700">Total Reviews</div>
             </div>
           </div>
         </div>
