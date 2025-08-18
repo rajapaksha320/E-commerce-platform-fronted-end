@@ -67,7 +67,7 @@ const ShoppingCartPage = () => {
   // Local state for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [savedPage, setSavedPage] = useState(1);
-  const itemsPerPage = 3;
+  const itemsPerPage = 10;
   const savedItemsPerPage = 6;
 
   // Get user ID
@@ -218,7 +218,7 @@ const ShoppingCartPage = () => {
   const finalShipping = freeShipping ? 0 : shipping;
   const tax = subtotal * 0.08;
   const total = subtotal + finalShipping + tax;
-  const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0) - 1;
 
   // Get pagination info
   const totalPages = cartPagination?.totalPages || 1;
