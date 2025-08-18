@@ -151,11 +151,11 @@ const OrderDetailsModal = ({
     }
   };
 
-  // ✅ FIXED: Format shipping address to handle string response from API
+  // Format shipping address to handle string response from API
   const formatShippingAddress = () => {
     if (!order.shippingAddress) return "No shipping address";
 
-    // ✅ If shippingAddress is a string (as from your API), return it directly
+    // If shippingAddress is a string (as from your API), return it directly
     if (typeof order.shippingAddress === "string") {
       return order.shippingAddress;
     }
@@ -295,7 +295,7 @@ const OrderDetailsModal = ({
                     Shipping Information
                   </h3>
                   <div className="space-y-3">
-                    {/* ✅ FIXED: Shipping Address Display */}
+                    {/* Shipping Address Display */}
                     <div className="flex items-start space-x-2">
                       <MapPin className="h-4 w-4 text-gray-500 mt-1 flex-shrink-0" />
                       <div className="flex-1">

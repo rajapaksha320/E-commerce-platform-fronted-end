@@ -643,7 +643,7 @@ const userSlice = createSlice({
       .addCase(getCartItems.fulfilled, (state, action) => {
         state.cartLoading = false;
 
-        // ✅ ENHANCED: Process cart items with store and seller data
+        // Process cart items with store and seller data
         const rawCartData = action.payload.cartData || [];
 
         // Process each cart item to ensure all required data is available
@@ -661,12 +661,12 @@ const userSlice = createSlice({
 
           return {
             ...item,
-            // ✅ Add normalized store/seller information
+            // Add normalized store/seller information
             storeId: storeId,
             sellerId: sellerId,
             storeName: store.basicInformation?.storeName || "Unknown Store",
 
-            // ✅ Add normalized listing information
+            // Add normalized listing information
             productName: listing.title || "Unknown Product",
             productBrand: listing.brand || "Unknown Brand",
             productImage:
@@ -674,25 +674,25 @@ const userSlice = createSlice({
               listing.images?.[0]?.url ||
               defaultVariation?.images?.[0]?.url,
 
-            // ✅ Add pricing information from variations
+            //Add pricing information from variations
             price: parseFloat(defaultVariation?.price || 0),
             originalPrice: parseFloat(
               defaultVariation?.originalPrice || defaultVariation?.price || 0
             ),
 
-            // ✅ Add stock and status information
+            // Add stock and status information
             inStock:
               listing.status === "active" &&
               parseInt(defaultVariation?.quantity || 0) > 0,
             productStatus: listing.status || "unknown",
             availableStock: parseInt(defaultVariation?.quantity || 0),
 
-            // ✅ Add product metadata
+            // Add product metadata
             category: listing.category,
             productTags: listing.productTags || [],
             hasVariations: listing.hasVariations || false,
 
-            // ✅ Keep original nested objects for detailed access
+            // Keep original nested objects for detailed access
             listing: listing,
             store: store,
           };
