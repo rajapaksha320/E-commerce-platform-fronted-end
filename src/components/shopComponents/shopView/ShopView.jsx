@@ -126,6 +126,7 @@ const ShopView = () => {
     searchQuery,
     filters,
   ]);
+  
 
   const isLoading = useMemo(() => {
     if (isSearchMode) {
@@ -313,6 +314,22 @@ const ShopView = () => {
   const handleProductClick = (product) => {
     navigate(`/product/${product._id}`);
   };
+
+  const getActualProductCount = () => {
+    // Use pagination total if available (most accurate)
+    if (storesPagination?.total) {
+      return storesPagination.total;
+    }
+
+    // Use current listings length as fallback
+    if (storeListings?.length) {
+      return storeListings.length;
+    }
+
+    // Use shop's totalProducts as last resort
+    return currentShopDetails?.totalProducts || 0;
+  };
+
 
   const getBadgeVariant = (badge) => {
     const variants = {
@@ -780,9 +797,10 @@ const ShopView = () => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
               <Card className="text-center p-4 sm:p-6">
                 <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1 sm:mb-2">
-                  {currentShopDetails.totalProducts || 0}
+                  {getActualProductCount()}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600">Products</div>
+              
               </Card>
               <Card className="text-center p-4 sm:p-6">
                 <div className="text-2xl sm:text-3xl font-bold text-green-600 mb-1 sm:mb-2">

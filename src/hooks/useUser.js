@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useSelector, useDispatch } from "react-redux";
 import { useCallback } from "react";
 import {
@@ -94,6 +95,7 @@ import {
   selectUserSuccess,
   selectUserMessage,
 } from "../store/slices/userSlice";
+import { title } from "framer-motion/client";
 
 const useUser = () => {
   const dispatch = useDispatch();
@@ -515,6 +517,7 @@ const useUser = () => {
         CustomerRating: filters.rating || 0,
         color: filters.color || "",
         brandName: filters.brand || "",
+        title:filters.title || ""
       };
 
       return searchAllProducts(searchParams, page, pageSize);

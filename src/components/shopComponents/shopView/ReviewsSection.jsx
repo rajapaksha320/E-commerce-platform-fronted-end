@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Star,
   ThumbsUp,
@@ -43,81 +43,220 @@ const ReviewsSection = ({ shopId, className = "" }) => {
     }
   }, [shopId, currentPage, reviewsPerPage, fetchShopReviews]);
 
-  // Mock data for categories and distribution since API doesn't provide this yet
-  const shopRatings = {
-    overall: 4.6,
-    totalReviews: shopReviews?.length || 0,
-    categories: [
-      {
-        id: "shopping",
-        name: "Shopping Experience",
-        icon: ShoppingBag,
-        rating: 4.7,
-        color: "text-blue-600",
-        bgColor: "bg-blue-100",
-      },
-      {
-        id: "customer_service",
-        name: "Customer Service",
-        icon: Headphones,
-        rating: 4.5,
-        color: "text-green-600",
-        bgColor: "bg-green-100",
-      },
-      {
-        id: "product_quality",
-        name: "Product Quality",
-        icon: Package,
-        rating: 4.8,
-        color: "text-purple-600",
-        bgColor: "bg-purple-100",
-      },
-      {
-        id: "delivery",
-        name: "Delivery Speed",
-        icon: Award,
-        rating: 4.4,
-        color: "text-orange-600",
-        bgColor: "bg-orange-100",
-      },
-    ],
-    distribution: [
-      {
-        stars: 5,
-        count: Math.floor((shopReviews?.length || 0) * 0.54),
-        percentage: 54,
-      },
-      {
-        stars: 4,
-        count: Math.floor((shopReviews?.length || 0) * 0.3),
-        percentage: 30,
-      },
-      {
-        stars: 3,
-        count: Math.floor((shopReviews?.length || 0) * 0.1),
-        percentage: 10,
-      },
-      {
-        stars: 2,
-        count: Math.floor((shopReviews?.length || 0) * 0.04),
-        percentage: 4,
-      },
-      {
-        stars: 1,
-        count: Math.floor((shopReviews?.length || 0) * 0.02),
-        percentage: 2,
-      },
-    ],
-  };
+  // ✅ FIXED: Move getAverageRating function definition before it's used
+  const getAverageRating = useCallback((review) => {
+    const ratings = [
+      review.shoppingExperience,
+      review.customerService,
+      review.productQuality,
+      review.deliverySpeed,
+    ].filter((rating) => rating > 0);
 
-  const filterOptions = [
-    { id: "all", name: "All Reviews", count: shopReviews?.length || 0 },
-    { id: "5", name: "5 Stars", count: shopRatings.distribution[0].count },
-    { id: "4", name: "4 Stars", count: shopRatings.distribution[1].count },
-    { id: "3", name: "3 Stars", count: shopRatings.distribution[2].count },
-    { id: "2", name: "2 Stars", count: shopRatings.distribution[3].count },
-    { id: "1", name: "1 Star", count: shopRatings.distribution[4].count },
-  ];
+    if (ratings.length === 0) return 0;
+    return ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+  }, []);
+
+  // ✅ FIXED: Calculate real review counts from actual data
+  const reviewCounts = useMemo(() => {
+    if (!shopReviews || !Array.isArray(shopReviews)) {
+      return { total: 0, 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    }
+
+    const counts = { total: shopReviews.length, 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+
+    shopReviews.forEach((review) => {
+      // Calculate average rating from the review components
+      const ratings = [
+        review.shoppingExperience,
+        review.customerService,
+        review.productQuality,
+        review.deliverySpeed,
+      ].filter((rating) => rating > 0);
+
+      if (ratings.length > 0) {
+        const avgRating =
+          ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+        const roundedRating = Math.round(avgRating);
+
+        if (roundedRating >= 1 && roundedRating <= 5) {
+          counts[roundedRating]++;
+        }
+      }
+    });
+
+    return counts;
+  }, [shopReviews]);
+
+  // ✅ FIXED: Calculate real distribution percentages from backend data
+  const shopRatings = useMemo(() => {
+    const totalReviews = reviewCounts.total;
+
+    // Calculate category averages from actual backend data
+    const categoryTotals = {
+      shoppingExperience: { sum: 0, count: 0 },
+      customerService: { sum: 0, count: 0 },
+      productQuality: { sum: 0, count: 0 },
+      deliverySpeed: { sum: 0, count: 0 },
+    };
+
+    let totalRatingSum = 0;
+    let totalRatingCount = 0;
+
+    if (shopReviews && Array.isArray(shopReviews)) {
+      shopReviews.forEach((review) => {
+        // Calculate category totals
+        if (review.shoppingExperience > 0) {
+          categoryTotals.shoppingExperience.sum += review.shoppingExperience;
+          categoryTotals.shoppingExperience.count++;
+        }
+        if (review.customerService > 0) {
+          categoryTotals.customerService.sum += review.customerService;
+          categoryTotals.customerService.count++;
+        }
+        if (review.productQuality > 0) {
+          categoryTotals.productQuality.sum += review.productQuality;
+          categoryTotals.productQuality.count++;
+        }
+        if (review.deliverySpeed > 0) {
+          categoryTotals.deliverySpeed.sum += review.deliverySpeed;
+          categoryTotals.deliverySpeed.count++;
+        }
+
+        // Calculate overall average
+        const ratings = [
+          review.shoppingExperience,
+          review.customerService,
+          review.productQuality,
+          review.deliverySpeed,
+        ].filter((rating) => rating > 0);
+
+        if (ratings.length > 0) {
+          const avgRating =
+            ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+          totalRatingSum += avgRating;
+          totalRatingCount++;
+        }
+      });
+    }
+
+    const overallRating =
+      totalRatingCount > 0 ? totalRatingSum / totalRatingCount : 0;
+
+    // Calculate category averages from actual data
+    const shoppingAvg =
+      categoryTotals.shoppingExperience.count > 0
+        ? categoryTotals.shoppingExperience.sum /
+          categoryTotals.shoppingExperience.count
+        : 0;
+    const serviceAvg =
+      categoryTotals.customerService.count > 0
+        ? categoryTotals.customerService.sum /
+          categoryTotals.customerService.count
+        : 0;
+    const qualityAvg =
+      categoryTotals.productQuality.count > 0
+        ? categoryTotals.productQuality.sum /
+          categoryTotals.productQuality.count
+        : 0;
+    const deliveryAvg =
+      categoryTotals.deliverySpeed.count > 0
+        ? categoryTotals.deliverySpeed.sum / categoryTotals.deliverySpeed.count
+        : 0;
+
+    return {
+      overall: parseFloat(overallRating.toFixed(1)),
+      totalReviews: totalReviews,
+      categories: [
+        {
+          id: "shopping",
+          name: "Shopping Experience",
+          icon: ShoppingBag,
+          rating: parseFloat(shoppingAvg.toFixed(1)),
+          color: "text-blue-600",
+          bgColor: "bg-blue-100",
+        },
+        {
+          id: "customer_service",
+          name: "Customer Service",
+          icon: Headphones,
+          rating: parseFloat(serviceAvg.toFixed(1)),
+          color: "text-green-600",
+          bgColor: "bg-green-100",
+        },
+        {
+          id: "product_quality",
+          name: "Product Quality",
+          icon: Package,
+          rating: parseFloat(qualityAvg.toFixed(1)),
+          color: "text-purple-600",
+          bgColor: "bg-purple-100",
+        },
+        {
+          id: "delivery",
+          name: "Delivery Speed",
+          icon: Award,
+          rating: parseFloat(deliveryAvg.toFixed(1)),
+          color: "text-orange-600",
+          bgColor: "bg-orange-100",
+        },
+      ],
+      distribution: [
+        {
+          stars: 5,
+          count: reviewCounts[5],
+          percentage:
+            totalReviews > 0
+              ? Math.round((reviewCounts[5] / totalReviews) * 100)
+              : 0,
+        },
+        {
+          stars: 4,
+          count: reviewCounts[4],
+          percentage:
+            totalReviews > 0
+              ? Math.round((reviewCounts[4] / totalReviews) * 100)
+              : 0,
+        },
+        {
+          stars: 3,
+          count: reviewCounts[3],
+          percentage:
+            totalReviews > 0
+              ? Math.round((reviewCounts[3] / totalReviews) * 100)
+              : 0,
+        },
+        {
+          stars: 2,
+          count: reviewCounts[2],
+          percentage:
+            totalReviews > 0
+              ? Math.round((reviewCounts[2] / totalReviews) * 100)
+              : 0,
+        },
+        {
+          stars: 1,
+          count: reviewCounts[1],
+          percentage:
+            totalReviews > 0
+              ? Math.round((reviewCounts[1] / totalReviews) * 100)
+              : 0,
+        },
+      ],
+    };
+  }, [reviewCounts, shopReviews]);
+
+  // ✅ FIXED: Use real counts for filter options
+  const filterOptions = useMemo(
+    () => [
+      { id: "all", name: "All Reviews", count: reviewCounts.total },
+      { id: "5", name: "5 Stars", count: reviewCounts[5] },
+      { id: "4", name: "4 Stars", count: reviewCounts[4] },
+      { id: "3", name: "3 Stars", count: reviewCounts[3] },
+      { id: "2", name: "2 Stars", count: reviewCounts[2] },
+      { id: "1", name: "1 Star", count: reviewCounts[1] },
+    ],
+    [reviewCounts]
+  );
 
   const sortOptions = [
     { id: "newest", name: "Newest First" },
@@ -127,7 +266,7 @@ const ReviewsSection = ({ shopId, className = "" }) => {
     { id: "helpful", name: "Most Helpful" },
   ];
 
-  // Filter and sort reviews
+  // Filter and sort reviews - now getAverageRating is available
   const filteredAndSortedReviews = useMemo(() => {
     if (!shopReviews) return [];
 
@@ -145,12 +284,7 @@ const ReviewsSection = ({ shopId, className = "" }) => {
         // Filter by rating
         const rating = parseInt(selectedFilter);
         filtered = filtered.filter((review) => {
-          const avgRating =
-            ((review.shoppingExperience || 0) +
-              (review.customerService || 0) +
-              (review.productQuality || 0) +
-              (review.deliverySpeed || 0)) /
-            4;
+          const avgRating = getAverageRating(review);
           return Math.round(avgRating) === rating;
         });
       }
@@ -163,35 +297,15 @@ const ReviewsSection = ({ shopId, className = "" }) => {
         break;
       case "highest":
         filtered.sort((a, b) => {
-          const avgA =
-            ((a.shoppingExperience || 0) +
-              (a.customerService || 0) +
-              (a.productQuality || 0) +
-              (a.deliverySpeed || 0)) /
-            4;
-          const avgB =
-            ((b.shoppingExperience || 0) +
-              (b.customerService || 0) +
-              (b.productQuality || 0) +
-              (b.deliverySpeed || 0)) /
-            4;
+          const avgA = getAverageRating(a);
+          const avgB = getAverageRating(b);
           return avgB - avgA;
         });
         break;
       case "lowest":
         filtered.sort((a, b) => {
-          const avgA =
-            ((a.shoppingExperience || 0) +
-              (a.customerService || 0) +
-              (a.productQuality || 0) +
-              (a.deliverySpeed || 0)) /
-            4;
-          const avgB =
-            ((b.shoppingExperience || 0) +
-              (b.customerService || 0) +
-              (b.productQuality || 0) +
-              (b.deliverySpeed || 0)) /
-            4;
+          const avgA = getAverageRating(a);
+          const avgB = getAverageRating(b);
           return avgA - avgB;
         });
         break;
@@ -206,7 +320,7 @@ const ReviewsSection = ({ shopId, className = "" }) => {
     }
 
     return filtered;
-  }, [shopReviews, selectedFilter, sortBy]);
+  }, [shopReviews, selectedFilter, sortBy, getAverageRating]);
 
   // Pagination calculations
   const totalPages = Math.ceil(
@@ -266,18 +380,6 @@ const ReviewsSection = ({ shopId, className = "" }) => {
     });
   };
 
-  const getAverageRating = (review) => {
-    const ratings = [
-      review.shoppingExperience,
-      review.customerService,
-      review.productQuality,
-      review.deliverySpeed,
-    ].filter((rating) => rating > 0);
-
-    if (ratings.length === 0) return 0;
-    return ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
-  };
-
   const getUserInitials = (name) => {
     return name
       .split(" ")
@@ -286,6 +388,21 @@ const ReviewsSection = ({ shopId, className = "" }) => {
       .toUpperCase()
       .slice(0, 2);
   };
+
+  // ✅ Debug logging to verify real data calculations
+  useEffect(() => {
+    console.log("ReviewsSection Debug:", {
+      shopReviews: shopReviews?.length || 0,
+      reviewCounts: reviewCounts,
+      filterOptions: filterOptions,
+      shopRatings: shopRatings,
+      categoryBreakdown: shopRatings.categories.map((cat) => ({
+        name: cat.name,
+        rating: cat.rating,
+        source: "calculated from backend data",
+      })),
+    });
+  }, [shopReviews, reviewCounts, filterOptions, shopRatings]);
 
   // Loading state
   if (reviewsLoading && !shopReviews) {
@@ -572,23 +689,7 @@ const ReviewsSection = ({ shopId, className = "" }) => {
                         )}
                       </div>
 
-                      {/* Review Actions */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <button className="flex items-center space-x-1 text-gray-600 hover:text-green-600 transition-colors">
-                            <ThumbsUp className="h-4 w-4" />
-                            <span className="text-sm">Helpful (0)</span>
-                          </button>
-                          <button className="flex items-center space-x-1 text-gray-600 hover:text-red-600 transition-colors">
-                            <ThumbsDown className="h-4 w-4" />
-                            <span className="text-sm">Not Helpful</span>
-                          </button>
-                        </div>
-                        <Button variant="outline" size="sm">
-                          <MessageCircle className="h-4 w-4 mr-1" />
-                          Reply
-                        </Button>
-                      </div>
+                      
                     </div>
                   </div>
                 </Card>
