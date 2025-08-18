@@ -19,8 +19,10 @@ import {
   X,
   Menu,
   Loader,
+  Loader2,
   AlertCircle,
   Building,
+  CheckCircle,
 } from "lucide-react";
 
 import { Button, Badge, ContactCard as Card } from "../../ui/ContactUis/Uis";
@@ -65,13 +67,13 @@ const ShopView = () => {
     searchProductsInStore,
     resetShopDetail,
     addItemToCart,
-    cartLoading,
     quickToggleWishlist,
     isItemInProductWishlist,
     isItemInShopWishlist,
     isItemInCart,
     fetchShopReviews,
     removeFromWishlist,
+    fetchCartItems,
   } = useUser();
 
   // Component state
@@ -82,6 +84,8 @@ const ShopView = () => {
   const [sortBy, setSortBy] = useState("best_match");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+
+  const [addingToCart, setAddingToCart] = useState(new Set());
 
   const [filters, setFilters] = useState({
     categoryMain: "",
@@ -194,11 +198,10 @@ const ShopView = () => {
     };
   }, [shopId, fetchShopDetailsById, resetShopDetail]);
 
-  // ✅ FIXED: Fetch shop listings immediately when we have seller ID (not just for products tab)
   // This ensures we have data for accurate stats calculation on initial load
   useEffect(() => {
     if (sellerId) {
-      fetchShopListings(sellerId, 1, itemsPerPage); // Fetch first page immediately for stats
+      fetchShopListings(sellerId, 1, itemsPerPage);
     }
   }, [sellerId, fetchShopListings, itemsPerPage]);
 
@@ -212,7 +215,7 @@ const ShopView = () => {
   useEffect(() => {
     if (shopId) {
       // Fetch all reviews to get accurate count and rating
-      fetchShopReviews(shopId, 1, 100); 
+      fetchShopReviews(shopId, 1, 100);
     }
   }, [shopId, fetchShopReviews]);
 
@@ -233,6 +236,7 @@ const ShopView = () => {
         CustomerRating: filters.CustomerRating,
         color: filters.color,
         brandName: filters.brandName,
+        title: searchQuery, 
       };
 
       searchProductsInStore(sellerId, searchParams, currentPage, itemsPerPage);
@@ -314,8 +318,24 @@ const ShopView = () => {
       return;
     }
 
+    // Check if already in cart
+    if (isItemInCart(product._id)) {
+      showToast.success("Item is already in your cart", {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
+      return;
+    }
+
+    // Set loading state for this specific product
+    setAddingToCart((prev) => new Set(prev).add(product._id));
+
     try {
       await addItemToCart(authUser._id, product._id, 1);
+
+      // Refresh cart items to update status
+      await fetchCartItems(authUser._id, 1, 100);
+
       const productName = product.title || product.name || "Product";
       showToast.success(`"${productName}" added to cart successfully!`, {
         text: "View Cart",
@@ -324,6 +344,13 @@ const ShopView = () => {
     } catch (error) {
       console.error("Error adding to cart:", error);
       showToast.error("Failed to add to cart. Please try again.");
+    } finally {
+      // Remove loading state for this specific product
+      setAddingToCart((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(product._id);
+        return newSet;
+      });
     }
   };
 
@@ -414,6 +441,49 @@ const ShopView = () => {
     return 0;
   };
 
+  const getCartButtonContent = (product) => {
+    const productId = product._id;
+    const isLoadingThisItem = addingToCart.has(productId);
+    const inCart = isItemInCart(productId);
+    const isOutOfStock =
+      product.status !== "active" ||
+      parseInt(product.variations?.[0]?.quantity || 0) <= 0;
+
+    if (isLoadingThisItem) {
+      return {
+        text: "Adding...",
+        icon: <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />,
+        disabled: true,
+        variant: "primary",
+      };
+    }
+
+    if (inCart) {
+      return {
+        text: "Added to Cart",
+        icon: <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />,
+        disabled: false,
+        variant: "success",
+      };
+    }
+
+    if (isOutOfStock) {
+      return {
+        text: "Out of Stock",
+        icon: <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />,
+        disabled: true,
+        variant: "outline",
+      };
+    }
+
+    return {
+      text: "Add to Cart",
+      icon: <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />,
+      disabled: false,
+      variant: "primary",
+    };
+  };
+
   const renderProductCard = (product) => {
     const variation = product.variations?.[0];
     const price = parseFloat(variation?.price || 0);
@@ -424,7 +494,8 @@ const ShopView = () => {
       product.status === "active" && parseInt(variation?.quantity || 0) > 0;
     const rating = parseFloat(product.averageRating || 0);
     const isFavorite = authUser ? isItemInProductWishlist(product._id) : false;
-    const inCart = authUser ? isItemInCart(product._id) : false;
+
+    const cartButton = getCartButtonContent(product);
 
     return (
       <Card
@@ -477,7 +548,7 @@ const ShopView = () => {
           )}
 
           {/* Action Buttons */}
-          <div className="absolute top-2 right-10 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute top-10 right-3 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -594,27 +665,26 @@ const ShopView = () => {
             )}
           </div>
 
-          {/* Add to Cart Button */}
           <Button
-            variant="primary"
+            variant={cartButton.variant}
             size="sm"
-            className="w-full mt-auto touch-manipulation text-xs sm:text-sm py-2 sm:py-2.5"
-            disabled={!isInStock || cartLoading}
+            className={`w-full mt-auto touch-manipulation text-xs sm:text-sm py-2 sm:py-2.5 ${
+              cartButton.variant === "success"
+                ? "bg-green-600 hover:bg-green-700 text-white"
+                : ""
+            }`}
+            disabled={cartButton.disabled}
             onClick={(e) => {
               e.stopPropagation();
-              handleAddToCart(product);
+              if (!cartButton.disabled && cartButton.variant !== "success") {
+                handleAddToCart(product);
+              } else if (cartButton.variant === "success") {
+                navigate("/shopping-cart");
+              }
             }}
           >
-            <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-            {cartLoading ? (
-              <Loader className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-            ) : inCart ? (
-              "Added to Cart"
-            ) : isInStock ? (
-              "Add to Cart"
-            ) : (
-              "Out of Stock"
-            )}
+            {cartButton.icon}
+            {cartButton.text}
           </Button>
         </div>
       </Card>
@@ -810,7 +880,6 @@ const ShopView = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
-
         <ShopHeader
           shop={currentShopDetails}
           className="mb-6 sm:mb-8"

@@ -1,87 +1,81 @@
 /* eslint-disable no-unused-vars */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Home, Building, User, Phone, MapPin } from "lucide-react";
+import { useSelector } from "react-redux";
 import {
   Button,
   Badge,
   ContactCard as Card,
 } from "../../components/ui/ContactUis/Uis";
+import { selectUser as selectAuthUser } from "../../store/slices/authSlice";
 
 const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
-  const [formData, setFormData] = useState(
-    editingAddress || {
-      id: null,
-      type: "home",
-      firstName: "",
-      lastName: "",
-      company: "",
-      address: "",
-      apartment: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      country: "United States",
-      phone: "",
-      isDefault: false,
-    }
-  );
+  const authUser = useSelector(selectAuthUser);
+
+  const [formData, setFormData] = useState({
+    _id: null,
+    addressType: "home",
+    firstName: "",
+    lastName: "",
+    streetAddress: "",
+    apartment: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    phoneNumber: "",
+    isDefault: false,
+  });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // US States list (you can replace with full list or API call)
+  // Sri Lankan provinces/states
   const states = [
-    "AL",
-    "AK",
-    "AZ",
-    "AR",
-    "CA",
-    "CO",
-    "CT",
-    "DE",
-    "FL",
-    "GA",
-    "HI",
-    "ID",
-    "IL",
-    "IN",
-    "IA",
-    "KS",
-    "KY",
-    "LA",
-    "ME",
-    "MD",
-    "MA",
-    "MI",
-    "MN",
-    "MS",
-    "MO",
-    "MT",
-    "NE",
-    "NV",
-    "NH",
-    "NJ",
-    "NM",
-    "NY",
-    "NC",
-    "ND",
-    "OH",
-    "OK",
-    "OR",
-    "PA",
-    "RI",
-    "SC",
-    "SD",
-    "TN",
-    "TX",
-    "UT",
-    "VT",
-    "VA",
-    "WA",
-    "WV",
-    "WI",
-    "WY",
+    "Western",
+    "Central",
+    "Southern",
+    "Northern",
+    "Eastern",
+    "North Western",
+    "North Central",
+    "Uva",
+    "Sabaragamuwa",
   ];
+
+  // Initialize form data when editing address changes
+  useEffect(() => {
+    if (editingAddress) {
+      setFormData({
+        _id: editingAddress._id,
+        addressType: editingAddress.addressType || "home",
+        firstName: editingAddress.firstName || "",
+        lastName: editingAddress.lastName || "",
+        streetAddress: editingAddress.streetAddress || "",
+        apartment: editingAddress.apartment || "",
+        city: editingAddress.city || "",
+        state: editingAddress.state || "",
+        zipCode: editingAddress.zipCode || "",
+        phoneNumber: editingAddress.phoneNumber || "",
+        isDefault: editingAddress.isDefault || false,
+      });
+    } else {
+      // Reset form for new address
+      setFormData({
+        _id: null,
+        addressType: "home",
+        firstName: authUser?.firstName || "",
+        lastName: authUser?.lastName || "",
+        streetAddress: "",
+        apartment: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        phoneNumber: authUser?.phoneNumber || "",
+        isDefault: false,
+      });
+    }
+    setErrors({});
+  }, [editingAddress, authUser]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -89,21 +83,19 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
     if (!formData.firstName.trim())
       newErrors.firstName = "First name is required";
     if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
-    if (!formData.address.trim())
-      newErrors.address = "Street address is required";
+    if (!formData.streetAddress.trim())
+      newErrors.streetAddress = "Street address is required";
     if (!formData.city.trim()) newErrors.city = "City is required";
-    if (!formData.state.trim()) newErrors.state = "State is required";
+    if (!formData.state.trim()) newErrors.state = "Province is required";
     if (!formData.zipCode.trim()) {
-      newErrors.zipCode = "ZIP code is required";
-    } else if (!/^\d{5}(-\d{4})?$/.test(formData.zipCode)) {
-      newErrors.zipCode = "Invalid ZIP code format";
+      newErrors.zipCode = "Postal code is required";
+    } else if (!/^\d{5}$/.test(formData.zipCode)) {
+      newErrors.zipCode = "Invalid postal code format (5 digits)";
     }
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Phone number is required";
-    } else if (
-      !/^[+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/[\s\-()]/g, ""))
-    ) {
-      newErrors.phone = "Invalid phone number format";
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = "Phone number is required";
+    } else if (!/^[+]?[0-9\s\-()]{10,15}$/.test(formData.phoneNumber)) {
+      newErrors.phoneNumber = "Invalid phone number format";
     }
 
     setErrors(newErrors);
@@ -118,42 +110,49 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const addressToSave = {
-        ...formData,
-        id: formData.id || Date.now(),
-        phone: formData.phone.replace(/[\s\-()]/g, ""), // Clean phone number
+      // Map form data to API structure
+      const addressPayload = {
+        buyerId: authUser._id,
+        addressType: formData.addressType,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        streetAddress: formData.streetAddress.trim(),
+        apartment: formData.apartment.trim() || "",
+        city: formData.city.trim(),
+        state: formData.state,
+        zipCode: formData.zipCode.trim(),
+        phoneNumber: formData.phoneNumber.replace(/[\s\-()]/g, ""), // Clean phone number
+        isDefault: formData.isDefault,
       };
 
-      onSave(addressToSave);
-      handleClose();
+      // If editing, include the ID
+      if (formData._id) {
+        await onSave({ ...addressPayload, _id: formData._id });
+      } else {
+        await onSave(addressPayload);
+      }
     } catch (error) {
       console.error("Error saving address:", error);
+      // Error handling is done in parent component
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleClose = () => {
-    setFormData(
-      editingAddress || {
-        id: null,
-        type: "home",
-        firstName: "",
-        lastName: "",
-        company: "",
-        address: "",
-        apartment: "",
-        city: "",
-        state: "",
-        zipCode: "",
-        country: "United States",
-        phone: "",
-        isDefault: false,
-      }
-    );
+    setFormData({
+      _id: null,
+      addressType: "home",
+      firstName: authUser?.firstName || "",
+      lastName: authUser?.lastName || "",
+      streetAddress: "",
+      apartment: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      phoneNumber: authUser?.phoneNumber || "",
+      isDefault: false,
+    });
     setErrors({});
     onClose();
   };
@@ -166,22 +165,23 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
   };
 
   const formatPhoneNumber = (value) => {
+    // Remove all non-digits
     const phoneNumber = value.replace(/[^\d]/g, "");
     const phoneNumberLength = phoneNumber.length;
 
     if (phoneNumberLength < 4) return phoneNumber;
     if (phoneNumberLength < 7) {
-      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+      return `${phoneNumber.slice(0, 3)} ${phoneNumber.slice(3)}`;
     }
-    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(
+    return `${phoneNumber.slice(0, 3)} ${phoneNumber.slice(
       3,
       6
-    )}-${phoneNumber.slice(6, 10)}`;
+    )} ${phoneNumber.slice(6, 10)}`;
   };
 
   const handlePhoneChange = (value) => {
     const formatted = formatPhoneNumber(value);
-    handleChange("phone", formatted);
+    handleChange("phoneNumber", formatted);
   };
 
   if (!isOpen) return null;
@@ -201,6 +201,7 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
               size="sm"
               onClick={handleClose}
               className="p-2"
+              disabled={isSubmitting}
             >
               <X className="h-5 w-5" />
             </Button>
@@ -221,12 +222,13 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
                 <button
                   key={id}
                   type="button"
-                  onClick={() => handleChange("type", id)}
+                  onClick={() => handleChange("addressType", id)}
+                  disabled={isSubmitting}
                   className={`p-3 rounded-lg border-2 transition-colors duration-200 flex items-center justify-center space-x-2 ${
-                    formData.type === id
+                    formData.addressType === id
                       ? "border-blue-500 bg-blue-50 text-blue-700"
                       : "border-gray-200 hover:border-gray-300 text-gray-700"
-                  }`}
+                  } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   <Icon className="h-4 w-4" />
                   <span className="font-medium">{label}</span>
@@ -245,9 +247,10 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => handleChange("firstName", e.target.value)}
+                disabled={isSubmitting}
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${
                   errors.firstName ? "border-red-500" : "border-gray-300"
-                }`}
+                } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
                 placeholder="Enter first name"
               />
               {errors.firstName && (
@@ -263,9 +266,10 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => handleChange("lastName", e.target.value)}
+                disabled={isSubmitting}
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${
                   errors.lastName ? "border-red-500" : "border-gray-300"
-                }`}
+                } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
                 placeholder="Enter last name"
               />
               {errors.lastName && (
@@ -274,36 +278,25 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
             </div>
           </div>
 
-          {/* Company (Optional) */}
-          {/* <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Company (Optional)
-            </label>
-            <input
-              type="text"
-              value={formData.company}
-              onChange={(e) => handleChange("company", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
-              placeholder="Enter company name"
-            />
-          </div> */}
-
-          {/* Address */}
+          {/* Street Address */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Street Address *
             </label>
             <input
               type="text"
-              value={formData.address}
-              onChange={(e) => handleChange("address", e.target.value)}
+              value={formData.streetAddress}
+              onChange={(e) => handleChange("streetAddress", e.target.value)}
+              disabled={isSubmitting}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${
-                errors.address ? "border-red-500" : "border-gray-300"
-              }`}
+                errors.streetAddress ? "border-red-500" : "border-gray-300"
+              } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
               placeholder="Enter street address"
             />
-            {errors.address && (
-              <p className="mt-1 text-sm text-red-600">{errors.address}</p>
+            {errors.streetAddress && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.streetAddress}
+              </p>
             )}
           </div>
 
@@ -316,7 +309,10 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
               type="text"
               value={formData.apartment}
               onChange={(e) => handleChange("apartment", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
+              disabled={isSubmitting}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${
+                isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+              }`}
               placeholder="Apt, Suite, Floor, etc."
             />
           </div>
@@ -331,9 +327,10 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
                 type="text"
                 value={formData.city}
                 onChange={(e) => handleChange("city", e.target.value)}
+                disabled={isSubmitting}
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${
                   errors.city ? "border-red-500" : "border-gray-300"
-                }`}
+                } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
                 placeholder="Enter city"
               />
               {errors.city && (
@@ -343,16 +340,17 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                State *
+                Province *
               </label>
               <select
                 value={formData.state}
                 onChange={(e) => handleChange("state", e.target.value)}
+                disabled={isSubmitting}
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${
                   errors.state ? "border-red-500" : "border-gray-300"
-                }`}
+                } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                <option value="">Select state</option>
+                <option value="">Select province</option>
                 {states.map((state) => (
                   <option key={state} value={state}>
                     {state}
@@ -366,17 +364,18 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                ZIP Code *
+                Postal Code *
               </label>
               <input
                 type="text"
                 value={formData.zipCode}
                 onChange={(e) => handleChange("zipCode", e.target.value)}
+                disabled={isSubmitting}
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${
                   errors.zipCode ? "border-red-500" : "border-gray-300"
-                }`}
+                } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
                 placeholder="12345"
-                maxLength={10}
+                maxLength={5}
               />
               {errors.zipCode && (
                 <p className="mt-1 text-sm text-red-600">{errors.zipCode}</p>
@@ -391,16 +390,17 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
             </label>
             <input
               type="tel"
-              value={formData.phone}
+              value={formData.phoneNumber}
               onChange={(e) => handlePhoneChange(e.target.value)}
+              disabled={isSubmitting}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${
-                errors.phone ? "border-red-500" : "border-gray-300"
-              }`}
-              placeholder="(555) 123-4567"
-              maxLength={14}
+                errors.phoneNumber ? "border-red-500" : "border-gray-300"
+              } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
+              placeholder="077 123 4567"
+              maxLength={15}
             />
-            {errors.phone && (
-              <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+            {errors.phoneNumber && (
+              <p className="mt-1 text-sm text-red-600">{errors.phoneNumber}</p>
             )}
           </div>
 
@@ -411,11 +411,16 @@ const AddressModal = ({ isOpen, onClose, onSave, editingAddress = null }) => {
               id="isDefault"
               checked={formData.isDefault}
               onChange={(e) => handleChange("isDefault", e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              disabled={isSubmitting}
+              className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded ${
+                isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             />
             <label
               htmlFor="isDefault"
-              className="ml-2 block text-sm text-gray-700"
+              className={`ml-2 block text-sm text-gray-700 ${
+                isSubmitting ? "opacity-50" : ""
+              }`}
             >
               Set as default address
             </label>

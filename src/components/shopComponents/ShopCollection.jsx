@@ -807,20 +807,10 @@ const ShopCollection = () => {
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <div className="flex items-center space-x-1">
-                          <Package className="h-4 w-4" />
-                          <span>{shop.totalProducts || 0} products</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Users className="h-4 w-4" />
-                          <span>{shop.totalSales || 0} sales</span>
-                        </div>
-                      </div>
-
+                    <div className="">
                       <Button
                         size="sm"
+                        className="w-full cursor-pointer hover:!bg-blue-500"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleVisitShop(shop._id);
