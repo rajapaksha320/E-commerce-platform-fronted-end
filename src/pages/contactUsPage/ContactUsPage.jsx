@@ -71,7 +71,7 @@ const ContactUsPage = () => {
         inquiry_type: formData.category,
         order_number: formData.orderNumber || "N/A",
         timestamp: new Date().toLocaleString(),
-        to_email: "admin@emmover.com", // Your admin email
+        to_email: "admin@emmover.com", 
       };
 
       // Send email using EmailJS
