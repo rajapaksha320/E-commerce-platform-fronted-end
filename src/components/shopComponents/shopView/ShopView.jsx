@@ -95,11 +95,9 @@ const ShopView = () => {
     brandName: "",
   });
 
-  // Get seller ID from shop details for listings
   const sellerId = currentShopDetails?.sellerId;
 
   const realShopStats = useMemo(() => {
-    // Calculate review count and average rating from shopReviews
     const reviewCount = shopReviews?.length || 0;
 
     let averageRating = 0;
@@ -205,7 +203,6 @@ const ShopView = () => {
     }
   }, [sellerId, fetchShopListings, itemsPerPage]);
 
-  // Fetch additional pages only when on products tab and navigating pages
   useEffect(() => {
     if (sellerId && activeTab === "products" && currentPage > 1) {
       fetchShopListings(sellerId, currentPage, itemsPerPage);

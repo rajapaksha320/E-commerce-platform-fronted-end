@@ -23,7 +23,7 @@ import { Button, Input } from "../../ui/ContactUis/Uis";
 import AuthModal from "../../authComponents/AuthModal";
 import SearchDropdown from "./SearchDropdown";
 import { useNavigate } from "react-router-dom";
-import useUser from "../../../hooks/useUser"; // Import the useUser hook
+import useUser from "../../../hooks/useUser";
 
 // Redux selectors
 import {
@@ -100,7 +100,7 @@ const NavBar = () => {
     { name: "Home", href: "/" },
     { name: "Shops", href: "/shop-collections" },
     { name: "Categories", href: "/category-collections" },
-    // { name: "Deals", href: "/deals" },
+    { name: "Products", href: "/product-collections" },
     { name: "About", href: "/about-us" },
     { name: "Contact", href: "/contact-us" },
   ];

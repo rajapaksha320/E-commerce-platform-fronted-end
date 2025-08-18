@@ -41,7 +41,7 @@ const ShopHeader = ({
   const {
     quickToggleWishlist,
     isItemInShopWishlist,
-    fetchWishlist, // Add this to refresh wishlist after action
+    fetchWishlist,
   } = useUser();
 
   if (!shop) return null;

@@ -151,12 +151,12 @@ const CategoriesCollection = () => {
   const fetchCategoryData = async () => {
     setIsLoadingCategories(true);
     try {
-      // Call the API to get category counts - we can use any category since the API returns all counts
+    
       const result = await fetchStoresByCategory("fashion", 1, 1).unwrap();
 
       console.log("Full API response:", result);
 
-      // The API response structure is: { data: [{ categoryCounts: {...}, totalProductsInCategory: ... }] }
+  
       const responseData = result?.data?.[0];
 
       if (responseData?.categoryCounts) {
@@ -226,18 +226,17 @@ const CategoriesCollection = () => {
       { id: "all", name: "All Categories", count: totalCount },
     ];
 
-    // Add categories that exist in both API data and our definitions
+    // Add categories that exist in both API data and current definitions
     Object.entries(counts).forEach(([categoryKey, count]) => {
       if (categoryDefinitions[categoryKey] && count > 0) {
         categories.push({
           id: categoryKey,
           name: categoryDefinitions[categoryKey].name,
-          count: count, // Real count from backend
+          count: count,
         });
       }
     });
 
-    // Sort by count (highest first) - all numbers from backend
     const sortedCategories = categories
       .slice(1)
       .sort((a, b) => b.count - a.count);
@@ -268,15 +267,15 @@ const CategoriesCollection = () => {
           slug: categoryKey,
           image: definition.image,
           description: definition.description,
-          products: categoryData.totalProductsInCategory || 0, // Real count from backend
-          shops: count, // Real shop count from backend
-          rating: (4.2 + Math.random() * 0.8).toFixed(1), // Can be made dynamic later
-          growth: definition.growth, // Hardcoded for UI
-          badge: definition.badge, // Hardcoded for UI
-          discount: definition.discount, // Hardcoded for UI
+          products: categoryData.totalProductsInCategory || 0, 
+          shops: count, 
+          rating: (4.2 + Math.random() * 0.8).toFixed(1), 
+          growth: definition.growth, 
+          badge: definition.badge, 
+          discount: definition.discount,
         };
       })
-      .sort((a, b) => b.shops - a.shops); // Sort by real shop count from backend
+      .sort((a, b) => b.shops - a.shops); 
   }, [categoryData]);
 
   // Filter categories based on search term and selected category
@@ -354,7 +353,6 @@ const CategoriesCollection = () => {
 
   const handleQuickView = (category, e) => {
     e.stopPropagation();
-    // Could show a modal with category preview or navigate to stores in that category
     navigate(`/stores?category=${category.slug}`);
   };
 

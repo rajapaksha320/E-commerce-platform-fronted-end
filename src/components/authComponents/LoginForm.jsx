@@ -76,7 +76,7 @@ const LoginForm = ({ switchView, onClose, onLogin, intendedDestination }) => {
       return !sellerRoutes.some(route => destination.startsWith(route));
     }
     
-    return true; // Default allow
+    return true; 
   };
 
   // Helper function to navigate based on user role
@@ -84,7 +84,6 @@ const LoginForm = ({ switchView, onClose, onLogin, intendedDestination }) => {
     if (role === 'seller') {
       navigate('/seller-dashboard');
     } else {
-      // For buyers, stay on current page or go to homepage if no intended destination
       navigate('/');
     }
   };

@@ -56,7 +56,6 @@ const ShoppingCartPage = () => {
     cartItemCount,
     cartTotal,
 
-    // ✅ NEW: Enhanced cart data
     cartMetadata,
     cartStores,
     cartSellers,
@@ -74,7 +73,7 @@ const ShoppingCartPage = () => {
     quickToggleWishlist,
     fetchWishlist,
 
-    // ✅ NEW: Enhanced helper functions
+    // helper functions
     getCartItemDetails,
     validateCartForCheckout,
 
@@ -101,7 +100,7 @@ const ShoppingCartPage = () => {
     }
   }, [isAuthenticated, buyerId, currentPage, fetchCartItems]);
 
-  // ✅ ENHANCED: Get item details with enhanced cart data
+  // Get item details with enhanced cart data
   const getItemDetails = (cartItem) => {
     // Use enhanced cart data if available
     if (cartItem.productName && cartItem.price !== undefined) {
@@ -160,7 +159,7 @@ const ShoppingCartPage = () => {
     };
   };
 
-  // ✅ FIXED: Get in-stock items and out-of-stock counts
+  // Get in-stock items and out-of-stock counts
   const cartItemsWithDetails = cartItems.map((item) => ({
     ...item,
     details: getItemDetails(item),
@@ -174,7 +173,7 @@ const ShoppingCartPage = () => {
   );
   const inStockItemIds = inStockItems.map((item) => item._id);
 
-  // ✅ FIXED: Update select all state when cart items change - only consider in-stock items
+  // Update select all state when cart items change - only consider in-stock items
   useEffect(() => {
     if (inStockItems.length > 0) {
       const allInStockSelected = inStockItems.every((item) =>
@@ -205,7 +204,7 @@ const ShoppingCartPage = () => {
     setSelectedItems(newSelected);
   };
 
-  // ✅ FIXED: Handle select all toggle - only select in-stock items
+  // Handle select all toggle - only select in-stock items
   const handleSelectAll = (isSelected) => {
     setSelectAll(isSelected);
     if (isSelected) {
@@ -216,7 +215,7 @@ const ShoppingCartPage = () => {
     }
   };
 
-  // ✅ ENHANCED: Handle navigation to checkout with selected items
+  // Handle navigation to checkout with selected items
   const handleNavigateCheckout = () => {
     if (selectedItems.size === 0) {
       showToast.error("Please select at least one item to checkout");
@@ -234,7 +233,7 @@ const ShoppingCartPage = () => {
       return;
     }
 
-    // ✅ ENHANCED: Validate selected items before checkout
+    // Validate selected items before checkout
     try {
       const validation = validateCartForCheckout(Array.from(selectedItems));
       if (!validation.isValid) {
@@ -274,7 +273,7 @@ const ShoppingCartPage = () => {
       ).size,
     });
 
-    // ✅ FIX: Navigate to checkout with selected items in state
+    // Navigate to checkout with selected items in state
     navigate("/checkout", {
       state: {
         selectedItems: selectedCartItems,
@@ -284,7 +283,7 @@ const ShoppingCartPage = () => {
     });
   };
 
-  // ✅ ENHANCED: Update item quantity with enhanced data
+  // pdate item quantity with enhanced data
   const updateQuantity = async (cartItemId, newQuantity) => {
     if (newQuantity <= 0) {
       await removeItem(cartItemId);
@@ -323,7 +322,7 @@ const ShoppingCartPage = () => {
       newSelected.delete(cartItemId);
       setSelectedItems(newSelected);
 
-      // ✅ FIX: Check if this was the last item on current page
+      // Check if this was the last item on current page
       if (cartItems.length === 1 && currentPage > 1) {
         // Go to previous page
         const newPage = currentPage - 1;
@@ -408,7 +407,7 @@ const ShoppingCartPage = () => {
     ));
   };
 
-  // ✅ ENHANCED: Calculate totals for selected items only - only in-stock items
+  // Calculate totals for selected items only - only in-stock items
   const selectedCartItems = cartItems.filter((item) => {
     const details = getItemDetails(item);
     return selectedItems.has(item._id) && details.inStock;
@@ -439,7 +438,7 @@ const ShoppingCartPage = () => {
   const totalPages = cartPagination?.totalPages || 1;
   const totalItems = cartPagination?.totalItems || cartItems.length;
 
-  // ✅ FIXED: Check if all items are out of stock
+  // Check if all items are out of stock
   const allItemsOutOfStock = cartItems.length > 0 && inStockItems.length === 0;
 
   // Loading state
@@ -521,7 +520,7 @@ const ShoppingCartPage = () => {
                 </h1>
                 <p className="text-sm text-gray-600 mt-1">
                   {cartItems.length} {cartItems.length === 1 ? "item" : "items"}
-                  {/* ✅ ENHANCED: Show stock status in header */}
+                  {/* Show stock status in header */}
                   {outOfStockItems.length > 0 && (
                     <span className="text-red-600">
                       {" "}
@@ -583,7 +582,7 @@ const ShoppingCartPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Cart Items Section */}
             <div className="lg:col-span-2">
-              {/* ✅ ENHANCED: Cart Controls with better messaging */}
+              {/* Cart Controls with better messaging */}
               <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
@@ -604,7 +603,7 @@ const ShoppingCartPage = () => {
                       </span>
                     </button>
 
-                    {/* ✅ NEW: Show available items info */}
+                    {/* Show available items info */}
                     {inStockItems.length > 0 &&
                       inStockItems.length < cartItems.length && (
                         <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
@@ -625,7 +624,7 @@ const ShoppingCartPage = () => {
                   </div>
                 </div>
 
-                {/* ✅ NEW: All items out of stock warning */}
+                {/* All items out of stock warning */}
                 {allItemsOutOfStock && (
                   <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                     <div className="flex items-center text-red-700">
@@ -893,7 +892,7 @@ const ShoppingCartPage = () => {
                   </div>
 
                   <div className="p-6">
-                    {/* ✅ ENHANCED: Handle different states */}
+                    {/* Handle different states */}
                     {allItemsOutOfStock ? (
                       <div className="text-center py-8">
                         <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
