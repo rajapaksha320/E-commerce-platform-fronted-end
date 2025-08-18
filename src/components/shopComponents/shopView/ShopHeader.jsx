@@ -23,7 +23,18 @@ import useUser from "../../../hooks/useUser";
 import { useSelector } from "react-redux";
 import { selectUser as selectAuthUser } from "../../../store/slices/authSlice";
 
-const ShopHeader = ({ shop, className = "", onWishlistUpdate }) => {
+const ShopHeader = ({
+  shop,
+  className = "",
+  onWishlistUpdate,
+  // ✅ NEW: Accept real stats from parent component
+  realStats = {
+    reviewCount: 0,
+    productCount: 0,
+    averageRating: 0,
+    totalSales: 0,
+  },
+}) => {
   const navigate = useNavigate();
   const authUser = useSelector(selectAuthUser);
 
@@ -107,6 +118,12 @@ const ShopHeader = ({ shop, className = "", onWishlistUpdate }) => {
   };
 
   const statusBadge = getStatusBadge();
+
+  // ✅ USE REAL STATS: Get actual rating and review count from realStats prop
+  const displayRating = realStats.averageRating || 0;
+  const displayReviewCount = realStats.reviewCount || 0;
+  const displayProductCount = realStats.productCount || 0;
+  const displaySalesCount = realStats.totalSales || shop.totalSales || 0;
 
   return (
     <div
@@ -216,29 +233,34 @@ const ShopHeader = ({ shop, className = "", onWishlistUpdate }) => {
                   </p>
                 )}
 
-                {/* Rating and Stats */}
+                {/* ✅ FIXED: Rating and Stats with Real Data */}
                 <div className="flex flex-wrap items-center gap-6 mb-6">
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center">
-                      {renderRatingStars(shop.rating)}
+                      {renderRatingStars(displayRating)}
                     </div>
                     <span className="font-semibold text-gray-900">
-                      {shop.rating || 0}
+                      {displayRating.toFixed(1)}
                     </span>
-                    <span className="text-gray-600">(0 reviews)</span>
+                    <span className="text-gray-600">
+                      ({displayReviewCount}{" "}
+                      {displayReviewCount === 1 ? "review" : "reviews"})
+                    </span>
                   </div>
 
                   <div className="flex items-center space-x-1 text-gray-600">
                     <Package className="h-4 w-4" />
                     <span className="text-sm">
-                      {shop.totalProducts || 0} products
+                      {displayProductCount}{" "}
+                      {displayProductCount === 1 ? "product" : "products"}
                     </span>
                   </div>
 
                   <div className="flex items-center space-x-1 text-gray-600">
                     <ShoppingBag className="h-4 w-4" />
                     <span className="text-sm">
-                      {shop.totalSales || 0} sales
+                      {displaySalesCount}{" "}
+                      {displaySalesCount === 1 ? "sale" : "sales"}
                     </span>
                   </div>
 
@@ -317,7 +339,7 @@ const ShopHeader = ({ shop, className = "", onWishlistUpdate }) => {
           </div>
         )}
 
-        {/* Shop Quick Stats */}
+        {/* ✅ FIXED: Shop Quick Stats with Real Data */}
         <div className="mt-6 pt-6 border-t border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Shop Information
@@ -326,7 +348,7 @@ const ShopHeader = ({ shop, className = "", onWishlistUpdate }) => {
             <div className="bg-blue-50 p-4 rounded-lg text-center">
               <Package className="h-6 w-6 text-blue-600 mx-auto mb-2" />
               <div className="text-xl font-bold text-blue-600">
-                {shop.totalProducts || 0}
+                {displayProductCount}
               </div>
               <div className="text-sm text-blue-700">Total Products</div>
             </div>
@@ -334,7 +356,7 @@ const ShopHeader = ({ shop, className = "", onWishlistUpdate }) => {
             <div className="bg-green-50 p-4 rounded-lg text-center">
               <ShoppingBag className="h-6 w-6 text-green-600 mx-auto mb-2" />
               <div className="text-xl font-bold text-green-600">
-                {shop.totalSales || 0}
+                {displaySalesCount}
               </div>
               <div className="text-sm text-green-700">Total Sales</div>
             </div>
@@ -342,17 +364,17 @@ const ShopHeader = ({ shop, className = "", onWishlistUpdate }) => {
             <div className="bg-yellow-50 p-4 rounded-lg text-center">
               <Star className="h-6 w-6 text-yellow-600 mx-auto mb-2" />
               <div className="text-xl font-bold text-yellow-600">
-                {shop.rating || 0}
+                {displayRating.toFixed(1)}
               </div>
               <div className="text-sm text-yellow-700">Shop Rating</div>
             </div>
 
             <div className="bg-purple-50 p-4 rounded-lg text-center">
-              <Calendar className="h-6 w-6 text-purple-600 mx-auto mb-2" />
+              <MessageCircle className="h-6 w-6 text-purple-600 mx-auto mb-2" />
               <div className="text-xl font-bold text-purple-600">
-                {new Date(shop.createdAt).getFullYear()}
+                {displayReviewCount}
               </div>
-              <div className="text-sm text-purple-700">Established</div>
+              <div className="text-sm text-purple-700">Total Reviews</div>
             </div>
           </div>
         </div>

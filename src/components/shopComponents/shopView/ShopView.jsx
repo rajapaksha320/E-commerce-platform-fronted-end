@@ -55,6 +55,8 @@ const ShopView = () => {
     storeSearchError,
     lastStoreSearchParams,
     shopReviews,
+    reviewsLoading,
+    reviewsError,
     storesPagination,
     fetchWishlist,
     storeSearchPagination,
@@ -92,8 +94,49 @@ const ShopView = () => {
   // Get seller ID from shop details for listings
   const sellerId = currentShopDetails?.sellerId;
 
-  // Get review count from shop reviews
-  const reviewCount = shopReviews?.length || 0;
+  // ✅ CALCULATE REAL STATS from backend data (similar to ReviewsSection approach)
+  const realShopStats = useMemo(() => {
+    // Calculate review count and average rating from shopReviews
+    const reviewCount = shopReviews?.length || 0;
+
+    let averageRating = 0;
+    if (shopReviews && shopReviews.length > 0) {
+      let totalRatingSum = 0;
+      let totalRatingCount = 0;
+
+      shopReviews.forEach((review) => {
+        const ratings = [
+          review.shoppingExperience,
+          review.customerService,
+          review.productQuality,
+          review.deliverySpeed,
+        ].filter((rating) => rating > 0);
+
+        if (ratings.length > 0) {
+          const avgRating =
+            ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+          totalRatingSum += avgRating;
+          totalRatingCount++;
+        }
+      });
+
+      averageRating =
+        totalRatingCount > 0 ? totalRatingSum / totalRatingCount : 0;
+    }
+
+    // Calculate product count from storeListings
+    const productCount = storesPagination?.total || storeListings?.length || 0;
+
+    // Get sales count from shop data
+    const totalSales = currentShopDetails?.totalSales || 0;
+
+    return {
+      reviewCount,
+      averageRating,
+      productCount,
+      totalSales,
+    };
+  }, [shopReviews, storeListings, storesPagination, currentShopDetails]);
 
   // Determine which products to show and pagination info
   const { currentProducts, pagination, isSearchMode } = useMemo(() => {
@@ -126,7 +169,6 @@ const ShopView = () => {
     searchQuery,
     filters,
   ]);
-  
 
   const isLoading = useMemo(() => {
     if (isSearchMode) {
@@ -153,19 +195,28 @@ const ShopView = () => {
     };
   }, [shopId, fetchShopDetailsById, resetShopDetail]);
 
-  // Fetch shop listings when we have seller ID
+  // ✅ FIXED: Fetch shop listings immediately when we have seller ID (not just for products tab)
+  // This ensures we have data for accurate stats calculation on initial load
   useEffect(() => {
-    if (sellerId && activeTab === "products") {
+    if (sellerId) {
+      fetchShopListings(sellerId, 1, itemsPerPage); // Fetch first page immediately for stats
+    }
+  }, [sellerId, fetchShopListings, itemsPerPage]);
+
+  // Fetch additional pages only when on products tab and navigating pages
+  useEffect(() => {
+    if (sellerId && activeTab === "products" && currentPage > 1) {
       fetchShopListings(sellerId, currentPage, itemsPerPage);
     }
-  }, [sellerId, activeTab, fetchShopListings, currentPage, itemsPerPage]);
+  }, [sellerId, activeTab, currentPage, fetchShopListings, itemsPerPage]);
 
-  // Fetch shop reviews for count
+  // ✅ FETCH SHOP REVIEWS for stats calculation (not just for feedback tab)
   useEffect(() => {
-    if (shopId && activeTab === "feedback") {
-      fetchShopReviews(shopId, 1, 10);
+    if (shopId) {
+      // Fetch all reviews to get accurate count and rating
+      fetchShopReviews(shopId, 1, 100); // Get more reviews for accurate stats
     }
-  }, [shopId, activeTab, fetchShopReviews]);
+  }, [shopId, fetchShopReviews]);
 
   // Handle search and filters
   useEffect(() => {
@@ -310,7 +361,6 @@ const ShopView = () => {
     }
   };
 
-
   const handleProductClick = (product) => {
     navigate(`/product/${product._id}`);
   };
@@ -329,7 +379,6 @@ const ShopView = () => {
     // Use shop's totalProducts as last resort
     return currentShopDetails?.totalProducts || 0;
   };
-
 
   const getBadgeVariant = (badge) => {
     const variants = {
@@ -766,10 +815,11 @@ const ShopView = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
-        {/* Shop Header */}
+        {/* ✅ UPDATED: Shop Header with Real Stats */}
         <ShopHeader
           shop={currentShopDetails}
           className="mb-6 sm:mb-8"
+          realStats={realShopStats}
           onWishlistUpdate={(message, type, action) => {
             if (type === "success") {
               showToast.success(message, action);
@@ -793,30 +843,29 @@ const ShopView = () => {
         {/* Tab Content */}
         {activeTab === "home" && (
           <div className="space-y-6 sm:space-y-8">
-            {/* Shop Statistics */}
+            {/* ✅ UPDATED: Shop Statistics with Real Data */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
               <Card className="text-center p-4 sm:p-6">
                 <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1 sm:mb-2">
-                  {getActualProductCount()}
+                  {realShopStats.productCount}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600">Products</div>
-              
               </Card>
               <Card className="text-center p-4 sm:p-6">
                 <div className="text-2xl sm:text-3xl font-bold text-green-600 mb-1 sm:mb-2">
-                  {currentShopDetails.rating || 0}
+                  {realShopStats.averageRating.toFixed(1)}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600">Rating</div>
               </Card>
               <Card className="text-center p-4 sm:p-6">
                 <div className="text-2xl sm:text-3xl font-bold text-purple-600 mb-1 sm:mb-2">
-                  {reviewCount}
+                  {realShopStats.reviewCount}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600">Reviews</div>
               </Card>
               <Card className="text-center p-4 sm:p-6">
                 <div className="text-2xl sm:text-3xl font-bold text-orange-600 mb-1 sm:mb-2">
-                  {currentShopDetails.totalSales || 0}
+                  {realShopStats.totalSales}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600">Sales</div>
               </Card>
