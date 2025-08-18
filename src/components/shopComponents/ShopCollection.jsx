@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   Star,
   MapPin,
@@ -10,211 +11,281 @@ import {
   Heart,
   Eye,
   Search,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   ChevronUp,
+  Loader2,
+  AlertCircle,
+  Package,
+  Store,
+  Building,
+  Users,
+  BadgeCheck,
 } from "lucide-react";
 
 import { Card, Button, Badge } from "../ui";
+import useUser from "../../hooks/useUser";
+import { selectUser as selectAuthUser } from "../../store/slices/authSlice";
+import Pagination from "../ui/Pagination";
+import ToastNotification, { useToast } from "../ui/ToastNotification";
 
 const ShopCollection = () => {
   const navigate = useNavigate();
+  const authUser = useSelector(selectAuthUser);
+
+  // Toast notification hook
+  const { toastRef, showToast } = useToast();
+
+  // Redux state and actions from useUser hook
+  const {
+    stores,
+    filteredStores,
+    storesPagination,
+    storesLoading,
+    storesError,
+    fetchAllStores,
+    fetchStoresByCategory,
+    quickToggleWishlist,
+    removeFromWishlist,
+    isItemInShopWishlist,
+    fetchWishlist,
+    clearErrors,
+  } = useUser();
+
+  // UI States
   const [viewMode, setViewMode] = useState("grid");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [addingToWishlist, setAddingToWishlist] = useState(new Set());
+  const [categoryData, setCategoryData] = useState(null);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+
   const itemsPerPage = 6;
   const maxVisibleCategories = 6;
 
-  const categories = [
-    { id: "all", name: "All Shops", count: 150 },
-    { id: "electronics", name: "Electronics", count: 45 },
-    { id: "fashion", name: "Fashion", count: 38 },
-    { id: "home", name: "Home & Garden", count: 25 },
-    { id: "food", name: "Food & Beverage", count: 22 },
-    { id: "sports", name: "Sports", count: 20 },
-    { id: "beauty", name: "Beauty & Health", count: 18 },
-    { id: "books", name: "Books & Media", count: 15 },
-    { id: "automotive", name: "Automotive", count: 12 },
-    { id: "jewelry", name: "Jewelry & Watches", count: 10 },
-    { id: "toys", name: "Toys & Games", count: 8 },
-    { id: "pets", name: "Pet Supplies", count: 6 },
-  ];
+  // Category definitions for proper display names
+  const categoryDefinitions = {
+    electronics: "Electronics & Technology",
+    fashion: "Fashion & Apparel",
+    home: "Home & Garden",
+    beauty: "Health & Beauty",
+    sports: "Sports & Fitness",
+    food: "Food & Beverages",
+    books: "Books & Media",
+    automotive: "Automotive",
+    toys: "Toys & Games",
+    jewelry: "Jewelry & Accessories",
+  };
 
-  const shops = [
-    {
-      id: 1,
-      name: "TechHub Electronics",
-      category: "electronics",
-      image:
-        "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop",
-      rating: 4.8,
-      reviews: 1250,
-      location: "New York, NY",
-      openTime: "9:00 AM - 9:00 PM",
-      description:
-        "Premium electronics and gadgets with latest technology innovations.",
-      products: 156,
-      badge: "Verified",
-      discount: "Up to 30% off",
-    },
-    {
-      id: 2,
-      name: "Fashion Forward",
-      category: "fashion",
-      image:
-        "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop",
-      rating: 4.9,
-      reviews: 890,
-      location: "Los Angeles, CA",
-      openTime: "10:00 AM - 8:00 PM",
-      description: "Trendy clothing and accessories for modern lifestyle.",
-      products: 324,
-      badge: "Premium",
-      discount: "25% off new arrivals",
-    },
-    {
-      id: 3,
-      name: "Home Comfort Store",
-      category: "home",
-      image:
-        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop",
-      rating: 4.7,
-      reviews: 567,
-      location: "Chicago, IL",
-      openTime: "8:00 AM - 10:00 PM",
-      description: "Everything you need to make your house a beautiful home.",
-      products: 89,
-      badge: "Featured",
-      discount: "Free shipping",
-    },
-    {
-      id: 4,
-      name: "Gourmet Delights",
-      category: "food",
-      image:
-        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop",
-      rating: 4.6,
-      reviews: 445,
-      location: "San Francisco, CA",
-      openTime: "7:00 AM - 11:00 PM",
-      description: "Artisanal foods and beverages from around the world.",
-      products: 67,
-      badge: "Organic",
-      discount: "Buy 2 Get 1 Free",
-    },
-    {
-      id: 5,
-      name: "SportZone Pro",
-      category: "sports",
-      image:
-        "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop",
-      rating: 4.8,
-      reviews: 733,
-      location: "Miami, FL",
-      openTime: "6:00 AM - 10:00 PM",
-      description: "Professional sports equipment and fitness gear.",
-      products: 234,
-      badge: "Athletic",
-      discount: "20% off sports gear",
-    },
-    {
-      id: 6,
-      name: "Urban Style Studio",
-      category: "fashion",
-      image:
-        "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=300&fit=crop",
-      rating: 4.5,
-      reviews: 312,
-      location: "Austin, TX",
-      openTime: "11:00 AM - 7:00 PM",
-      description: "Contemporary fashion with urban street style influence.",
-      products: 128,
-      badge: "Trending",
-      discount: "40% off clearance",
-    },
-    {
-      id: 7,
-      name: "Digital World",
-      category: "electronics",
-      image:
-        "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400&h=300&fit=crop",
-      rating: 4.7,
-      reviews: 892,
-      location: "Seattle, WA",
-      openTime: "9:00 AM - 8:00 PM",
-      description: "Cutting-edge technology and smart home solutions.",
-      products: 278,
-      badge: "Featured",
-      discount: "15% off smart devices",
-    },
-    {
-      id: 8,
-      name: "Fitness Central",
-      category: "sports",
-      image:
-        "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=300&fit=crop",
-      rating: 4.6,
-      reviews: 654,
-      location: "Denver, CO",
-      openTime: "5:00 AM - 11:00 PM",
-      description: "Complete fitness solutions for all your workout needs.",
-      products: 189,
-      badge: "Athletic",
-      discount: "30% off equipment",
-    },
-    {
-      id: 9,
-      name: "Garden Paradise",
-      category: "home",
-      image:
-        "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=300&fit=crop",
-      rating: 4.4,
-      reviews: 387,
-      location: "Portland, OR",
-      openTime: "7:00 AM - 7:00 PM",
-      description:
-        "Beautiful plants and gardening supplies for your outdoor space.",
-      products: 156,
-      badge: "Organic",
-      discount: "Buy 3 Get 1 Free",
-    },
-  ];
+  // Fetch category data from API
+  const fetchCategoryData = async () => {
+    setIsLoadingCategories(true);
+    try {
+      // Fetch fashion category to get categoryCounts (you can use any category)
+      const result = await fetchStoresByCategory("fashion", 1, 1).unwrap();
+      const responseData = result?.data?.[0];
 
-  // Filter shops based on search term and category
+      if (responseData?.categoryCounts) {
+        setCategoryData({
+          categoryCounts: responseData.categoryCounts,
+        });
+      } else {
+        setCategoryData({ categoryCounts: {} });
+      }
+    } catch (error) {
+      console.error("Failed to fetch category data:", error);
+      setCategoryData({ categoryCounts: {} });
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
+  // Build categories from API data
+  const categories = useMemo(() => {
+    if (!categoryData?.categoryCounts) {
+      return [{ id: "all", name: "All Shops", count: 0 }];
+    }
+
+    const counts = categoryData.categoryCounts;
+    const totalCount = Object.values(counts).reduce(
+      (sum, count) => sum + count,
+      0
+    );
+
+    const categoryList = [{ id: "all", name: "All Shops", count: totalCount }];
+
+    Object.entries(counts).forEach(([categoryKey, count]) => {
+      if (categoryDefinitions[categoryKey] && count > 0) {
+        categoryList.push({
+          id: categoryKey,
+          name: categoryDefinitions[categoryKey],
+          count: count,
+        });
+      }
+    });
+
+    return categoryList.sort((a, b) => {
+      if (a.id === "all") return -1;
+      if (b.id === "all") return 1;
+      return b.count - a.count;
+    });
+  }, [categoryData]);
+
+  // Get the appropriate shops data based on current selection
+  const currentShopsData = selectedCategory === "all" ? stores : filteredStores;
+
+  // Extract actual store objects from API response
+  const actualStores = useMemo(() => {
+    if (!currentShopsData || currentShopsData.length === 0) return [];
+
+    return currentShopsData
+      .map((item) => {
+        const store = item.shop || item.store || item;
+        return {
+          ...store,
+          // Add category info if available from the listings
+          listings: item.listings || [],
+          totalProductsInCategory: item.totalProductsInCategory || 0,
+        };
+      })
+      .filter(Boolean);
+  }, [currentShopsData]);
+
+  // Filter shops based on search term (category filtering is handled by API)
   const filteredShops = useMemo(() => {
-    let filtered = shops;
+    if (!actualStores || actualStores.length === 0) return [];
 
-    // Filter by category first
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter((shop) => shop.category === selectedCategory);
+    // If no search term, return all shops
+    if (!searchTerm) {
+      return actualStores;
     }
 
-    // Then filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (shop) =>
-          shop.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          shop.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          shop.category.toLowerCase().includes(searchTerm.toLowerCase())
+    // Filter by search term
+    const searchLower = searchTerm.toLowerCase();
+    return actualStores.filter((store) => {
+      const storeName =
+        store.basicInformation?.storeName || store.storeName || "";
+      const storeDescription =
+        store.basicInformation?.storeDescription ||
+        store.storeDescription ||
+        "";
+      const storeLocation =
+        store.contactDetails?.storeLocation || store.storeLocation || "";
+      const storeTagLine = store.basicInformation?.storeTagLine || "";
+
+      return (
+        storeName.toLowerCase().includes(searchLower) ||
+        storeDescription.toLowerCase().includes(searchLower) ||
+        storeLocation.toLowerCase().includes(searchLower) ||
+        storeTagLine.toLowerCase().includes(searchLower)
       );
-    }
-
-    return filtered;
-  }, [searchTerm, selectedCategory]);
-
-  // Pagination logic
-  const totalPages = Math.ceil(filteredShops.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentShops = filteredShops.slice(startIndex, endIndex);
+    });
+  }, [actualStores, searchTerm]);
 
   // Reset to first page when search or category changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, selectedCategory]);
+
+  // Fetch initial category data and shops
+  useEffect(() => {
+    console.log("ShopCollection: Fetching initial data...");
+    fetchCategoryData();
+  }, []);
+
+  // Fetch shops when category or page changes
+  useEffect(() => {
+    if (selectedCategory === "all") {
+      console.log("Fetching all stores, page:", currentPage);
+      fetchAllStores(currentPage, itemsPerPage);
+    } else {
+      console.log(
+        "Fetching category stores:",
+        selectedCategory,
+        "page:",
+        currentPage
+      );
+      fetchStoresByCategory(selectedCategory, currentPage, itemsPerPage);
+    }
+  }, [selectedCategory, currentPage, fetchAllStores, fetchStoresByCategory]);
+
+  // Fetch wishlist if user is logged in
+  useEffect(() => {
+    if (authUser?._id) {
+      fetchWishlist(authUser._id);
+    }
+  }, [authUser, fetchWishlist]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log("ShopCollection Debug:", {
+      rawStores: stores,
+      actualStores: actualStores?.map((store) => ({
+        name: store.basicInformation?.storeName || store.storeName,
+        category: store.assignedCategory,
+        id: store._id,
+      })),
+      filteredShops: filteredShops?.map((store) => ({
+        name: store.basicInformation?.storeName || store.storeName,
+        category: store.assignedCategory,
+        id: store._id,
+      })),
+      categories: categories,
+      selectedCategory: selectedCategory,
+      searchTerm: searchTerm,
+    });
+  }, [
+    stores,
+    actualStores,
+    filteredShops,
+    categories,
+    selectedCategory,
+    searchTerm,
+  ]);
+
+  // Clear errors on unmount
+  useEffect(() => {
+    return () => {
+      clearErrors();
+    };
+  }, [clearErrors]);
+
+  // Pagination logic for filtered shops (client-side search filtering)
+  const totalPages = Math.ceil(filteredShops.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentShops = filteredShops.slice(startIndex, endIndex);
+
+  // Use API pagination when no search term, client-side pagination when searching
+  const shouldUseApiPagination = !searchTerm;
+  const displayShops = shouldUseApiPagination ? actualStores : currentShops;
+
+  // Fix pagination info mapping for API response structure
+  const paginationInfo = useMemo(() => {
+    if (shouldUseApiPagination && storesPagination) {
+      return {
+        totalItems: storesPagination.total || 0,
+        currentPage: storesPagination.page || currentPage,
+        totalPages: storesPagination.totalPages || 1,
+        pageSize: storesPagination.pageSize || itemsPerPage,
+      };
+    } else {
+      return {
+        totalItems: filteredShops.length,
+        currentPage: currentPage,
+        totalPages: totalPages,
+        pageSize: itemsPerPage,
+      };
+    }
+  }, [
+    shouldUseApiPagination,
+    storesPagination,
+    filteredShops.length,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+  ]);
 
   const getBadgeVariant = (badge) => {
     const variants = {
@@ -224,6 +295,8 @@ const ShopCollection = () => {
       Organic: "success",
       Athletic: "info",
       Trending: "danger",
+      Active: "success",
+      Inactive: "secondary",
     };
     return variants[badge] || "default";
   };
@@ -233,33 +306,10 @@ const ShopCollection = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const generatePageNumbers = () => {
-    const pages = [];
-    const maxVisible = 5;
-
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) pages.push(i);
-        pages.push("...");
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1);
-        pages.push("...");
-        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
-      } else {
-        pages.push(1);
-        pages.push("...");
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-        pages.push("...");
-        pages.push(totalPages);
-      }
-    }
-
-    return pages;
+  // Handle category selection
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
+    setCurrentPage(1);
   };
 
   // Handle navigation to shop view
@@ -272,8 +322,135 @@ const ShopCollection = () => {
     navigate(`/shop/${shopId}`);
   };
 
+  // Handle wishlist toggle
+  const handleWishlistToggle = async (shop, e) => {
+    e.stopPropagation();
+
+    if (!authUser?._id) {
+      navigate("/login");
+      return;
+    }
+
+    const shopId = shop._id;
+    const isInWishlist = isItemInShopWishlist(shopId);
+
+    setAddingToWishlist((prev) => new Set(prev).add(shopId));
+
+    try {
+      const shopName = shop.basicInformation?.storeName || "Shop";
+
+      if (isInWishlist) {
+        // Use direct removeFromWishlist for removal
+        await removeFromWishlist(authUser._id, shopId);
+        showToast.success(`"${shopName}" removed from wishlist`);
+      } else {
+        // Use quickToggleWishlist for adding
+        await quickToggleWishlist(authUser._id, shopId, "shop");
+        showToast.success(`"${shopName}" added to wishlist!`, {
+          text: "View Wishlist",
+          action: () => navigate("/wishlist"),
+        });
+      }
+
+      // Always refresh wishlist data after operation
+      await fetchWishlist(authUser._id);
+    } catch (error) {
+      console.error("Failed to update wishlist:", error);
+      const action = isInWishlist ? "remove from" : "add to";
+      showToast.error(`Failed to ${action} wishlist. Please try again.`);
+    } finally {
+      setAddingToWishlist((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(shopId);
+        return newSet;
+      });
+    }
+  };
+
+  // Get wishlist button content
+  const getWishlistButtonContent = (shop) => {
+    const shopId = shop._id;
+    const isLoading = addingToWishlist.has(shopId);
+    const inWishlist = authUser ? isItemInShopWishlist(shopId) : false;
+
+    if (isLoading) {
+      return {
+        className: "bg-gray-500 text-white scale-110",
+        icon: <Loader2 className="h-4 w-4 animate-spin" />,
+      };
+    }
+
+    if (inWishlist) {
+      return {
+        className: "bg-red-500 text-white scale-110",
+        icon: <Heart className="h-4 w-4 fill-current" />,
+      };
+    }
+
+    return {
+      className: "bg-white/90 text-gray-600 hover:text-red-500 hover:bg-white",
+      icon: <Heart className="h-4 w-4" />,
+    };
+  };
+
+  const renderStars = (rating) => {
+    return [...Array(5)].map((_, i) => (
+      <Star
+        key={`star-${i}`}
+        className={`h-4 w-4 ${
+          i < Math.floor(rating || 0)
+            ? "text-yellow-400 fill-current"
+            : "text-gray-300"
+        }`}
+      />
+    ));
+  };
+
+  // Loading state
+  if (storesLoading && (!actualStores || actualStores.length === 0)) {
+    return (
+      <section className="py-16 bg-gray-50 min-h-screen">
+        <ToastNotification ref={toastRef} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 sm:h-12 sm:w-12 animate-spin text-blue-600 mx-auto mb-4" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+              Loading Shops
+            </h2>
+            <p className="text-sm sm:text-base text-gray-600">
+              Please wait while we fetch the latest shops...
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Error state
+  if (storesError) {
+    return (
+      <section className="py-16 bg-gray-50 min-h-screen">
+        <ToastNotification ref={toastRef} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Card className="text-center py-8 sm:py-12">
+            <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
+              Failed to load shops
+            </h3>
+            <p className="text-sm sm:text-base text-gray-600 mb-4">
+              {storesError}
+            </p>
+            <Button onClick={() => fetchAllStores(1, 50)}>Try Again</Button>
+          </Card>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-16 bg-gray-50 min-h-screen">
+      <ToastNotification ref={toastRef} />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-12">
@@ -284,6 +461,12 @@ const ShopCollection = () => {
             Explore our complete collection of verified shops offering quality
             products and exceptional service.
           </p>
+          {storesLoading && (
+            <div className="mt-4 flex items-center justify-center text-blue-600">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Updating shop results...
+            </div>
+          )}
         </div>
 
         {/* Search Bar */}
@@ -293,11 +476,19 @@ const ShopCollection = () => {
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <input
                 type="text"
-                placeholder="Search shops by name..."
+                placeholder="Search shops by name, description, or category..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-12 pr-4 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-white shadow-sm"
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ×
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -316,10 +507,10 @@ const ShopCollection = () => {
                   0,
                   showAllCategories ? categories.length : maxVisibleCategories
                 )
-                .map((category) => (
+                .map((category, index) => (
                   <button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
+                    key={`category-${category.id}-${index}`}
+                    onClick={() => handleCategoryChange(category.id)}
                     className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
                       selectedCategory === category.id
                         ? "bg-blue-600 text-white shadow-md transform scale-105"
@@ -371,8 +562,24 @@ const ShopCollection = () => {
         <div className="flex flex-col lg:flex-row justify-between items-center mb-8 gap-4">
           {/* Results Info */}
           <div className="text-gray-600">
-            Showing {startIndex + 1}-{Math.min(endIndex, filteredShops.length)}{" "}
-            of {filteredShops.length} shops
+            {paginationInfo && paginationInfo.totalItems > 0 ? (
+              <>
+                Showing{" "}
+                {(() => {
+                  const startIdx =
+                    (paginationInfo.currentPage - 1) * paginationInfo.pageSize +
+                    1;
+                  const endIdx = Math.min(
+                    paginationInfo.currentPage * paginationInfo.pageSize,
+                    paginationInfo.totalItems
+                  );
+                  return `${startIdx}-${endIdx}`;
+                })()}{" "}
+                of {paginationInfo.totalItems} shops
+              </>
+            ) : (
+              `Showing ${displayShops?.length || 0} shops`
+            )}
             {selectedCategory !== "all" && (
               <span className="ml-2 text-blue-600 font-medium">
                 in {categories.find((cat) => cat.id === selectedCategory)?.name}
@@ -416,57 +623,61 @@ const ShopCollection = () => {
         </div>
 
         {/* No Results Message */}
-        {filteredShops.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <Search className="h-16 w-16 mx-auto" />
+        {displayShops.length === 0 &&
+          !storesLoading &&
+          !isLoadingCategories && (
+            <div className="text-center py-12">
+              <div className="text-gray-400 mb-4">
+                <Store className="h-16 w-16 mx-auto" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                No shops found
+              </h3>
+              <p className="text-gray-500 mb-4">
+                {searchTerm && selectedCategory !== "all"
+                  ? `No shops found for "${searchTerm}" in ${
+                      categories.find((cat) => cat.id === selectedCategory)
+                        ?.name
+                    }`
+                  : searchTerm
+                  ? `No shops found for "${searchTerm}"`
+                  : selectedCategory !== "all"
+                  ? `No shops found in ${
+                      categories.find((cat) => cat.id === selectedCategory)
+                        ?.name
+                    }`
+                  : "No shops available at the moment"}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                {searchTerm && (
+                  <Button variant="outline" onClick={() => setSearchTerm("")}>
+                    Clear Search
+                  </Button>
+                )}
+                {selectedCategory !== "all" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleCategoryChange("all")}
+                  >
+                    View All Categories
+                  </Button>
+                )}
+                {(searchTerm || selectedCategory !== "all") && (
+                  <Button
+                    onClick={() => {
+                      setSearchTerm("");
+                      handleCategoryChange("all");
+                    }}
+                  >
+                    Reset All Filters
+                  </Button>
+                )}
+              </div>
             </div>
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">
-              No shops found
-            </h3>
-            <p className="text-gray-500 mb-4">
-              {searchTerm && selectedCategory !== "all"
-                ? `No shops found for "${searchTerm}" in ${
-                    categories.find((cat) => cat.id === selectedCategory)?.name
-                  }`
-                : searchTerm
-                ? `No shops found for "${searchTerm}"`
-                : selectedCategory !== "all"
-                ? `No shops found in ${
-                    categories.find((cat) => cat.id === selectedCategory)?.name
-                  }`
-                : "No shops found"}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              {searchTerm && (
-                <Button variant="outline" onClick={() => setSearchTerm("")}>
-                  Clear Search
-                </Button>
-              )}
-              {selectedCategory !== "all" && (
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedCategory("all")}
-                >
-                  View All Categories
-                </Button>
-              )}
-              {(searchTerm || selectedCategory !== "all") && (
-                <Button
-                  onClick={() => {
-                    setSearchTerm("");
-                    setSelectedCategory("all");
-                  }}
-                >
-                  Reset All Filters
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
+          )}
 
         {/* Shops Grid */}
-        {filteredShops.length > 0 && (
+        {displayShops.length > 0 && (
           <div
             className={`grid gap-6 mb-12 ${
               viewMode === "grid"
@@ -474,163 +685,172 @@ const ShopCollection = () => {
                 : "grid-cols-1"
             }`}
           >
-            {currentShops.map((shop) => (
-              <Card
-                key={shop.id}
-                className={`group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer ${
-                  viewMode === "list" ? "flex flex-col md:flex-row" : ""
-                }`}
-                padding={false}
-                onClick={() => handleShopCardClick(shop.id)}
-              >
-                {/* Shop Image */}
-                <div
-                  className={`relative overflow-hidden ${
-                    viewMode === "list" ? "md:w-80 flex-shrink-0" : "h-48"
+            {displayShops.map((shop, shopIndex) => {
+              const wishlistButton = getWishlistButtonContent(shop);
+
+              return (
+                <Card
+                  key={`shop-${shop._id || shop.id || shopIndex}`}
+                  className={`group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer ${
+                    viewMode === "list" ? "flex flex-col md:flex-row" : ""
                   }`}
+                  padding={false}
+                  onClick={() => handleShopCardClick(shop._id)}
                 >
-                  <img
-                    src={shop.image}
-                    alt={shop.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-4 left-4">
-                    <Badge variant={getBadgeVariant(shop.badge)}>
-                      {shop.badge}
-                    </Badge>
-                  </div>
-                  <div className="absolute top-4 right-4 flex gap-2">
-                    <button
-                      className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Handle favorite logic here
-                      }}
-                    >
-                      <Heart className="h-4 w-4" />
-                    </button>
-                    <button
-                      className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleVisitShop(shop.id);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </div>
-                  {shop.discount && (
-                    <div className="absolute bottom-4 left-4">
-                      <Badge variant="danger">{shop.discount}</Badge>
-                    </div>
-                  )}
-                </div>
+                  {/* Shop Image */}
+                  <div
+                    className={`relative overflow-hidden ${
+                      viewMode === "list"
+                        ? "md:w-80 flex-shrink-0 h-48"
+                        : "h-48"
+                    }`}
+                  >
+                    {shop.shopMedia?.bannerImage ||
+                    shop.shopMedia?.storeLogo ? (
+                      <img
+                        src={
+                          shop.shopMedia?.bannerImage ||
+                          shop.shopMedia?.storeLogo
+                        }
+                        alt={shop.basicInformation?.storeName || "Shop"}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          e.target.src = "/placehold.png";
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        <div className="text-center text-white">
+                          <Building className="h-12 w-12 mx-auto mb-2" />
+                          <span className="text-lg font-semibold">
+                            {shop.basicInformation?.storeName?.charAt(0) || "S"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
-                {/* Shop Info */}
-                <div className="p-6 flex-1">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                      {shop.name}
-                    </h3>
-                    <div className="flex items-center gap-1 text-sm">
-                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                      <span className="font-medium">{shop.rating}</span>
-                      <span className="text-gray-500">({shop.reviews})</span>
+                    <div className="absolute top-4 left-4">
+                      <Badge variant={getBadgeVariant(shop.status)}>
+                        {shop.status === "active" ? "Verified" : "Inactive"}
+                      </Badge>
                     </div>
-                  </div>
 
-                  <p className="text-gray-600 mb-4 line-clamp-2">
-                    {shop.description}
-                  </p>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center text-sm text-gray-500">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      {shop.location}
-                    </div>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Clock className="h-4 w-4 mr-2" />
-                      {shop.openTime}
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      <button
+                        className={`w-8 h-8 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 ${wishlistButton.className}`}
+                        onClick={(e) => handleWishlistToggle(shop, e)}
+                        disabled={addingToWishlist.has(shop._id)}
+                        title={
+                          isItemInShopWishlist(shop._id)
+                            ? "Remove from wishlist"
+                            : "Add to wishlist"
+                        }
+                      >
+                        {wishlistButton.icon}
+                      </button>
+                      <button
+                        className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleVisitShop(shop._id);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">
-                      {shop.products} products
-                    </span>
-                    <Button
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleVisitShop(shop.id);
-                      }}
-                    >
-                      Visit Shop
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
+                  {/* Shop Info */}
+                  <div className="p-6 flex-1">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                            {shop.basicInformation?.storeName || "Unnamed Shop"}
+                          </h3>
+                          {shop.status === "active" && (
+                            <BadgeCheck className="h-5 w-5 text-blue-600" />
+                          )}
+                        </div>
+                        {shop.basicInformation?.storeTagLine && (
+                          <p className="text-sm text-gray-600 mb-2">
+                            {shop.basicInformation.storeTagLine}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 text-sm">
+                        <div className="flex items-center">
+                          {renderStars(shop.rating)}
+                        </div>
+                        <span className="font-medium">{shop.rating || 0}</span>
+                        <span className="text-gray-500">(0)</span>
+                      </div>
+                    </div>
+
+                    <p className="text-gray-600 mb-4 line-clamp-2">
+                      {shop.basicInformation?.storeDescription ||
+                        "Quality products and exceptional service from a trusted seller."}
+                    </p>
+
+                    <div className="space-y-2 mb-4">
+                      {shop.contactDetails?.storeLocation && (
+                        <div className="flex items-center text-sm text-gray-500">
+                          <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
+                          {shop.contactDetails.storeLocation}
+                        </div>
+                      )}
+                      {shop.contactDetails?.storeBusinessHours && (
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
+                          {shop.contactDetails.storeBusinessHours}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <div className="flex items-center space-x-1">
+                          <Package className="h-4 w-4" />
+                          <span>{shop.totalProducts || 0} products</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Users className="h-4 w-4" />
+                          <span>{shop.totalSales || 0} sales</span>
+                        </div>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleVisitShop(shop._id);
+                        }}
+                      >
+                        Visit Shop
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
 
         {/* Pagination */}
-        {filteredShops.length > 0 && totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600">
-              Page {currentPage} of {totalPages}
+        {displayShops.length > 0 &&
+          paginationInfo &&
+          paginationInfo.totalPages > 1 && (
+            <div className="mt-12">
+              <Pagination
+                currentPage={paginationInfo.currentPage}
+                totalPages={paginationInfo.totalPages}
+                onPageChange={handlePageChange}
+                itemsPerPage={paginationInfo.pageSize}
+                totalItems={paginationInfo.totalItems}
+              />
             </div>
-
-            <div className="flex items-center gap-2">
-              {/* Previous Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-
-              {/* Page Numbers */}
-              <div className="hidden sm:flex items-center gap-1">
-                {generatePageNumbers().map((page, index) => (
-                  <Fragment key={index}>
-                    {page === "..." ? (
-                      <span className="px-3 py-2 text-gray-500">...</span>
-                    ) : (
-                      <button
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 text-sm rounded-md transition-colors ${
-                          currentPage === page
-                            ? "bg-blue-600 text-white"
-                            : "text-gray-600 hover:bg-gray-100"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    )}
-                  </Fragment>
-                ))}
-              </div>
-
-              {/* Next Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+          )}
       </div>
     </section>
   );

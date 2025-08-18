@@ -29,6 +29,7 @@ import FilterSidebar from "./FilterSidebar";
 import ShopHeader from "./ShopHeader";
 import ReviewsSection from "./ReviewsSection";
 import Pagination from "../../ui/ContactUis/Pagination";
+import ToastNotification, { useToast } from "../../ui/ToastNotification";
 import useUser from "../../../hooks/useUser";
 import { useSelector } from "react-redux";
 import { selectUser as selectAuthUser } from "../../../store/slices/authSlice";
@@ -37,6 +38,9 @@ const ShopView = () => {
   const { shopId } = useParams();
   const navigate = useNavigate();
   const authUser = useSelector(selectAuthUser);
+
+  // Toast notification hook
+  const { toastRef, showToast } = useToast();
 
   // Redux hooks
   const {
@@ -50,6 +54,12 @@ const ShopView = () => {
     storeSearchLoading,
     storeSearchError,
     lastStoreSearchParams,
+    shopReviews,
+    reviewsLoading,
+    reviewsError,
+    storesPagination,
+    fetchWishlist,
+    storeSearchPagination,
     fetchShopDetailsById,
     fetchShopListings,
     searchProductsInStore,
@@ -58,7 +68,10 @@ const ShopView = () => {
     cartLoading,
     quickToggleWishlist,
     isItemInProductWishlist,
+    isItemInShopWishlist,
     isItemInCart,
+    fetchShopReviews,
+    removeFromWishlist,
   } = useUser();
 
   // Component state
@@ -81,50 +94,94 @@ const ShopView = () => {
   // Get seller ID from shop details for listings
   const sellerId = currentShopDetails?.sellerId;
 
-  // Determine which products to show based on active filters/search
-  const currentProducts = useMemo(() => {
-    // If there's an active search or filters, show search results
-    if (
+  const realShopStats = useMemo(() => {
+    // Calculate review count and average rating from shopReviews
+    const reviewCount = shopReviews?.length || 0;
+
+    let averageRating = 0;
+    if (shopReviews && shopReviews.length > 0) {
+      let totalRatingSum = 0;
+      let totalRatingCount = 0;
+
+      shopReviews.forEach((review) => {
+        const ratings = [
+          review.shoppingExperience,
+          review.customerService,
+          review.productQuality,
+          review.deliverySpeed,
+        ].filter((rating) => rating > 0);
+
+        if (ratings.length > 0) {
+          const avgRating =
+            ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+          totalRatingSum += avgRating;
+          totalRatingCount++;
+        }
+      });
+
+      averageRating =
+        totalRatingCount > 0 ? totalRatingSum / totalRatingCount : 0;
+    }
+
+    // Calculate product count from storeListings
+    const productCount = storesPagination?.total || storeListings?.length || 0;
+
+    // Get sales count from shop data
+    const totalSales = currentShopDetails?.totalSales || 0;
+
+    return {
+      reviewCount,
+      averageRating,
+      productCount,
+      totalSales,
+    };
+  }, [shopReviews, storeListings, storesPagination, currentShopDetails]);
+
+  // Determine which products to show and pagination info
+  const { currentProducts, pagination, isSearchMode } = useMemo(() => {
+    const hasActiveFilters =
       searchQuery ||
       filters.categoryMain ||
       filters.PriceRange ||
       filters.CustomerRating ||
       filters.color ||
-      filters.brandName
-    ) {
-      return storeSearchResults || [];
+      filters.brandName;
+
+    if (hasActiveFilters) {
+      return {
+        currentProducts: storeSearchResults || [],
+        pagination: storeSearchPagination,
+        isSearchMode: true,
+      };
+    } else {
+      return {
+        currentProducts: storeListings || [],
+        pagination: storesPagination,
+        isSearchMode: false,
+      };
     }
-    // Otherwise show regular shop listings
-    return storeListings || [];
-  }, [storeSearchResults, storeListings, searchQuery, filters]);
+  }, [
+    storeSearchResults,
+    storeListings,
+    storeSearchPagination,
+    storesPagination,
+    searchQuery,
+    filters,
+  ]);
 
   const isLoading = useMemo(() => {
-    if (
-      searchQuery ||
-      filters.categoryMain ||
-      filters.PriceRange ||
-      filters.CustomerRating ||
-      filters.color ||
-      filters.brandName
-    ) {
+    if (isSearchMode) {
       return storeSearchLoading;
     }
     return storesLoading;
-  }, [storeSearchLoading, storesLoading, searchQuery, filters]);
+  }, [storeSearchLoading, storesLoading, isSearchMode]);
 
   const error = useMemo(() => {
-    if (
-      searchQuery ||
-      filters.categoryMain ||
-      filters.PriceRange ||
-      filters.CustomerRating ||
-      filters.color ||
-      filters.brandName
-    ) {
+    if (isSearchMode) {
       return storeSearchError;
     }
     return storesError;
-  }, [storeSearchError, storesError, searchQuery, filters]);
+  }, [storeSearchError, storesError, isSearchMode]);
 
   // Fetch shop data
   useEffect(() => {
@@ -137,12 +194,27 @@ const ShopView = () => {
     };
   }, [shopId, fetchShopDetailsById, resetShopDetail]);
 
-  // Fetch shop listings when we have seller ID
+  // ✅ FIXED: Fetch shop listings immediately when we have seller ID (not just for products tab)
+  // This ensures we have data for accurate stats calculation on initial load
   useEffect(() => {
-    if (sellerId && activeTab === "products") {
+    if (sellerId) {
+      fetchShopListings(sellerId, 1, itemsPerPage); // Fetch first page immediately for stats
+    }
+  }, [sellerId, fetchShopListings, itemsPerPage]);
+
+  // Fetch additional pages only when on products tab and navigating pages
+  useEffect(() => {
+    if (sellerId && activeTab === "products" && currentPage > 1) {
       fetchShopListings(sellerId, currentPage, itemsPerPage);
     }
-  }, [sellerId, activeTab, fetchShopListings, currentPage, itemsPerPage]);
+  }, [sellerId, activeTab, currentPage, fetchShopListings, itemsPerPage]);
+
+  useEffect(() => {
+    if (shopId) {
+      // Fetch all reviews to get accurate count and rating
+      fetchShopReviews(shopId, 1, 100); 
+    }
+  }, [shopId, fetchShopReviews]);
 
   // Handle search and filters
   useEffect(() => {
@@ -179,19 +251,18 @@ const ShopView = () => {
     setCurrentPage(1);
   }, [filters, searchQuery, sortBy]);
 
+  // Define tabs with proper counts from backend
   const tabs = [
     { id: "home", name: "Shop Home", icon: Home },
     {
       id: "products",
       name: "Products",
       icon: Package,
-      count: currentShopDetails?.totalProducts || 0,
     },
     {
       id: "feedback",
       name: "Reviews",
       icon: MessageSquare,
-      count: 0, // Will be updated by ReviewsSection
     },
   ];
 
@@ -208,14 +279,14 @@ const ShopView = () => {
   const handleFiltersChange = (newFilters) => {
     // Convert UI filters to API format
     const apiFilters = {
-      categoryMain: newFilters.categories?.[0] || "",
+      categoryMain: newFilters.categories || "",
       PriceRange:
         newFilters.priceRange?.min && newFilters.priceRange?.max
           ? `${newFilters.priceRange.min}-${newFilters.priceRange.max}`
           : "",
       CustomerRating: newFilters.rating || 0,
       color: newFilters.colors?.[0] || "",
-      brandName: newFilters.brands?.[0] || "",
+      brandName: newFilters.brands || "",
     };
 
     setFilters(apiFilters);
@@ -245,8 +316,14 @@ const ShopView = () => {
 
     try {
       await addItemToCart(authUser._id, product._id, 1);
+      const productName = product.title || product.name || "Product";
+      showToast.success(`"${productName}" added to cart successfully!`, {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
     } catch (error) {
       console.error("Error adding to cart:", error);
+      showToast.error("Failed to add to cart. Please try again.");
     }
   };
 
@@ -257,14 +334,45 @@ const ShopView = () => {
     }
 
     try {
-      await quickToggleWishlist(authUser._id, product._id, "product");
+      const productName = product.title || product.name || "Product";
+      const productId = product._id;
+      const wasInWishlist = isItemInProductWishlist(productId);
+
+      if (wasInWishlist) {
+        await removeFromWishlist(authUser._id, productId);
+        showToast.success(`"${productName}" removed from wishlist`);
+      } else {
+        await quickToggleWishlist(authUser._id, productId, "product");
+        showToast.success(`"${productName}" added to wishlist!`, {
+          text: "View Wishlist",
+          action: () => navigate("/wishlist"),
+        });
+      }
+
+      await fetchWishlist(authUser._id);
     } catch (error) {
       console.error("Error toggling wishlist:", error);
+      showToast.error("Failed to update wishlist. Please try again.");
     }
   };
 
   const handleProductClick = (product) => {
     navigate(`/product/${product._id}`);
+  };
+
+  const getActualProductCount = () => {
+    // Use pagination total if available
+    if (storesPagination?.total) {
+      return storesPagination.total;
+    }
+
+    // Use current listings length as fallback
+    if (storeListings?.length) {
+      return storeListings.length;
+    }
+
+    // Use shop's totalProducts as last resort
+    return currentShopDetails?.totalProducts || 0;
   };
 
   const getBadgeVariant = (badge) => {
@@ -682,6 +790,9 @@ const ShopView = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Toast Notification Component */}
+      <ToastNotification ref={toastRef} />
+
       {/* Back Button */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
@@ -699,8 +810,19 @@ const ShopView = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
-        {/* Shop Header */}
-        <ShopHeader shop={currentShopDetails} className="mb-6 sm:mb-8" />
+
+        <ShopHeader
+          shop={currentShopDetails}
+          className="mb-6 sm:mb-8"
+          realStats={realShopStats}
+          onWishlistUpdate={(message, type, action) => {
+            if (type === "success") {
+              showToast.success(message, action);
+            } else if (type === "error") {
+              showToast.error(message, action);
+            }
+          }}
+        />
 
         {/* Tabs */}
         <div className="mb-6 sm:mb-8">
@@ -716,29 +838,28 @@ const ShopView = () => {
         {/* Tab Content */}
         {activeTab === "home" && (
           <div className="space-y-6 sm:space-y-8">
-            {/* Shop Statistics */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
               <Card className="text-center p-4 sm:p-6">
                 <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1 sm:mb-2">
-                  {currentShopDetails.totalProducts || 0}
+                  {realShopStats.productCount}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600">Products</div>
               </Card>
               <Card className="text-center p-4 sm:p-6">
                 <div className="text-2xl sm:text-3xl font-bold text-green-600 mb-1 sm:mb-2">
-                  {currentShopDetails.rating || 0}
+                  {realShopStats.averageRating.toFixed(1)}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600">Rating</div>
               </Card>
               <Card className="text-center p-4 sm:p-6">
                 <div className="text-2xl sm:text-3xl font-bold text-purple-600 mb-1 sm:mb-2">
-                  0
+                  {realShopStats.reviewCount}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600">Reviews</div>
               </Card>
               <Card className="text-center p-4 sm:p-6">
                 <div className="text-2xl sm:text-3xl font-bold text-orange-600 mb-1 sm:mb-2">
-                  {currentShopDetails.totalSales || 0}
+                  {realShopStats.totalSales}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600">Sales</div>
               </Card>
@@ -772,9 +893,7 @@ const ShopView = () => {
             <div className="hidden lg:block w-80 flex-shrink-0">
               <FilterSidebar
                 filters={{
-                  categories: filters.categoryMain
-                    ? [filters.categoryMain]
-                    : [],
+                  categories: filters.categoryMain || null,
                   priceRange: filters.PriceRange
                     ? {
                         min: parseInt(filters.PriceRange.split("-")[0]),
@@ -782,7 +901,7 @@ const ShopView = () => {
                       }
                     : {},
                   rating: filters.CustomerRating,
-                  brands: filters.brandName ? [filters.brandName] : [],
+                  brands: filters.brandName || null,
                   colors: filters.color ? [filters.color] : [],
                 }}
                 onFiltersChange={handleFiltersChange}
@@ -876,7 +995,19 @@ const ShopView = () => {
                   {/* Results Info */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-gray-200">
                     <div className="text-sm text-gray-600">
-                      Showing {currentProducts.length} products
+                      {pagination ? (
+                        <>
+                          Showing {(currentPage - 1) * itemsPerPage + 1}-
+                          {Math.min(
+                            currentPage * itemsPerPage,
+                            pagination.total || pagination.totalItems || 0
+                          )}{" "}
+                          of {pagination.total || pagination.totalItems || 0}{" "}
+                          products
+                        </>
+                      ) : (
+                        `Showing ${currentProducts.length} products`
+                      )}
                     </div>
 
                     {/* Active Filters Indicator */}
@@ -908,9 +1039,7 @@ const ShopView = () => {
                 <div className="lg:hidden mb-4 sm:mb-6">
                   <FilterSidebar
                     filters={{
-                      categories: filters.categoryMain
-                        ? [filters.categoryMain]
-                        : [],
+                      categories: filters.categoryMain || null,
                       priceRange: filters.PriceRange
                         ? {
                             min: parseInt(filters.PriceRange.split("-")[0]),
@@ -918,7 +1047,7 @@ const ShopView = () => {
                           }
                         : {},
                       rating: filters.CustomerRating,
-                      brands: filters.brandName ? [filters.brandName] : [],
+                      brands: filters.brandName || null,
                       colors: filters.color ? [filters.color] : [],
                     }}
                     onFiltersChange={handleFiltersChange}
@@ -950,15 +1079,30 @@ const ShopView = () => {
                   </Button>
                 </Card>
               ) : currentProducts.length > 0 ? (
-                <div
-                  className={`grid gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8 ${
-                    viewMode === "grid"
-                      ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
-                      : "grid-cols-1"
-                  }`}
-                >
-                  {currentProducts.map(renderProductCard)}
-                </div>
+                <>
+                  <div
+                    className={`grid gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8 ${
+                      viewMode === "grid"
+                        ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
+                        : "grid-cols-1"
+                    }`}
+                  >
+                    {currentProducts.map(renderProductCard)}
+                  </div>
+
+                  {/* Pagination - Only show if we have backend pagination data */}
+                  {pagination && pagination.totalPages > 1 && (
+                    <div className="flex justify-center">
+                      <Pagination
+                        currentPage={pagination.currentPage}
+                        totalPages={pagination.totalPages}
+                        onPageChange={handlePageChange}
+                        itemsPerPage={itemsPerPage}
+                        totalItems={pagination.totalItems}
+                      />
+                    </div>
+                  )}
+                </>
               ) : (
                 <Card className="text-center p-8 sm:p-12">
                   <Package className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />

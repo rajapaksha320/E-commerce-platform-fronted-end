@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useSelector, useDispatch } from "react-redux";
 import { useCallback } from "react";
 import {
@@ -94,6 +95,7 @@ import {
   selectUserSuccess,
   selectUserMessage,
 } from "../store/slices/userSlice";
+import { title } from "framer-motion/client";
 
 const useUser = () => {
   const dispatch = useDispatch();
@@ -515,6 +517,7 @@ const useUser = () => {
         CustomerRating: filters.rating || 0,
         color: filters.color || "",
         brandName: filters.brand || "",
+        title:filters.title || ""
       };
 
       return searchAllProducts(searchParams, page, pageSize);
@@ -599,7 +602,7 @@ const useUser = () => {
     [dispatch]
   );
 
-  // QUICK ACTIONS
+  // QUICK ACTIONS - FIXED VERSION
   const quickAddToCart = useCallback(
     (buyerId, listingId) => {
       return addItemToCart(buyerId, listingId, 1);
@@ -611,17 +614,46 @@ const useUser = () => {
     (userId, itemId, itemType = "product") => {
       if (itemType === "product") {
         const isInWishlist = isItemInProductWishlist(itemId);
+
         if (isInWishlist) {
+          // ✅ For removal, just use removeFromWishlist directly
           return removeFromWishlist(userId, itemId);
         } else {
-          return addToWishlist([itemId], []);
+          // ✅ For adding, get existing items and add new one
+          const existingProductIds = productWishlist.reduce((ids, list) => {
+            return [...ids, ...list.items.map((item) => item._id)];
+          }, []);
+
+          const existingShopIds = shopWishlist.reduce((ids, list) => {
+            return [...ids, ...list.items.map((item) => item._id)];
+          }, []);
+
+          // Only add if not already in the list
+          if (!existingProductIds.includes(itemId)) {
+            const updatedProductIds = [...existingProductIds, itemId];
+            return addToWishlist(updatedProductIds, existingShopIds);
+          }
         }
       } else {
+        // Shop logic
         const isInWishlist = isItemInShopWishlist(itemId);
+
         if (isInWishlist) {
           return removeFromWishlist(userId, itemId);
         } else {
-          return addToWishlist([], [itemId]);
+          const existingShopIds = shopWishlist.reduce((ids, list) => {
+            return [...ids, ...list.items.map((item) => item._id)];
+          }, []);
+
+          if (!existingShopIds.includes(itemId)) {
+            const updatedShopIds = [...existingShopIds, itemId];
+
+            const existingProductIds = productWishlist.reduce((ids, list) => {
+              return [...ids, ...list.items.map((item) => item._id)];
+            }, []);
+
+            return addToWishlist(existingProductIds, updatedShopIds);
+          }
         }
       }
     },
@@ -630,6 +662,8 @@ const useUser = () => {
       isItemInShopWishlist,
       addToWishlist,
       removeFromWishlist,
+      productWishlist,
+      shopWishlist,
     ]
   );
 

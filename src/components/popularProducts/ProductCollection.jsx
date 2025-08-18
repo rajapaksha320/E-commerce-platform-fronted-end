@@ -65,6 +65,9 @@ const ProductCollection = () => {
     addToWishlist,
     removeFromWishlist,
     isItemInProductWishlist,
+    productWishlist, // Add this
+    shopWishlist, // Add this
+    quickToggleWishlist
   } = useUser();
 
   // Safely get clearSearchResults with fallback
@@ -433,21 +436,23 @@ const ProductCollection = () => {
     setAddingToWishlist((prev) => new Set(prev).add(productId));
 
     try {
+      const productName =
+        product.title || product.name || product.productName || "Item";
+
       if (isInWishlist) {
+        // ✅ Don't use quickToggleWishlist for removal - use direct API
         await removeFromWishlist(authUser._id, productId);
-        const productName =
-          product.title || product.name || product.productName || "Item";
         showToast.success(`"${productName}" removed from wishlist`);
       } else {
-        await addToWishlist([productId], []);
-        const productName =
-          product.title || product.name || product.productName || "Item";
+        // ✅ For adding, use the corrected quickToggleWishlist
+        await quickToggleWishlist(authUser._id, productId, "product");
         showToast.success(`"${productName}" added to wishlist!`, {
           text: "View Wishlist",
           action: () => navigate("/wishlist"),
         });
       }
 
+      // ✅ Force refresh wishlist data after operation
       await fetchWishlist(authUser._id);
     } catch (error) {
       console.error("Failed to update wishlist:", error);
