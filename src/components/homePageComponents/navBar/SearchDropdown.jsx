@@ -1,15 +1,25 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from "react";
-import {
-  Search,
-  TrendingUp,
-  Clock,
-  ArrowRight,
-  Star,
-  Package,
-  Filter,
-} from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Search, ArrowRight, Star, Package, Loader2 } from "lucide-react";
 import { Button, Badge } from "../../ui/ContactUis/Uis";
+import {
+  searchProducts,
+  selectSearchResults,
+  selectSearchLoading,
+} from "../../../store/slices/userSlice";
+// Import debounce utility
+const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
 
 const SearchDropdown = ({
   searchQuery,
@@ -17,156 +27,229 @@ const SearchDropdown = ({
   onClose,
   onViewAll,
   onProductSelect,
+  isMobile = false,
 }) => {
-  const [recentSearches] = useState([
-    "Wireless headphones",
-    "Gaming laptop",
-    "Smart watch",
-    "Bluetooth speaker",
-  ]);
+  const dispatch = useDispatch();
+  const searchResults = useSelector(selectSearchResults);
+  const searchLoading = useSelector(selectSearchLoading);
 
-  const [trendingSearches] = useState([
-    "iPhone 15",
-    "MacBook Pro",
-    "AirPods Pro",
-    "Samsung Galaxy",
-    "PlayStation 5",
-    "Nintendo Switch",
-  ]);
+  const [suggestions, setSuggestions] = useState([]);
 
-  // Mock products for real-time search results
-  const [searchResults, setSearchResults] = useState([]);
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    debounce(async (query) => {
+      if (query && query.length >= 2) {
+        try {
+          const searchParams = {
+            title: query,
+            brandName: "",
+            categoryMain: "",
+            PriceRange: "",
+            CustomerRating: 0,
+            color: "",
+          };
 
-  const allProducts = [
-    {
-      id: 1,
-      name: "Wireless Bluetooth Headphones Pro",
-      category: "Electronics",
-      brand: "Apple",
-      price: 179.99,
-      rating: 4.8,
-      image:
-        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
-      inStock: true,
-    },
-    {
-      id: 2,
-      name: "Smart Fitness Watch Series 5",
-      category: "Electronics",
-      brand: "Samsung",
-      price: 299.99,
-      rating: 4.7,
-      image:
-        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
-      inStock: true,
-    },
-    {
-      id: 3,
-      name: "Gaming Mechanical Keyboard",
-      category: "Electronics",
-      brand: "Logitech",
-      price: 149.99,
-      rating: 4.9,
-      image:
-        "https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=300&h=300&fit=crop",
-      inStock: true,
-    },
-    {
-      id: 4,
-      name: "Portable Bluetooth Speaker",
-      category: "Electronics",
-      brand: "Sony",
-      price: 89.99,
-      rating: 4.6,
-      image:
-        "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&h=300&fit=crop",
-      inStock: false,
-    },
-    {
-      id: 5,
-      name: "USB-C Fast Charger 65W",
-      category: "Electronics",
-      brand: "Apple",
-      price: 59.99,
-      rating: 4.7,
-      image:
-        "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop",
-      inStock: true,
-    },
-  ];
+          const response = await dispatch(
+            searchProducts({
+              searchParams,
+              page: 1,
+              pageSize: 8,
+            })
+          ).unwrap();
 
+          // Process results for suggestions
+          if (response.data && response.data.length > 0) {
+            const processedSuggestions = response.data
+              .slice(0, 5)
+              .map((item) => ({
+                id: item._id,
+                name: item.title,
+                category: item.category?.main || "Unknown",
+                brand: item.brand || "Unknown Brand",
+                price: item.variations?.[0]?.price || item.price || 0,
+                originalPrice:
+                  item.variations?.[0]?.originalPrice ||
+                  item.originalPrice ||
+                  0,
+                rating: item.averageRating || 0,
+                image:
+                  item.images?.[0]?.url ||
+                  item.variations?.[0]?.images?.[0]?.url,
+                inStock:
+                  item.status === "active" &&
+                  (item.variations?.[0]?.quantity > 0 || item.quantity > 0),
+                listingId: item._id,
+              }));
+            setSuggestions(processedSuggestions);
+          } else {
+            setSuggestions([]);
+          }
+        } catch (error) {
+          console.error("Search error:", error);
+          setSuggestions([]);
+        }
+      } else {
+        setSuggestions([]);
+      }
+    }, 300),
+    [dispatch]
+  );
+
+  // Effect to trigger search when query changes
   useEffect(() => {
-    if (searchQuery && searchQuery.length > 0) {
-      const filtered = allProducts
-        .filter(
-          (product) =>
-            product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            product.category
-              .toLowerCase()
-              .includes(searchQuery.toLowerCase()) ||
-            product.brand.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        .slice(0, 5);
-      setSearchResults(filtered);
+    if (searchQuery) {
+      debouncedSearch(searchQuery);
     } else {
-      setSearchResults([]);
+      setSuggestions([]);
     }
-  }, [searchQuery]);
+  }, [searchQuery, debouncedSearch]);
+
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion) => {
+    onProductSelect({
+      id: suggestion.listingId,
+      name: suggestion.name,
+      ...suggestion,
+    });
+  };
 
   if (!isOpen) return null;
 
   return (
-    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 max-h-96 overflow-hidden">
+    <div
+      className={`absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden ${
+        isMobile ? "max-h-[70vh] min-h-[200px] z-[60]" : "max-h-96 z-50"
+      }`}
+    >
+      {/* Loading State */}
+      {searchLoading && (
+        <div className={`text-center ${isMobile ? "p-8" : "p-6"}`}>
+          <Loader2
+            className={`animate-spin mx-auto mb-2 text-blue-600 ${
+              isMobile ? "h-8 w-8" : "h-6 w-6"
+            }`}
+          />
+          <p className={`text-gray-600 ${isMobile ? "text-base" : "text-sm"}`}>
+            Searching products...
+          </p>
+        </div>
+      )}
+
       {/* Search Results */}
-      {searchQuery && searchResults.length > 0 && (
+      {searchQuery && suggestions.length > 0 && !searchLoading && (
         <div className="border-b border-gray-100">
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-900">Products</h3>
+          <div className={`${isMobile ? "p-3" : "p-4"}`}>
+            <div
+              className={`flex items-center justify-between ${
+                isMobile ? "mb-2" : "mb-3"
+              }`}
+            >
+              <h3
+                className={`font-semibold text-gray-900 ${
+                  isMobile ? "text-base" : "text-sm"
+                }`}
+              >
+                Products
+              </h3>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => onViewAll(searchQuery)}
-                className="text-blue-600 hover:text-blue-700"
+                className={`text-blue-600 hover:text-blue-700 ${
+                  isMobile ? "text-sm px-2 py-1" : ""
+                }`}
               >
-                View all ({searchResults.length}+)
-                <ArrowRight className="h-4 w-4 ml-1" />
+                View all results
+                <ArrowRight
+                  className={`ml-1 ${isMobile ? "h-3 w-3" : "h-4 w-4"}`}
+                />
               </Button>
             </div>
-            <div className="space-y-2">
-              {searchResults.map((product) => (
+            <div className={`${isMobile ? "space-y-3" : "space-y-2"}`}>
+              {suggestions.map((suggestion) => (
                 <div
-                  key={product.id}
-                  onClick={() => onProductSelect(product)}
-                  className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                  key={suggestion.id}
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className={`flex items-center space-x-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors active:bg-gray-100 ${
+                    isMobile ? "p-3" : "p-2"
+                  }`}
                 >
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-10 h-10 rounded-lg object-cover"
-                  />
+                  {suggestion.image ? (
+                    <img
+                      src={suggestion.image}
+                      alt={suggestion.name}
+                      className={`rounded-lg object-cover ${
+                        isMobile ? "w-12 h-12" : "w-10 h-10"
+                      }`}
+                    />
+                  ) : (
+                    <div
+                      className={`rounded-lg bg-gray-200 flex items-center justify-center ${
+                        isMobile ? "w-12 h-12" : "w-10 h-10"
+                      }`}
+                    >
+                      <Package
+                        className={`text-gray-400 ${
+                          isMobile ? "h-6 w-6" : "h-5 w-5"
+                        }`}
+                      />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {product.name}
+                    <p
+                      className={`font-medium text-gray-900 truncate ${
+                        isMobile ? "text-base" : "text-sm"
+                      }`}
+                    >
+                      {suggestion.name}
                     </p>
                     <div className="flex items-center space-x-2">
-                      <span className="text-xs text-gray-500">
-                        {product.brand}
+                      <span
+                        className={`text-gray-500 ${
+                          isMobile ? "text-sm" : "text-xs"
+                        }`}
+                      >
+                        {suggestion.brand}
                       </span>
-                      <div className="flex items-center">
-                        <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                        <span className="text-xs text-gray-500 ml-1">
-                          {product.rating}
-                        </span>
-                      </div>
+                      {suggestion.rating > 0 && (
+                        <div className="flex items-center">
+                          <Star
+                            className={`text-yellow-400 fill-current ${
+                              isMobile ? "h-3 w-3" : "h-3 w-3"
+                            }`}
+                          />
+                          <span
+                            className={`text-gray-500 ml-1 ${
+                              isMobile ? "text-sm" : "text-xs"
+                            }`}
+                          >
+                            {suggestion.rating.toFixed(1)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-gray-900">
-                      ${product.price}
-                    </p>
-                    {!product.inStock && (
-                      <Badge variant="danger" size="sm">
+                    <div className="flex flex-col items-end">
+                      <p
+                        className={`font-semibold text-gray-900 ${
+                          isMobile ? "text-base" : "text-sm"
+                        }`}
+                      >
+                        ${parseFloat(suggestion.price).toFixed(2)}
+                      </p>
+                      {suggestion.originalPrice > suggestion.price && (
+                        <p
+                          className={`text-gray-500 line-through ${
+                            isMobile ? "text-sm" : "text-xs"
+                          }`}
+                        >
+                          ${parseFloat(suggestion.originalPrice).toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                    {!suggestion.inStock && (
+                      <Badge variant="danger" size="sm" className="mt-1">
                         Out of Stock
                       </Badge>
                     )}
@@ -179,76 +262,79 @@ const SearchDropdown = ({
       )}
 
       {/* No Results */}
-      {searchQuery && searchResults.length === 0 && (
-        <div className="p-6 text-center border-b border-gray-100">
-          <Package className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-sm text-gray-600">
+      {searchQuery && suggestions.length === 0 && !searchLoading && (
+        <div
+          className={`text-center border-b border-gray-100 ${
+            isMobile ? "p-6" : "p-6"
+          }`}
+        >
+          <Package
+            className={`text-gray-400 mx-auto mb-2 ${
+              isMobile ? "h-10 w-10" : "h-8 w-8"
+            }`}
+          />
+          <p
+            className={`text-gray-600 mb-2 ${
+              isMobile ? "text-base" : "text-sm"
+            }`}
+          >
             No products found for "{searchQuery}"
+          </p>
+          <p
+            className={`text-gray-500 mb-3 ${isMobile ? "text-sm" : "text-xs"}`}
+          >
+            Try searching with different keywords or brand names
           </p>
           <Button
             variant="primary"
             size="sm"
             onClick={() => onViewAll(searchQuery)}
-            className="mt-2"
+            className={`mt-2 ${isMobile ? "px-4 py-2 text-sm" : ""}`}
           >
             Search all categories
           </Button>
         </div>
       )}
 
-      {/* Trending Searches */}
+      {/* Quick Search Tips */}
       {!searchQuery && (
-        <div className="p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-            <TrendingUp className="h-4 w-4 mr-2 text-orange-500" />
-            Trending
+        <div className={`bg-gray-50 ${isMobile ? "p-4" : "p-4"}`}>
+          <h3
+            className={`font-semibold text-gray-900 mb-2 ${
+              isMobile ? "text-base" : "text-sm"
+            }`}
+          >
+            Search Tips
           </h3>
-          <div className="grid grid-cols-2 gap-2">
-            {trendingSearches.map((term, index) => (
-              <button
-                key={index}
-                onClick={() => onViewAll(term)}
-                className="text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-              >
-                {term}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recent Searches */}
-      {!searchQuery && recentSearches.length > 0 && (
-        <div className="p-4 border-t border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-            <Clock className="h-4 w-4 mr-2 text-gray-500" />
-            Recent searches
-          </h3>
-          <div className="space-y-1">
-            {recentSearches.map((term, index) => (
-              <button
-                key={index}
-                onClick={() => onViewAll(term)}
-                className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                {term}
-              </button>
-            ))}
+          <div
+            className={`text-gray-600 space-y-1 ${
+              isMobile ? "text-sm" : "text-xs"
+            }`}
+          >
+            <p>• Search by product name (e.g., "iPhone", "laptop")</p>
           </div>
         </div>
       )}
 
       {/* Quick Actions */}
-      <div className="p-4 bg-gray-50 border-t border-gray-100">
+      <div
+        className={`bg-gray-50 border-t border-gray-100 ${
+          isMobile ? "p-4" : "p-4"
+        }`}
+      >
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500">Quick search</span>
+          <span className={`text-gray-500 ${isMobile ? "text-sm" : "text-xs"}`}>
+            Quick search
+          </span>
           <Button
             variant="primary"
             size="sm"
             onClick={() => onViewAll(searchQuery || "")}
-            className="flex items-center"
+            className={`flex items-center ${
+              isMobile ? "px-3 py-2 text-sm" : ""
+            }`}
           >
-            <Filter className="h-3 w-3 mr-1" />
+            <Search className={`mr-1 ${isMobile ? "h-4 w-4" : "h-3 w-3"}`} />
             Advanced Search
           </Button>
         </div>
