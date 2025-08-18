@@ -56,7 +56,7 @@ const BestItems = () => {
 
   // Fetch stores data first
   useEffect(() => {
-    fetchAllStores(1, 50); // Get more stores for better selection
+    fetchAllStores(1, 50); 
   }, [fetchAllStores]);
 
   // Fetch products data
@@ -71,7 +71,7 @@ const BestItems = () => {
         title: "",
       },
       1,
-      60 // Fetch more products
+      60 
     );
   }, [searchAllProducts]);
 
@@ -85,7 +85,7 @@ const BestItems = () => {
 
       console.log(`Processing ${activeStores.length} active stores`);
 
-      // TRENDING STORES - Newer stores with potential, active but not necessarily highest sales
+      // TRENDING STORES 
       const trendingStores = [...activeStores]
         .map((storeData) => {
           const store = storeData.store;
@@ -99,11 +99,11 @@ const BestItems = () => {
           let trendingScore = 0;
 
           // 1. STORE NEWNESS (Newer = More Trendy)
-          if (daysSinceCreated <= 30) trendingScore += 100; // Last month
-          else if (daysSinceCreated <= 90) trendingScore += 70; // Last 3 months
-          else if (daysSinceCreated <= 180) trendingScore += 40; // Last 6 months
+          if (daysSinceCreated <= 30) trendingScore += 100;
+          else if (daysSinceCreated <= 90) trendingScore += 70; 
+          else if (daysSinceCreated <= 180) trendingScore += 40;
 
-          // 2. GROWING POTENTIAL (Good rating but not maxed out sales)
+          // 2. GROWING POTENTIAL 
           const rating = parseFloat(store.rating || 0);
           const totalSales = parseInt(store.totalSales || 0);
           const totalProducts = parseInt(store.totalProducts || 0);
@@ -113,17 +113,17 @@ const BestItems = () => {
           else if (rating >= 4.0) trendingScore += 40;
           else if (rating >= 3.0) trendingScore += 20;
 
-          // 3. PRODUCT VARIETY (More products = more to trend)
+          // 3. PRODUCT VARIETY 
           if (totalProducts >= 20) trendingScore += 30;
           else if (totalProducts >= 10) trendingScore += 20;
           else if (totalProducts >= 5) trendingScore += 10;
 
-          // 4. MODERATE SALES (Not zero, but not overwhelming - shows growth)
+          // 4. MODERATE SALES
           if (totalSales > 0 && totalSales <= 50) trendingScore += 40;
           else if (totalSales > 50 && totalSales <= 100) trendingScore += 25;
           else if (totalSales > 100) trendingScore += 10; // High sales go to bestsellers
 
-          // 5. BUSINESS TYPE BONUS (Some business types trend more)
+          // 5. BUSINESS TYPE BONUS 
           const businessType =
             seller?.businessInfo?.businessType?.toLowerCase();
           if (businessType === "retail" || businessType === "individual") {
@@ -137,8 +137,7 @@ const BestItems = () => {
           return { ...storeData, trendingScore, daysSinceCreated };
         })
         .sort((a, b) => b.trendingScore - a.trendingScore)
-        .slice(0, 8); // Top trending stores
-
+        .slice(0, 8); 
       // BESTSELLING STORES - Adapted for low/no sales scenario
       const bestsellingStores = [...activeStores]
         .map((storeData) => {
@@ -152,39 +151,39 @@ const BestItems = () => {
 
           let bestSellerScore = 0;
 
-          // 1. ESTABLISHMENT FACTOR (More flexible for new marketplaces)
-          if (daysSinceCreated >= 90) bestSellerScore += 50; // 3+ months
-          else if (daysSinceCreated >= 30) bestSellerScore += 35; // 1+ month
-          else if (daysSinceCreated >= 14) bestSellerScore += 25; // 2+ weeks
-          else if (daysSinceCreated >= 7) bestSellerScore += 15; // 1+ week
+          // 1. ESTABLISHMENT FACTOR 
+          if (daysSinceCreated >= 90) bestSellerScore += 50;
+          else if (daysSinceCreated >= 30) bestSellerScore += 35; 
+          else if (daysSinceCreated >= 14) bestSellerScore += 25; 
+          else if (daysSinceCreated >= 7) bestSellerScore += 15; 
 
-          // 2. SALES PERFORMANCE (Adjusted for low sales environment)
+          // 2. SALES PERFORMANCE 
           const totalSales = parseInt(store.totalSales || 0);
-          if (totalSales >= 50) bestSellerScore += 100; // Any significant sales
+          if (totalSales >= 50) bestSellerScore += 100; 
           else if (totalSales >= 20) bestSellerScore += 80;
           else if (totalSales >= 10) bestSellerScore += 60;
           else if (totalSales >= 5) bestSellerScore += 40;
-          else if (totalSales >= 1) bestSellerScore += 25; // Even 1 sale counts
-          else bestSellerScore += 5; // Potential for sales (baseline)
+          else if (totalSales >= 1) bestSellerScore += 25; 
+          else bestSellerScore += 5;
 
-          // 3. RATING QUALITY (Higher weight since sales are low)
+          // 3. RATING QUALITY
           const rating = parseFloat(store.rating || 0);
           if (rating >= 4.5) bestSellerScore += 70;
           else if (rating >= 4.0) bestSellerScore += 55;
           else if (rating >= 3.5) bestSellerScore += 40;
           else if (rating >= 3.0) bestSellerScore += 25;
           else if (rating >= 2.0) bestSellerScore += 10;
-          else bestSellerScore += 5; // Even no rating gets baseline
+          else bestSellerScore += 5; 
 
-          // 4. PRODUCT READINESS (Store setup quality)
+          // 4. PRODUCT READINESS 
           const totalProducts = parseInt(store.totalProducts || 0);
           if (totalProducts >= 20) bestSellerScore += 30;
           else if (totalProducts >= 10) bestSellerScore += 25;
           else if (totalProducts >= 5) bestSellerScore += 20;
           else if (totalProducts >= 1) bestSellerScore += 15;
-          else bestSellerScore += 5; // Store exists
+          else bestSellerScore += 5;
 
-          // 5. STORE COMPLETENESS (Business setup quality)
+          // 5. STORE COMPLETENESS
           const businessType =
             seller?.businessInfo?.businessType?.toLowerCase();
           const hasBusinessName = seller?.businessInfo?.businessName;
@@ -199,7 +198,7 @@ const BestItems = () => {
           if (hasWebsite) bestSellerScore += 5;
           if (hasCompleteContact) bestSellerScore += 10;
 
-          // 6. STORE BRANDING (Professional appearance)
+          // 6. STORE BRANDING 
           if (store.shopMedia?.storeLogo) bestSellerScore += 10;
           if (store.shopMedia?.bannerImage) bestSellerScore += 5;
           if (store.basicInformation?.storeDescription) bestSellerScore += 5;
@@ -211,7 +210,7 @@ const BestItems = () => {
           return { ...storeData, bestSellerScore, daysSinceCreated };
         })
         .sort((a, b) => b.bestSellerScore - a.bestSellerScore)
-        .slice(0, 8); // Top bestselling stores
+        .slice(0, 8); 
 
       setStoreCategories({
         trending: trendingStores,
