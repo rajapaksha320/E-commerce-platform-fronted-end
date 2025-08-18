@@ -49,7 +49,7 @@ const userService = {
     return await axiosInstance.post("/api/v1/cart/add/", payload);
   },
 
-  // ✅ ENHANCED: Get cart items - now returns enhanced data with store and listing info
+  // Get cart items
   getCartItems: async (buyerId, page = 1, size = 10) => {
     try {
       const response = await axiosInstance.get(
@@ -81,7 +81,7 @@ const userService = {
     return await axiosInstance.delete(`/api/v1/cart/delete-cart/${cartItemId}`);
   },
 
-  // ✅ NEW: Get detailed cart information for checkout with enhanced processing
+  // Get detailed cart information for checkout 
   getCartForCheckout: async (buyerId) => {
     try {
       const response = await userService.getCartItems(buyerId, 1, 100);
@@ -99,7 +99,7 @@ const userService = {
 
         return {
           ...item,
-          // ✅ Enhanced: Extract all required data from the API response
+          // Extract all required data from the API response
 
           // Normalize pricing from variations
           price: parseFloat(variation?.price || listing?.price || 0),
@@ -197,7 +197,7 @@ const userService = {
     }
   },
 
-  // ✅ NEW: Bulk cart operations
+  // Bulk cart operations
   bulkDeleteCartItems: async (cartItemIds) => {
     try {
       const deletePromises = cartItemIds.map((id) =>
@@ -211,7 +211,7 @@ const userService = {
     }
   },
 
-  // ✅ NEW: Clear entire cart for a user
+  // Clear entire cart for a user
   clearUserCart: async (buyerId) => {
     try {
       const cartResponse = await userService.getCartItems(buyerId, 1, 100);
@@ -262,9 +262,8 @@ const userService = {
 
   // ORDER SERVICES
 
-  // ✅ ENHANCED: Place an order with comprehensive validation and error handling
+  // Place an order with comprehensive validation and error handling
   placeOrder: async (orderData) => {
-    // ✅ Enhanced validation
     const validation = userService.validateOrderData(orderData);
     if (!validation.isValid) {
       throw new Error(
@@ -274,7 +273,7 @@ const userService = {
 
     const payload = {
       buyerId: orderData.buyerId,
-      listingIds: orderData.listingIds.filter(Boolean), // Remove any null/undefined values
+      listingIds: orderData.listingIds.filter(Boolean), 
       storeIds: (orderData.storeIds || []).filter(Boolean),
       sellerIds: (orderData.sellerIds || []).filter(Boolean),
       shippingAddress: orderData.shippingAddress,
@@ -312,7 +311,7 @@ const userService = {
     }
   },
 
-  // ✅ NEW: Validate order data before submission
+  // Validate order data before submission
   validateOrderData: (orderData) => {
     const validation = {
       isValid: true,
@@ -570,7 +569,7 @@ const userService = {
     }
   },
 
-  // ✅ ENHANCED: Extract cart item metadata for orders with comprehensive data
+  // Extract cart item metadata for orders with  data
   extractOrderMetadata: (cartItems) => {
     const listingIds = [];
     const storeIds = new Set();
@@ -657,7 +656,7 @@ const userService = {
     return metadata;
   },
 
-  // ✅ NEW: Prepare order payload with validation
+  // Prepare order payload with validation
   prepareOrderPayload: async (
     cartItems,
     shippingAddress,
@@ -747,7 +746,7 @@ const userService = {
     });
   },
 
-  // ✅ ENHANCED: Get cart summary with comprehensive metadata
+  // Get cart summary with  metadata
   getCartSummary: async (buyerId) => {
     try {
       const response = await userService.getCartForCheckout(buyerId);
@@ -812,7 +811,7 @@ const userService = {
     }
   },
 
-  // ✅ ENHANCED: Validate order before placement with comprehensive checks
+  // Validate order before placement with checks
   validateOrder: async (orderData) => {
     try {
       // Basic validation
@@ -880,7 +879,7 @@ const userService = {
     }
   },
 
-  // ✅ NEW: Get cart analytics
+  // Get cart analytics
   getCartAnalytics: async (buyerId) => {
     try {
       const response = await userService.getCartForCheckout(buyerId);
@@ -900,7 +899,7 @@ const userService = {
         stockStatus: {
           inStock: summary.inStockItems || 0,
           outOfStock: summary.outOfStockItems || 0,
-          lowStock: 0, // items with stock < 5
+          lowStock: 0,
         },
       };
 
