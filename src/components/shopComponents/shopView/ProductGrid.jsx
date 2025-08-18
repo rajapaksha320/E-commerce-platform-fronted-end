@@ -62,7 +62,6 @@ const ProductGrid = ({
 
   const handleQuickView = (e, product) => {
     e.stopPropagation();
-    // Navigate to product page for now, can be enhanced with modal later
     navigate(`/product/${product._id}`);
   };
 
@@ -90,7 +89,6 @@ const ProductGrid = ({
       }
     }
 
-    // Check if product is new (created within last 30 days)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     if (new Date(product.createdAt) > thirtyDaysAgo) {
       return "New Arrival";

@@ -36,7 +36,6 @@ const ReviewsSection = ({ shopId, className = "" }) => {
     fetchShopReviews,
   } = useUser();
 
-  // Fetch reviews when component mounts or shopId changes
   useEffect(() => {
     if (shopId) {
       fetchShopReviews(shopId, currentPage, reviewsPerPage);
@@ -63,7 +62,7 @@ const ReviewsSection = ({ shopId, className = "" }) => {
     const counts = { total: shopReviews.length, 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
 
     shopReviews.forEach((review) => {
-      // Calculate average rating from the review components
+
       const ratings = [
         review.shoppingExperience,
         review.customerService,
@@ -88,7 +87,6 @@ const ReviewsSection = ({ shopId, className = "" }) => {
   const shopRatings = useMemo(() => {
     const totalReviews = reviewCounts.total;
 
-    // Calculate category averages from actual backend data
     const categoryTotals = {
       shoppingExperience: { sum: 0, count: 0 },
       customerService: { sum: 0, count: 0 },
@@ -262,7 +260,7 @@ const ReviewsSection = ({ shopId, className = "" }) => {
     { id: "helpful", name: "Most Helpful" },
   ];
 
-  // Filter and sort reviews - now getAverageRating is available
+  // Filter and sort reviews 
   const filteredAndSortedReviews = useMemo(() => {
     if (!shopReviews) return [];
 
@@ -306,7 +304,7 @@ const ReviewsSection = ({ shopId, className = "" }) => {
         });
         break;
       case "helpful":
-        // Sort by helpful votes if available, otherwise by date
+        
         filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         break;
       case "newest":

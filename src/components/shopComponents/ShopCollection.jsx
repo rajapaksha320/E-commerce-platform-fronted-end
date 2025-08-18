@@ -82,7 +82,7 @@ const ShopCollection = () => {
   const fetchCategoryData = async () => {
     setIsLoadingCategories(true);
     try {
-      // Fetch fashion category to get categoryCounts (you can use any category)
+      // Fetch fashion category to get categoryCounts 
       const result = await fetchStoresByCategory("fashion", 1, 1).unwrap();
       const responseData = result?.data?.[0];
 
@@ -132,10 +132,8 @@ const ShopCollection = () => {
     });
   }, [categoryData]);
 
-  // Get the appropriate shops data based on current selection
   const currentShopsData = selectedCategory === "all" ? stores : filteredStores;
 
-  // Extract actual store objects from API response
   const actualStores = useMemo(() => {
     if (!currentShopsData || currentShopsData.length === 0) return [];
 
@@ -144,7 +142,6 @@ const ShopCollection = () => {
         const store = item.shop || item.store || item;
         return {
           ...store,
-          // Add category info if available from the listings
           listings: item.listings || [],
           totalProductsInCategory: item.totalProductsInCategory || 0,
         };
@@ -152,7 +149,6 @@ const ShopCollection = () => {
       .filter(Boolean);
   }, [currentShopsData]);
 
-  // Filter shops based on search term (category filtering is handled by API)
   const filteredShops = useMemo(() => {
     if (!actualStores || actualStores.length === 0) return [];
 
