@@ -634,7 +634,7 @@ const userSlice = createSlice({
         state.cartError = action.payload;
       });
 
-    // ✅ ENHANCED: Cart items processing with full data
+
     builder
       .addCase(getCartItems.pending, (state) => {
         state.cartLoading = true;
@@ -1073,7 +1073,7 @@ export const selectCartLoading = (state) => state.user.cartLoading;
 export const selectCartError = (state) => state.user.cartError;
 export const selectCartItemCount = (state) => state.user.cartItems.length;
 
-// ✅ MEMOIZED: Cart total selector
+// Cart total selector
 export const selectCartTotal = createSelector(
   [selectCartItems],
   (cartItems) => {
@@ -1088,7 +1088,7 @@ export const selectCartTotal = createSelector(
   }
 );
 
-// ✅ MEMOIZED: Cart stores selector
+// Cart stores selector
 export const selectCartStores = createSelector(
   [selectCartItems],
   (cartItems) => {
@@ -1107,7 +1107,7 @@ export const selectCartStores = createSelector(
   }
 );
 
-// ✅ MEMOIZED: Cart sellers selector
+// Cart sellers selector
 export const selectCartSellers = createSelector(
   [selectCartItems],
   (cartItems) => {
@@ -1121,7 +1121,7 @@ export const selectCartSellers = createSelector(
   }
 );
 
-// ✅ MEMOIZED: Cart metadata selector
+// Cart metadata selector
 export const selectCartMetadata = createSelector(
   [selectCartItems],
   (cartItems) => {
@@ -1149,7 +1149,7 @@ export const selectCartMetadata = createSelector(
   }
 );
 
-// ✅ MEMOIZED: Cart for checkout selector
+// Cart for checkout selector
 export const selectCartForCheckout = createSelector(
   [selectCartItems],
   (cartItems) => {
@@ -1182,7 +1182,7 @@ export const selectCartForCheckout = createSelector(
   }
 );
 
-// ✅ MEMOIZED: Factory function for order data selector with parameters
+// Factory function for order data selector with parameters
 export const makeSelectOrderDataFromCart = () =>
   createSelector(
     [selectCartItems, (state, selectedItemIds) => selectedItemIds],
@@ -1216,7 +1216,7 @@ export const makeSelectOrderDataFromCart = () =>
     }
   );
 
-// ✅ MEMOIZED: Static order data selector (for when no params needed)
+// Static order data selector 
 export const selectOrderDataFromCart = createSelector(
   [selectCartItems],
   (cartItems) => {
