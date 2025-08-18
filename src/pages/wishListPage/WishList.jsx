@@ -645,12 +645,6 @@ const WishList = () => {
                           </div>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-1 sm:space-y-0 text-xs sm:text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
-                            <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            <span>{shop.totalProducts || 0} products</span>
-                          </div>
-                        </div>
 
                         <div className="flex items-center space-x-1 text-xs sm:text-sm text-gray-600">
                           <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
