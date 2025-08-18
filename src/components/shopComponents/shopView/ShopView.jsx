@@ -85,7 +85,6 @@ const ShopView = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
-  // ✅ FIX: Add local loading state for cart operations (like in WishList)
   const [addingToCart, setAddingToCart] = useState(new Set());
 
   const [filters, setFilters] = useState({
@@ -199,11 +198,10 @@ const ShopView = () => {
     };
   }, [shopId, fetchShopDetailsById, resetShopDetail]);
 
-  // ✅ FIXED: Fetch shop listings immediately when we have seller ID (not just for products tab)
   // This ensures we have data for accurate stats calculation on initial load
   useEffect(() => {
     if (sellerId) {
-      fetchShopListings(sellerId, 1, itemsPerPage); // Fetch first page immediately for stats
+      fetchShopListings(sellerId, 1, itemsPerPage);
     }
   }, [sellerId, fetchShopListings, itemsPerPage]);
 
@@ -238,7 +236,7 @@ const ShopView = () => {
         CustomerRating: filters.CustomerRating,
         color: filters.color,
         brandName: filters.brandName,
-        title: searchQuery, // ✅ FIX: Add the search query as title
+        title: searchQuery, 
       };
 
       searchProductsInStore(sellerId, searchParams, currentPage, itemsPerPage);
@@ -314,7 +312,6 @@ const ShopView = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ✅ FIX: Updated handleAddToCart to use local loading state
   const handleAddToCart = async (product) => {
     if (!authUser) {
       navigate("/login");
@@ -444,7 +441,6 @@ const ShopView = () => {
     return 0;
   };
 
-  // ✅ FIX: New function to get cart button content (like in WishList)
   const getCartButtonContent = (product) => {
     const productId = product._id;
     const isLoadingThisItem = addingToCart.has(productId);
@@ -499,7 +495,6 @@ const ShopView = () => {
     const rating = parseFloat(product.averageRating || 0);
     const isFavorite = authUser ? isItemInProductWishlist(product._id) : false;
 
-    // ✅ FIX: Use the new cart button content function
     const cartButton = getCartButtonContent(product);
 
     return (
@@ -670,7 +665,6 @@ const ShopView = () => {
             )}
           </div>
 
-          {/* ✅ FIX: Updated Add to Cart Button */}
           <Button
             variant={cartButton.variant}
             size="sm"

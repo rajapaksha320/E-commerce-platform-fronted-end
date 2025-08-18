@@ -19,7 +19,9 @@ import {
   Truck,
   MapPin,
   Loader,
+  Loader2,
   AlertCircle,
+  CheckCircle,
 } from "lucide-react";
 
 import {
@@ -53,13 +55,13 @@ const MainSearchResult = () => {
     lastSearchParams,
     searchAllProducts,
     addItemToCart,
-    cartLoading,
     quickToggleWishlist,
     isItemInProductWishlist,
     isItemInCart,
     fetchWishlist,
+    fetchCartItems,
     removeFromWishlist,
-    resetSearchResults, 
+    resetSearchResults,
   } = useUser();
 
   const [viewMode, setViewMode] = useState("grid");
@@ -68,6 +70,9 @@ const MainSearchResult = () => {
   const [sortBy, setSortBy] = useState("best_match");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // ✅ FIX: Add local loading state for cart operations (like in ShopView and WishList)
+  const [addingToCart, setAddingToCart] = useState(new Set());
 
   const [filters, setFilters] = useState({
     categories: [],
@@ -160,14 +165,31 @@ const MainSearchResult = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // ✅ FIX: Updated handleAddToCart to use local loading state
   const handleAddToCart = async (product) => {
     if (!authUser) {
       navigate("/login");
       return;
     }
 
+    // Check if already in cart
+    if (isItemInCart(product._id)) {
+      showToast.success("Item is already in your cart", {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
+      return;
+    }
+
+    // Set loading state for this specific product
+    setAddingToCart((prev) => new Set(prev).add(product._id));
+
     try {
       await addItemToCart(authUser._id, product._id, 1);
+
+      // Refresh cart items to update status
+      await fetchCartItems(authUser._id, 1, 100);
+
       const productName = product.title || "Product";
       showToast.success(`"${productName}" added to cart successfully!`, {
         text: "View Cart",
@@ -176,6 +198,13 @@ const MainSearchResult = () => {
     } catch (error) {
       console.error("Error adding to cart:", error);
       showToast.error("Failed to add to cart. Please try again.");
+    } finally {
+      // Remove loading state for this specific product
+      setAddingToCart((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(product._id);
+        return newSet;
+      });
     }
   };
 
@@ -251,6 +280,55 @@ const MainSearchResult = () => {
     return 0;
   };
 
+  // ✅ FIX: New function to get cart button content (like in ShopView and WishList)
+  const getCartButtonContent = (product) => {
+    const productId = product._id;
+    const isLoadingThisItem = addingToCart.has(productId);
+    const inCart = isItemInCart(productId);
+    const isOutOfStock =
+      product.status !== "active" ||
+      parseInt(product.variations?.[0]?.quantity || 0) <= 0;
+
+    if (isLoadingThisItem) {
+      return {
+        text: "Adding...",
+        shortText: "Adding...",
+        icon: (
+          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
+        ),
+        disabled: true,
+        variant: "primary",
+      };
+    }
+
+    if (inCart) {
+      return {
+        text: "Added to Cart",
+        shortText: "Added",
+        icon: <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />,
+        disabled: false,
+        variant: "success",
+      };
+    }
+
+    if (isOutOfStock) {
+      return {
+        text: "Out of Stock",
+        shortText: "No Stock",
+        icon: <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />,
+        disabled: true,
+        variant: "outline",
+      };
+    }
+
+    return {
+      text: "Add to Cart",
+      shortText: "Cart",
+      icon: <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />,
+      disabled: false,
+      variant: "primary",
+    };
+  };
 
   const renderProductCard = (product) => {
     const variation = product.variations?.[0];
@@ -262,10 +340,12 @@ const MainSearchResult = () => {
       product.status === "active" && parseInt(variation?.quantity || 0) > 0;
     const rating = parseFloat(product.averageRating || 0);
     const isFavorite = authUser ? isItemInProductWishlist(product._id) : false;
-    const inCart = authUser ? isItemInCart(product._id) : false;
     const isFreeShipping = product.shippingClass?.shippingClass === "free";
     const isExpressShipping =
       product.shippingClass?.shippingClass === "express";
+
+    // ✅ FIX: Use the new cart button content function
+    const cartButton = getCartButtonContent(product);
 
     return (
       <Card
@@ -465,40 +545,32 @@ const MainSearchResult = () => {
             )}
           </div>
 
-          {/* Add to Cart & Buy Now Buttons - Side by Side */}
+          {/* ✅ FIX: Updated Add to Cart & Buy Now Buttons */}
           <div className="flex gap-2 sm:gap-3">
             <Button
-              variant="primary"
+              variant={cartButton.variant}
               size="sm"
-              className="flex-1 text-xs sm:text-sm py-3 sm:py-3.5 px-3 sm:px-4 touch-manipulation font-semibold"
-              disabled={!isInStock || cartLoading}
+              className={`flex-1 text-xs sm:text-sm py-3 sm:py-3.5 px-3 sm:px-4 touch-manipulation font-semibold ${
+                cartButton.variant === "success"
+                  ? "bg-green-600 hover:bg-green-700 text-white"
+                  : ""
+              }`}
+              disabled={cartButton.disabled}
               onClick={(e) => {
                 e.stopPropagation();
-                handleAddToCart(product);
+                if (!cartButton.disabled && cartButton.variant !== "success") {
+                  handleAddToCart(product);
+                } else if (cartButton.variant === "success") {
+                  navigate("/shopping-cart");
+                }
               }}
             >
-              <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              {cartLoading ? (
-                <Loader className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-              ) : inCart ? (
-                <>
-                  <span className="hidden sm:inline">Added to Cart</span>
-                  <span className="sm:hidden">Added</span>
-                </>
-              ) : isInStock ? (
-                <>
-                  <span className="hidden sm:inline">Add to Cart</span>
-                  <span className="sm:hidden">Cart</span>
-                </>
-              ) : (
-                <>
-                  <span className="hidden sm:inline">Out of Stock</span>
-                  <span className="sm:hidden">No Stock</span>
-                </>
-              )}
+              {cartButton.icon}
+              <span className="hidden sm:inline">{cartButton.text}</span>
+              <span className="sm:hidden">{cartButton.shortText}</span>
             </Button>
 
-            {isInStock && (
+            {isInStock && cartButton.variant !== "success" && (
               <Button
                 variant="outline"
                 size="sm"
