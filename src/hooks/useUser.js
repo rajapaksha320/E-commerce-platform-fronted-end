@@ -94,8 +94,13 @@ import {
   selectUserError,
   selectUserSuccess,
   selectUserMessage,
+  // ✅ NEW: Enhanced cart selectors
+  selectCartStores,
+  selectCartSellers,
+  selectCartMetadata,
+  selectCartForCheckout,
+  selectOrderDataFromCart,
 } from "../store/slices/userSlice";
-import { title } from "framer-motion/client";
 
 const useUser = () => {
   const dispatch = useDispatch();
@@ -125,6 +130,12 @@ const useUser = () => {
   const cartError = useSelector(selectCartError);
   const cartItemCount = useSelector(selectCartItemCount);
   const cartTotal = useSelector(selectCartTotal);
+
+  // ✅ NEW: Enhanced cart data
+  const cartStores = useSelector(selectCartStores);
+  const cartSellers = useSelector(selectCartSellers);
+  const cartMetadata = useSelector(selectCartMetadata);
+  const cartForCheckout = useSelector(selectCartForCheckout);
 
   // WISHLIST STATE
   const wishlist = useSelector(selectWishlist);
@@ -242,6 +253,26 @@ const useUser = () => {
     },
     [dispatch]
   );
+
+  // ✅ NEW: Bulk remove cart items
+  const bulkRemoveCartItems = useCallback(
+    async (cartItemIds) => {
+      try {
+        const promises = cartItemIds.map((id) => dispatch(deleteCartItem(id)));
+        const results = await Promise.all(promises);
+        return results;
+      } catch (error) {
+        console.error("Error in bulk remove cart items:", error);
+        throw error;
+      }
+    },
+    [dispatch]
+  );
+
+  // ✅ NEW: Clear entire cart
+  const clearUserCart = useCallback(() => {
+    return dispatch(clearCart());
+  }, [dispatch]);
 
   // WISHLIST ACTIONS
   const fetchWishlist = useCallback(
@@ -444,6 +475,202 @@ const useUser = () => {
     [cartItems]
   );
 
+  // ✅ NEW: Enhanced cart helper functions
+  const getCartItemDetails = useCallback(
+    (cartItemId) => {
+      const item = cartItems.find((item) => item._id === cartItemId);
+      if (!item) return null;
+
+      return {
+        id: item._id,
+        listingId: item.listingId,
+        name: item.productName || item.listing?.title,
+        brand: item.productBrand || item.listing?.brand,
+        image: item.productImage,
+        price: item.price,
+        originalPrice: item.originalPrice,
+        quantity: item.quantity,
+        inStock: item.inStock,
+        availableStock: item.availableStock,
+        storeId: item.storeId,
+        sellerId: item.sellerId,
+        storeName: item.storeName,
+        category: item.listing?.category,
+        hasVariations: item.listing?.hasVariations,
+        variations: item.listing?.variations || [],
+        store: item.store,
+        listing: item.listing,
+      };
+    },
+    [cartItems]
+  );
+
+  // ✅ NEW: Get order data for selected items
+  const getOrderDataForItems = useCallback(
+    (selectedItemIds = []) => {
+      const cartItemsState = cartItems;
+
+      // Filter by selected items if provided, otherwise use all
+      const itemsToProcess =
+        selectedItemIds.length > 0
+          ? cartItemsState.filter((item) => selectedItemIds.includes(item._id))
+          : cartItemsState;
+
+      const listingIds = itemsToProcess
+        .map((item) => item.listingId)
+        .filter(Boolean);
+      const storeIds = [
+        ...new Set(itemsToProcess.map((item) => item.storeId).filter(Boolean)),
+      ];
+      const sellerIds = [
+        ...new Set(itemsToProcess.map((item) => item.sellerId).filter(Boolean)),
+      ];
+
+      return {
+        listingIds,
+        storeIds,
+        sellerIds,
+        totalAmount: itemsToProcess.reduce(
+          (sum, item) => sum + item.price * item.quantity,
+          0
+        ),
+        itemCount: itemsToProcess.reduce((sum, item) => sum + item.quantity, 0),
+        items: itemsToProcess,
+      };
+    },
+    [cartItems]
+  );
+
+  // ✅ ENHANCED: Get checkout items with full data
+  const getCheckoutItems = useCallback(
+    (selectedItemIds = []) => {
+      if (selectedItemIds.length === 0) {
+        return cartForCheckout;
+      }
+
+      return cartForCheckout.filter((item) =>
+        selectedItemIds.includes(item._id)
+      );
+    },
+    [cartForCheckout]
+  );
+
+  // ✅ NEW: Validate cart items for checkout
+  const validateCartForCheckout = useCallback(
+    (selectedItemIds = []) => {
+      const itemsToCheck =
+        selectedItemIds.length > 0
+          ? cartItems.filter((item) => selectedItemIds.includes(item._id))
+          : cartItems;
+
+      const validation = {
+        isValid: true,
+        errors: [],
+        warnings: [],
+        outOfStockItems: [],
+        unavailableItems: [],
+        summary: {
+          totalItems: itemsToCheck.length,
+          totalValue: 0,
+          storeCount: 0,
+          sellerCount: 0,
+        },
+      };
+
+      if (itemsToCheck.length === 0) {
+        validation.isValid = false;
+        validation.errors.push("No items selected for checkout");
+        return validation;
+      }
+
+      // Check each item
+      itemsToCheck.forEach((item) => {
+        // Check stock
+        if (!item.inStock || item.availableStock === 0) {
+          validation.outOfStockItems.push(item._id);
+          validation.errors.push(`${item.productName} is out of stock`);
+        }
+
+        // Check if item is still active
+        if (item.productStatus !== "active") {
+          validation.unavailableItems.push(item._id);
+          validation.errors.push(`${item.productName} is no longer available`);
+        }
+
+        // Check quantity vs available stock
+        if (item.quantity > item.availableStock) {
+          validation.warnings.push(
+            `Only ${item.availableStock} units available for ${item.productName} (requested: ${item.quantity})`
+          );
+        }
+
+        validation.summary.totalValue += item.price * item.quantity;
+      });
+
+      // Set summary data
+      validation.summary.storeCount = new Set(
+        itemsToCheck.map((item) => item.storeId).filter(Boolean)
+      ).size;
+      validation.summary.sellerCount = new Set(
+        itemsToCheck.map((item) => item.sellerId).filter(Boolean)
+      ).size;
+
+      // Mark as invalid if there are errors
+      if (validation.errors.length > 0) {
+        validation.isValid = false;
+      }
+
+      return validation;
+    },
+    [cartItems]
+  );
+
+  // ✅ ENHANCED: Helper to prepare order payload
+  const prepareOrderPayload = useCallback(
+    (
+      selectedItemIds,
+      shippingAddress,
+      shippingOption = "standard",
+      authUser
+    ) => {
+      const orderData = getOrderDataForItems(selectedItemIds);
+
+      if (!orderData.listingIds.length) {
+        throw new Error("No items selected for order");
+      }
+
+      if (!shippingAddress) {
+        throw new Error("Shipping address is required");
+      }
+
+      // Validate the cart items
+      const validation = validateCartForCheckout(selectedItemIds);
+      if (!validation.isValid) {
+        throw new Error(
+          `Order validation failed: ${validation.errors.join(", ")}`
+        );
+      }
+
+      return {
+        buyerId: authUser?._id,
+        listingIds: orderData.listingIds,
+        storeIds: orderData.storeIds,
+        sellerIds: orderData.sellerIds,
+        shippingAddress: shippingAddress,
+        shippingOption: shippingOption,
+        totalAmount: orderData.totalAmount,
+        // Add metadata for reference
+        _metadata: {
+          itemCount: orderData.itemCount,
+          storeCount: orderData.storeIds.length,
+          sellerCount: orderData.sellerIds.length,
+          validation: validation,
+        },
+      };
+    },
+    [getOrderDataForItems, validateCartForCheckout]
+  );
+
   const getAddressByType = useCallback(
     (addressType) => {
       return addresses.filter((addr) => addr.addressType === addressType);
@@ -517,7 +744,6 @@ const useUser = () => {
         CustomerRating: filters.rating || 0,
         color: filters.color || "",
         brandName: filters.brand || "",
-        title:filters.title || ""
       };
 
       return searchAllProducts(searchParams, page, pageSize);
@@ -610,44 +836,46 @@ const useUser = () => {
     [addItemToCart]
   );
 
+  // ✅ FIXED: quickToggleWishlist - Now properly handles adding/removing without replacing
   const quickToggleWishlist = useCallback(
     (userId, itemId, itemType = "product") => {
       if (itemType === "product") {
         const isInWishlist = isItemInProductWishlist(itemId);
-
         if (isInWishlist) {
-          // ✅ For removal, just use removeFromWishlist directly
           return removeFromWishlist(userId, itemId);
         } else {
-          // ✅ For adding, get existing items and add new one
+          // ✅ FIX: Get existing product IDs and add the new one
           const existingProductIds = productWishlist.reduce((ids, list) => {
-            return [...ids, ...list.items.map((item) => item._id)];
-          }, []);
-
-          const existingShopIds = shopWishlist.reduce((ids, list) => {
             return [...ids, ...list.items.map((item) => item._id)];
           }, []);
 
           // Only add if not already in the list
           if (!existingProductIds.includes(itemId)) {
             const updatedProductIds = [...existingProductIds, itemId];
+
+            // Get existing shop IDs to maintain them
+            const existingShopIds = shopWishlist.reduce((ids, list) => {
+              return [...ids, ...list.items.map((item) => item._id)];
+            }, []);
+
             return addToWishlist(updatedProductIds, existingShopIds);
           }
         }
       } else {
-        // Shop logic
         const isInWishlist = isItemInShopWishlist(itemId);
-
         if (isInWishlist) {
           return removeFromWishlist(userId, itemId);
         } else {
+          // ✅ FIX: Get existing shop IDs and add the new one
           const existingShopIds = shopWishlist.reduce((ids, list) => {
             return [...ids, ...list.items.map((item) => item._id)];
           }, []);
 
+          // Only add if not already in the list
           if (!existingShopIds.includes(itemId)) {
             const updatedShopIds = [...existingShopIds, itemId];
 
+            // Get existing product IDs to maintain them
             const existingProductIds = productWishlist.reduce((ids, list) => {
               return [...ids, ...list.items.map((item) => item._id)];
             }, []);
@@ -688,6 +916,19 @@ const useUser = () => {
     itemCount: cartItemCount,
     total: cartTotal,
     isEmpty: cartItemCount === 0,
+  };
+
+  // ✅ ENHANCED: Updated cartSummary with new data
+  const enhancedCartSummary = {
+    ...cartSummary,
+    metadata: cartMetadata,
+    stores: cartStores,
+    sellers: cartSellers,
+    isEmpty: cartItems.length === 0,
+    hasOutOfStock: cartItems.some((item) => !item.inStock),
+    hasLowStock: cartItems.some(
+      (item) => item.availableStock > 0 && item.availableStock < 5
+    ),
   };
 
   const wishlistSummary = {
@@ -811,6 +1052,12 @@ const useUser = () => {
     success,
     message,
 
+    // ✅ NEW: Enhanced cart data
+    cartStores,
+    cartSellers,
+    cartMetadata,
+    cartForCheckout,
+
     // ACTIONS
     fetchAllStores,
     fetchStoresByCategory,
@@ -821,6 +1068,8 @@ const useUser = () => {
     fetchCartItems,
     updateCartItemQuantity,
     removeCartItem,
+    bulkRemoveCartItems,
+    clearUserCart,
     fetchWishlist,
     addToWishlist,
     removeFromWishlist,
@@ -867,8 +1116,15 @@ const useUser = () => {
     getShopBasicInfo,
     getShopMedia,
 
+    // ✅ NEW: Enhanced helper functions
+    getCartItemDetails,
+    getOrderDataForItems,
+    getCheckoutItems,
+    validateCartForCheckout,
+    prepareOrderPayload,
+
     // SUMMARIES
-    cartSummary,
+    cartSummary: enhancedCartSummary,
     wishlistSummary,
     ordersSummary,
     addressesSummary,

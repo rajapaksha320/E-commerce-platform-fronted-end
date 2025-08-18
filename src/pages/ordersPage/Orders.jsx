@@ -33,7 +33,7 @@ import Pagination from "../../components/ui/ContactUis/Pagination";
 import OrderDetailsModal from "./OrderDetailsModal";
 import ProductReviewModal from "./ProductReviewModal";
 import { useNavigate } from "react-router-dom";
-import useUser from "../../hooks/useUser"; // Import useUser hook
+import useUser from "../../hooks/useUser";
 import { useSelector } from "react-redux";
 import {
   selectUser,
@@ -76,7 +76,7 @@ const Orders = () => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [reviewOrder, setReviewOrder] = useState(null);
 
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
   // Get user ID
   const userId = currentUser?._id || currentUser?.userId;
@@ -85,6 +85,7 @@ const Orders = () => {
   // Fetch orders on component mount
   useEffect(() => {
     if (isAuthenticated && buyerId) {
+      console.log("Fetching orders for buyerId:", buyerId);
       fetchBuyerOrders(buyerId, currentPage, itemsPerPage);
     }
   }, [isAuthenticated, buyerId, currentPage, fetchBuyerOrders]);
@@ -96,33 +97,35 @@ const Orders = () => {
     };
   }, [clearErrors]);
 
+  // Debug: Log orders data
+  useEffect(() => {
+    console.log("Orders data:", orders);
+    console.log("Orders loading:", ordersLoading);
+    console.log("Orders error:", ordersError);
+  }, [orders, ordersLoading, ordersError]);
+
   // Updated status options to match backend enum
   const statusOptions = [
-    { value: "all", label: "All Orders", count: orders.length },
+    { value: "all", label: "All Orders" },
     {
       value: "pending",
       label: "Pending",
-      count: orders.filter((o) => o.orderStatus === "pending").length,
     },
     {
       value: "confirmed",
       label: "Confirmed",
-      count: orders.filter((o) => o.orderStatus === "confirmed").length,
     },
     {
       value: "shipped",
       label: "Shipped",
-      count: orders.filter((o) => o.orderStatus === "shipped").length,
     },
     {
       value: "delivered",
       label: "Delivered",
-      count: orders.filter((o) => o.orderStatus === "delivered").length,
     },
     {
       value: "cancelled",
       label: "Cancelled",
-      count: orders.filter((o) => o.orderStatus === "cancelled").length,
     },
   ];
 
@@ -131,13 +134,15 @@ const Orders = () => {
     const matchesStatus =
       selectedStatus === "all" || order.orderStatus === selectedStatus;
 
+    const orderNumber = order.orderNumber || `#ORD-${order._id.slice(-6)}`;
     const matchesSearch =
       !searchQuery ||
-      order.orderNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order._id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.listingIds?.some((listing) =>
-        listing.title?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      (order.listings &&
+        order.listings.some((listing) =>
+          listing.title?.toLowerCase().includes(searchQuery.toLowerCase())
+        ));
 
     return matchesStatus && matchesSearch;
   });
@@ -257,18 +262,71 @@ const Orders = () => {
     });
   };
 
+  // Get product image from listing
+  const getProductImage = (listing) => {
+    console.log("Getting image for listing:", listing);
+
+    // Handle if listing has images array directly
+    if (listing?.images?.length) {
+      const primaryImage = listing.images.find((img) => img.isPrimary);
+      return primaryImage?.url || listing.images[0]?.url || "/placehold.png";
+    }
+
+    // Handle if listing has variations with images
+    if (listing?.variations?.length) {
+      const defaultVariation =
+        listing.variations.find((v) => v.isDefault) || listing.variations[0];
+      if (defaultVariation?.images?.length) {
+        return defaultVariation.images[0]?.url || "/placehold.png";
+      }
+    }
+
+    return "/placehold.png";
+  };
+
+  // Get product price from listing
+  const getProductPrice = (listing) => {
+    console.log("Getting price for listing:", listing);
+
+    if (!listing?.variations?.length) return 0;
+    const defaultVariation =
+      listing.variations.find((v) => v.isDefault) || listing.variations[0];
+    return parseFloat(defaultVariation?.price || 0);
+  };
+
+  // ✅ FIXED: Format shipping address to handle string response from API
+  const formatShippingAddress = (shippingAddress) => {
+    if (!shippingAddress) return "No shipping address";
+
+    // ✅ If shippingAddress is a string (as from your API), return it directly
+    if (typeof shippingAddress === "string") {
+      return shippingAddress;
+    }
+
+    // Handle if shippingAddress is an object (legacy support)
+    if (typeof shippingAddress === "object") {
+      const addr = shippingAddress;
+      return `${addr.streetAddress || ""}, ${addr.city || ""}, ${
+        addr.state || ""
+      } ${addr.zipCode || ""}`.replace(/^,\s*|,\s*$/g, ""); // Clean up leading/trailing commas
+    }
+
+    return "Shipping address provided";
+  };
+
   // Transform order data for display
   const getOrderDisplayData = (order) => {
+    console.log("Processing order for display:", order);
+
     return {
       id: order._id,
       orderNumber: order.orderNumber || `#ORD-${order._id.slice(-6)}`,
       date: order.createdAt || order.orderDate,
       status: order.orderStatus,
       total: order.totalAmount || 0,
-      items: order.listingIds || [],
-      shippingAddress: order.shippingAddress
-        ? `${order.shippingAddress.streetAddress}, ${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.zipCode}`
-        : "No shipping address",
+      items: order.listings || order.listingIds || [], // Use listings if available, fallback to listingIds
+      stores: order.stores || [],
+      shippingAddress: formatShippingAddress(order.shippingAddress), // ✅ Use updated function
       trackingNumber: order.trackingNumber || null,
       estimatedDelivery: order.estimatedDelivery,
       actualDelivery: order.actualDelivery,
@@ -277,19 +335,12 @@ const Orders = () => {
     };
   };
 
-  // Get product image from listing
-  const getProductImage = (listing) => {
-    if (!listing?.images?.length) return "/placehold.png";
-    const primaryImage = listing.images.find((img) => img.isPrimary);
-    return primaryImage?.url || listing.images[0]?.url || "/placehold.png";
-  };
-
-  // Get product price from listing
-  const getProductPrice = (listing) => {
-    if (!listing?.variations?.length) return 0;
-    const defaultVariation =
-      listing.variations.find((v) => v.isDefault) || listing.variations[0];
-    return defaultVariation?.price || 0;
+  // Get store name for an order
+  const getStoreName = (order) => {
+    if (order.stores && order.stores.length > 0) {
+      return order.stores[0].basicInformation?.storeName || "Unknown Store";
+    }
+    return "Unknown Store";
   };
 
   // Loading state
@@ -367,10 +418,6 @@ const Orders = () => {
                     <Loader2 className="h-4 w-4 animate-spin text-blue-600 ml-2" />
                   )}
                 </h1>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  {filteredOrders.length}{" "}
-                  {filteredOrders.length === 1 ? "order" : "orders"} found
-                </p>
               </div>
             </div>
           </div>
@@ -437,7 +484,7 @@ const Orders = () => {
                   : "You haven't placed any orders yet. Start shopping to see your orders here!"}
               </p>
               <Button
-                onClick={() => navigate("/shop-collection")}
+                onClick={() => navigate("/shop-collections")}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 Start Shopping
@@ -472,6 +519,10 @@ const Orders = () => {
                               <span className="mr-1">LKR</span>
                               {orderData.total.toFixed(2)}
                             </span>
+                            <span className="flex items-center">
+                              <ShoppingBag className="h-4 w-4 mr-1" />
+                              {getStoreName(order)}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -503,7 +554,7 @@ const Orders = () => {
                               {item.title || "Unknown Product"}
                             </h4>
                             <p className="text-sm text-gray-600">
-                              {item.brandName || "Unknown Brand"}
+                              {item.brand || item.brandName || "Unknown Brand"}
                             </p>
                             <div className="flex items-center mt-1 space-x-4">
                               <span className="text-sm text-gray-600">
@@ -537,18 +588,21 @@ const Orders = () => {
                       ))}
                     </div>
 
-                    {/* Shipping Info */}
-                    {orderData.shippingAddress && (
-                      <div className="flex items-start space-x-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-                        <MapPin className="h-4 w-4 mt-0.5 text-blue-600" />
-                        <div>
-                          <span className="font-medium text-blue-900">
-                            Shipping to:
-                          </span>
-                          <p>{orderData.shippingAddress}</p>
+                    {/* ✅ FIXED: Shipping Info - Now properly displays string addresses */}
+                    {orderData.shippingAddress &&
+                      orderData.shippingAddress !== "No shipping address" && (
+                        <div className="flex items-start space-x-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                          <MapPin className="h-4 w-4 mt-0.5 text-blue-600 flex-shrink-0" />
+                          <div className="flex-1">
+                            <span className="font-medium text-blue-900">
+                              Shipping to:
+                            </span>
+                            <p className="mt-1 text-gray-700">
+                              {orderData.shippingAddress}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
                     {/* Cancelled Info */}
                     {orderData.status === "cancelled" &&

@@ -1,4 +1,8 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import {
+  createSlice,
+  createAsyncThunk,
+  createSelector,
+} from "@reduxjs/toolkit";
 import userService from "../../services/userService";
 
 // Initial state
@@ -414,7 +418,6 @@ export const deleteUserAccount = createAsyncThunk(
   }
 );
 
-// GET USER PROFILE ASYNC THUNK
 export const getUserProfile = createAsyncThunk(
   "user/getUserProfile",
   async (userId, { rejectWithValue }) => {
@@ -631,6 +634,7 @@ const userSlice = createSlice({
         state.cartError = action.payload;
       });
 
+    // ✅ ENHANCED: Cart items processing with full data
     builder
       .addCase(getCartItems.pending, (state) => {
         state.cartLoading = true;
@@ -638,7 +642,62 @@ const userSlice = createSlice({
       })
       .addCase(getCartItems.fulfilled, (state, action) => {
         state.cartLoading = false;
-        state.cartItems = action.payload.cartData;
+
+        // ✅ ENHANCED: Process cart items with store and seller data
+        const rawCartData = action.payload.cartData || [];
+
+        // Process each cart item to ensure all required data is available
+        state.cartItems = rawCartData.map((item) => {
+          // Extract store information
+          const store = item.store || {};
+          const storeId = store._id || store.storeId;
+          const sellerId = store.sellerId || item.listing?.sellerDetails;
+
+          // Extract listing information
+          const listing = item.listing || {};
+          const defaultVariation =
+            listing.variations?.find((v) => v.isDefault) ||
+            listing.variations?.[0];
+
+          return {
+            ...item,
+            // ✅ Add normalized store/seller information
+            storeId: storeId,
+            sellerId: sellerId,
+            storeName: store.basicInformation?.storeName || "Unknown Store",
+
+            // ✅ Add normalized listing information
+            productName: listing.title || "Unknown Product",
+            productBrand: listing.brand || "Unknown Brand",
+            productImage:
+              listing.images?.find((img) => img.isPrimary)?.url ||
+              listing.images?.[0]?.url ||
+              defaultVariation?.images?.[0]?.url,
+
+            // ✅ Add pricing information from variations
+            price: parseFloat(defaultVariation?.price || 0),
+            originalPrice: parseFloat(
+              defaultVariation?.originalPrice || defaultVariation?.price || 0
+            ),
+
+            // ✅ Add stock and status information
+            inStock:
+              listing.status === "active" &&
+              parseInt(defaultVariation?.quantity || 0) > 0,
+            productStatus: listing.status || "unknown",
+            availableStock: parseInt(defaultVariation?.quantity || 0),
+
+            // ✅ Add product metadata
+            category: listing.category,
+            productTags: listing.productTags || [],
+            hasVariations: listing.hasVariations || false,
+
+            // ✅ Keep original nested objects for detailed access
+            listing: listing,
+            store: store,
+          };
+        });
+
         state.cartPagination = {
           totalItems: action.payload.totalItems,
           totalPages: action.payload.totalPages,
@@ -983,7 +1042,7 @@ export const {
   clearShopDetail,
 } = userSlice.actions;
 
-// Selectors
+// Basic selectors (no memoization needed for simple property access)
 export const selectUser = (state) => state.user;
 
 // Store selectors
@@ -1007,18 +1066,181 @@ export const selectCurrentShopDetails = (state) =>
 export const selectShopDetailLoading = (state) => state.user.shopDetailLoading;
 export const selectShopDetailError = (state) => state.user.shopDetailError;
 
-// Cart selectors
+// Cart selectors - basic
 export const selectCartItems = (state) => state.user.cartItems;
 export const selectCartPagination = (state) => state.user.cartPagination;
 export const selectCartLoading = (state) => state.user.cartLoading;
 export const selectCartError = (state) => state.user.cartError;
 export const selectCartItemCount = (state) => state.user.cartItems.length;
-export const selectCartTotal = (state) => {
-  return state.user.cartItems.reduce((total, item) => {
-    const price = item.listing?.variations?.[0]?.price || 0;
-    return total + parseFloat(price) * item.quantity;
-  }, 0);
-};
+
+// ✅ MEMOIZED: Cart total selector
+export const selectCartTotal = createSelector(
+  [selectCartItems],
+  (cartItems) => {
+    return cartItems.reduce((total, item) => {
+      const price =
+        item.price ||
+        parseFloat(
+          item.listing?.variations?.find((v) => v.isDefault)?.price || 0
+        );
+      return total + price * item.quantity;
+    }, 0);
+  }
+);
+
+// ✅ MEMOIZED: Cart stores selector
+export const selectCartStores = createSelector(
+  [selectCartItems],
+  (cartItems) => {
+    const stores = new Map();
+    cartItems.forEach((item) => {
+      if (item.storeId && !stores.has(item.storeId)) {
+        stores.set(item.storeId, {
+          id: item.storeId,
+          name: item.storeName,
+          sellerId: item.sellerId,
+          storeData: item.store,
+        });
+      }
+    });
+    return Array.from(stores.values());
+  }
+);
+
+// ✅ MEMOIZED: Cart sellers selector
+export const selectCartSellers = createSelector(
+  [selectCartItems],
+  (cartItems) => {
+    const sellers = new Set();
+    cartItems.forEach((item) => {
+      if (item.sellerId) {
+        sellers.add(item.sellerId);
+      }
+    });
+    return Array.from(sellers);
+  }
+);
+
+// ✅ MEMOIZED: Cart metadata selector
+export const selectCartMetadata = createSelector(
+  [selectCartItems],
+  (cartItems) => {
+    return {
+      totalItems: cartItems.length,
+      totalQuantity: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+      totalValue: cartItems.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      ),
+      uniqueStores: new Set(
+        cartItems.map((item) => item.storeId).filter(Boolean)
+      ).size,
+      uniqueSellers: new Set(
+        cartItems.map((item) => item.sellerId).filter(Boolean)
+      ).size,
+      categories: [
+        ...new Set(
+          cartItems.map((item) => item.category?.main).filter(Boolean)
+        ),
+      ],
+      inStockCount: cartItems.filter((item) => item.inStock).length,
+      outOfStockCount: cartItems.filter((item) => !item.inStock).length,
+    };
+  }
+);
+
+// ✅ MEMOIZED: Cart for checkout selector
+export const selectCartForCheckout = createSelector(
+  [selectCartItems],
+  (cartItems) => {
+    return cartItems.map((item) => ({
+      // Cart item basics
+      _id: item._id,
+      listingId: item.listingId,
+      quantity: item.quantity,
+
+      // Store/Seller info for order
+      storeId: item.storeId,
+      sellerId: item.sellerId,
+      storeName: item.storeName,
+
+      // Product info for display
+      name: item.productName,
+      brand: item.productBrand,
+      image: item.productImage,
+      price: item.price,
+      originalPrice: item.originalPrice,
+
+      // Status info
+      inStock: item.inStock,
+      availableStock: item.availableStock,
+
+      // Full objects for detailed access
+      listing: item.listing,
+      store: item.store,
+    }));
+  }
+);
+
+// ✅ MEMOIZED: Factory function for order data selector with parameters
+export const makeSelectOrderDataFromCart = () =>
+  createSelector(
+    [selectCartItems, (state, selectedItemIds) => selectedItemIds],
+    (cartItems, selectedItemIds = []) => {
+      const itemsToProcess =
+        selectedItemIds.length > 0
+          ? cartItems.filter((item) => selectedItemIds.includes(item._id))
+          : cartItems;
+
+      const listingIds = itemsToProcess
+        .map((item) => item.listingId)
+        .filter(Boolean);
+      const storeIds = [
+        ...new Set(itemsToProcess.map((item) => item.storeId).filter(Boolean)),
+      ];
+      const sellerIds = [
+        ...new Set(itemsToProcess.map((item) => item.sellerId).filter(Boolean)),
+      ];
+
+      return {
+        listingIds,
+        storeIds,
+        sellerIds,
+        totalAmount: itemsToProcess.reduce(
+          (sum, item) => sum + item.price * item.quantity,
+          0
+        ),
+        itemCount: itemsToProcess.reduce((sum, item) => sum + item.quantity, 0),
+        items: itemsToProcess,
+      };
+    }
+  );
+
+// ✅ MEMOIZED: Static order data selector (for when no params needed)
+export const selectOrderDataFromCart = createSelector(
+  [selectCartItems],
+  (cartItems) => {
+    const listingIds = cartItems.map((item) => item.listingId).filter(Boolean);
+    const storeIds = [
+      ...new Set(cartItems.map((item) => item.storeId).filter(Boolean)),
+    ];
+    const sellerIds = [
+      ...new Set(cartItems.map((item) => item.sellerId).filter(Boolean)),
+    ];
+
+    return {
+      listingIds,
+      storeIds,
+      sellerIds,
+      totalAmount: cartItems.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      ),
+      itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+      items: cartItems,
+    };
+  }
+);
 
 // Wishlist selectors
 export const selectWishlist = (state) => state.user.wishlist;

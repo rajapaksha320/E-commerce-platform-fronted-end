@@ -13,7 +13,6 @@ import {
   Star,
 } from "lucide-react";
 
-
 import {
   Button,
   Badge,
@@ -22,8 +21,6 @@ import {
   Select,
   Textarea,
 } from "../../components/ui/ContactUis/Uis";
-
-
 
 const ContactUsPage = () => {
   const navigate = useNavigate();
@@ -46,27 +43,82 @@ const ContactUsPage = () => {
     });
   };
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
+  // EmailJS integration function
+  const sendEmailToAdmin = async (formData) => {
+    try {
+      // Load EmailJS if not already loaded
+      if (typeof window.emailjs === "undefined") {
+        // Load EmailJS script
+        const script = document.createElement("script");
+        script.src =
+          "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
+        document.head.appendChild(script);
 
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitStatus("success");
-      setFormData({
-        name: "",
-        email: "",
-        subject: "",
-        orderNumber: "",
-        category: "general",
-        message: "",
-      });
+        await new Promise((resolve) => {
+          script.onload = resolve;
+        });
+      }
 
-      setTimeout(() => setSubmitStatus(null), 5000);
-    }, 2000);
+      //  Public Key Email js
+      window.emailjs.init("MmCkj2k0KfXCCHeMO"); 
+
+      // Prepare template parameters
+      const templateParams = {
+        from_name: formData.name,
+        from_email: formData.email,
+        subject: formData.subject,
+        message: formData.message,
+        inquiry_type: formData.category,
+        order_number: formData.orderNumber || "N/A",
+        timestamp: new Date().toLocaleString(),
+        to_email: "admin@emmover.com", // Your admin email
+      };
+
+      // Send email using EmailJS
+      const result = await window.emailjs.send(
+        "service_99nawzm",
+        "template_anml6ne",
+        templateParams
+      );
+
+      console.log("Email sent successfully:", result);
+      return { success: true };
+    } catch (error) {
+      console.error("Error sending email:", error);
+      return { success: false, error: error.message };
+    }
   };
 
-  // Direct to ContactUs page
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setSubmitStatus(null);
+
+    try {
+      const result = await sendEmailToAdmin(formData);
+
+      if (result.success) {
+        setSubmitStatus("success");
+        setFormData({
+          name: "",
+          email: "",
+          subject: "",
+          orderNumber: "",
+          category: "general",
+          message: "",
+        });
+      } else {
+        setSubmitStatus("error");
+      }
+    } catch (error) {
+      console.error("Submission error:", error);
+      setSubmitStatus("error");
+    } finally {
+      setIsSubmitting(false);
+      setTimeout(() => setSubmitStatus(null), 5000);
+    }
+  };
+
+  // Direct to FAQs page
   const handleFAQs = () => {
     navigate("/faqs");
   };
@@ -75,7 +127,7 @@ const ContactUsPage = () => {
     {
       icon: Mail,
       title: "Email Support",
-      description: "support@yourstore.com",
+      description: "support@emmover.com",
       details: "Response within 24 hours",
       color: "text-blue-600",
       badge: { variant: "primary", text: "24h Response" },
@@ -134,11 +186,11 @@ const ContactUsPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
-              Get in Touch
+              Get in Touch with Emmover
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
               We're here to help with your orders, questions, and everything in
-              between. Your satisfaction is our priority.
+              between. Your satisfaction is our priority at Emmover.
             </p>
           </div>
         </div>
@@ -195,8 +247,20 @@ const ContactUsPage = () => {
                       Success
                     </Badge>
                     <p className="text-green-800 font-medium ml-3">
-                      Thank you! Your message has been sent successfully. We'll
-                      get back to you soon.
+                      Thank you! Your message has been sent successfully to
+                      Emmover. We'll get back to you soon.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {submitStatus === "error" && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center">
+                    <Badge variant="warning">Error</Badge>
+                    <p className="text-red-800 font-medium ml-3">
+                      Sorry, there was an error sending your message. Please try
+                      again or contact us directly.
                     </p>
                   </div>
                 </div>
@@ -233,7 +297,7 @@ const ContactUsPage = () => {
                     placeholder="Select inquiry type"
                   />
                   <Input
-                    label="Order Number"
+                    label="Order Number (Optional)"
                     name="orderNumber"
                     value={formData.orderNumber}
                     onChange={handleInputChange}
@@ -268,7 +332,7 @@ const ContactUsPage = () => {
                   className="w-full"
                 >
                   <Send size={20} className="mr-2" />
-                  Send Message
+                  Send Message to Emmover
                 </Button>
               </div>
             </Card.Body>
@@ -280,7 +344,7 @@ const ContactUsPage = () => {
             <Card shadow="xl" hover={false}>
               <Card.Header>
                 <h3 className="text-2xl font-bold text-gray-900">
-                  How Can We Help?
+                  How Can Emmover Help?
                 </h3>
               </Card.Header>
               <Card.Body>
@@ -317,7 +381,7 @@ const ContactUsPage = () => {
               <Card.Header>
                 <div className="flex items-center justify-between">
                   <h3 className="text-2xl font-bold text-gray-900">
-                    Visit Our Store
+                    Visit Emmover Store
                   </h3>
                   <Badge variant="info" icon={<MapPin size={12} />}>
                     Physical Location
@@ -330,7 +394,7 @@ const ContactUsPage = () => {
                     <MapPin size={20} className="text-gray-600 mt-1" />
                     <div>
                       <p className="font-medium text-gray-900">
-                        123 Commerce Street
+                        123 Emmover Commerce Street
                       </p>
                       <p className="text-gray-600">New York, NY 10001</p>
                     </div>
@@ -364,10 +428,10 @@ const ContactUsPage = () => {
               <Card.Body>
                 <p className="text-gray-600 mb-6">
                   Check out our FAQ section for instant answers to common
-                  questions about orders, shipping, returns, and more.
+                  questions about Emmover orders, shipping, returns, and more.
                 </p>
                 <Button variant="outline" size="md" onClick={handleFAQs}>
-                  View FAQ
+                  View Emmover FAQ
                 </Button>
               </Card.Body>
             </Card>
