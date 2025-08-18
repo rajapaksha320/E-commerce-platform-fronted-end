@@ -941,9 +941,10 @@ const ShopView = () => {
                           Showing {(currentPage - 1) * itemsPerPage + 1}-
                           {Math.min(
                             currentPage * itemsPerPage,
-                            pagination.totalItems
-                          )}
-                          of {pagination.totalItems} products
+                            pagination.total || pagination.totalItems || 0
+                          )}{" "}
+                          of {pagination.total || pagination.totalItems || 0}{" "}
+                          products
                         </>
                       ) : (
                         `Showing ${currentProducts.length} products`

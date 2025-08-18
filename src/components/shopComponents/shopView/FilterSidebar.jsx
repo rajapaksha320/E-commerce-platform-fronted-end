@@ -62,26 +62,26 @@ const FilterSidebar = ({
 
   // Categories mapping for the API
   const categories = [
-    { id: "electronics", name: "Electronics", count: 156 },
-    { id: "fashion", name: "Fashion", count: 324 },
-    { id: "home", name: "Home & Garden", count: 89 },
-    { id: "sports", name: "Sports & Outdoors", count: 67 },
-    { id: "books", name: "Books", count: 234 },
-    { id: "toys", name: "Toys & Games", count: 45 },
-    { id: "beauty", name: "Beauty & Personal Care", count: 78 },
-    { id: "automotive", name: "Automotive", count: 56 },
+    { id: "electronics", name: "Electronics"},
+    { id: "fashion", name: "Fashion" },
+    { id: "home", name: "Home & Garden"},
+    { id: "sports", name: "Sports & Outdoors" },
+    { id: "books", name: "Books"},
+    { id: "toys", name: "Toys & Games" },
+    { id: "beauty", name: "Beauty & Personal Care" },
+    { id: "automotive", name: "Automotive" },
   ];
 
   // Common brands that might be in the system
   const brands = [
-    { id: "Apple", name: "Apple", count: 45 },
-    { id: "Samsung", name: "Samsung", count: 38 },
-    { id: "Nike", name: "Nike", count: 67 },
-    { id: "Adidas", name: "Adidas", count: 54 },
-    { id: "Sony", name: "Sony", count: 29 },
-    { id: "LG", name: "LG", count: 23 },
-    { id: "HP", name: "HP", count: 31 },
-    { id: "Dell", name: "Dell", count: 28 },
+    { id: "Apple", name: "Apple"},
+    { id: "Samsung", name: "Samsung"},
+    { id: "Nike", name: "Nike"},
+    { id: "Adidas", name: "Adidas"},
+    { id: "Sony", name: "Sony"},
+    { id: "LG", name: "LG" },
+    { id: "HP", name: "HP" },
+    { id: "Dell", name: "Dell" },
   ];
 
   // Color options
@@ -193,7 +193,7 @@ const FilterSidebar = ({
               <span className="text-sm text-gray-700 flex-1">
                 {category.name}
               </span>
-              <span className="text-xs text-gray-500">({category.count})</span>
+              
             </label>
           ))}
         </div>
@@ -318,7 +318,6 @@ const FilterSidebar = ({
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700 flex-1">{brand.name}</span>
-              <span className="text-xs text-gray-500">({brand.count})</span>
             </label>
           ))}
         </div>
