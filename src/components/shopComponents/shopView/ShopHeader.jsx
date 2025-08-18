@@ -27,7 +27,6 @@ const ShopHeader = ({
   shop,
   className = "",
   onWishlistUpdate,
-  // ✅ NEW: Accept real stats from parent component
   realStats = {
     reviewCount: 0,
     productCount: 0,
@@ -119,7 +118,6 @@ const ShopHeader = ({
 
   const statusBadge = getStatusBadge();
 
-  // ✅ USE REAL STATS: Get actual rating and review count from realStats prop
   const displayRating = realStats.averageRating || 0;
   const displayReviewCount = realStats.reviewCount || 0;
   const displayProductCount = realStats.productCount || 0;
@@ -233,7 +231,7 @@ const ShopHeader = ({
                   </p>
                 )}
 
-                {/* ✅ FIXED: Rating and Stats with Real Data */}
+
                 <div className="flex flex-wrap items-center gap-6 mb-6">
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center">
@@ -339,7 +337,6 @@ const ShopHeader = ({
           </div>
         )}
 
-        {/* ✅ FIXED: Shop Quick Stats with Real Data */}
         <div className="mt-6 pt-6 border-t border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Shop Information

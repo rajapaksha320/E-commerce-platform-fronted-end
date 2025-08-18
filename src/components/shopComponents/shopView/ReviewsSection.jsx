@@ -43,7 +43,6 @@ const ReviewsSection = ({ shopId, className = "" }) => {
     }
   }, [shopId, currentPage, reviewsPerPage, fetchShopReviews]);
 
-  // ✅ FIXED: Move getAverageRating function definition before it's used
   const getAverageRating = useCallback((review) => {
     const ratings = [
       review.shoppingExperience,
@@ -56,7 +55,6 @@ const ReviewsSection = ({ shopId, className = "" }) => {
     return ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
   }, []);
 
-  // ✅ FIXED: Calculate real review counts from actual data
   const reviewCounts = useMemo(() => {
     if (!shopReviews || !Array.isArray(shopReviews)) {
       return { total: 0, 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
@@ -87,7 +85,6 @@ const ReviewsSection = ({ shopId, className = "" }) => {
     return counts;
   }, [shopReviews]);
 
-  // ✅ FIXED: Calculate real distribution percentages from backend data
   const shopRatings = useMemo(() => {
     const totalReviews = reviewCounts.total;
 
@@ -245,7 +242,6 @@ const ReviewsSection = ({ shopId, className = "" }) => {
     };
   }, [reviewCounts, shopReviews]);
 
-  // ✅ FIXED: Use real counts for filter options
   const filterOptions = useMemo(
     () => [
       { id: "all", name: "All Reviews", count: reviewCounts.total },
@@ -276,10 +272,10 @@ const ReviewsSection = ({ shopId, className = "" }) => {
     if (selectedFilter !== "all") {
       if (selectedFilter === "verified") {
         // Filter verified purchases if we have this data
-        filtered = filtered.filter((review) => true); // Assume all are verified for now
+        filtered = filtered.filter((review) => true);
       } else if (selectedFilter === "with_images") {
         // Filter reviews with images if we have this data
-        filtered = filtered.filter((review) => false); // No image data available yet
+        filtered = filtered.filter((review) => false); 
       } else {
         // Filter by rating
         const rating = parseInt(selectedFilter);
@@ -389,7 +385,6 @@ const ReviewsSection = ({ shopId, className = "" }) => {
       .slice(0, 2);
   };
 
-  // ✅ Debug logging to verify real data calculations
   useEffect(() => {
     console.log("ReviewsSection Debug:", {
       shopReviews: shopReviews?.length || 0,

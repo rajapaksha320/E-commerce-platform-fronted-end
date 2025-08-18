@@ -94,7 +94,6 @@ const ShopView = () => {
   // Get seller ID from shop details for listings
   const sellerId = currentShopDetails?.sellerId;
 
-  // ✅ CALCULATE REAL STATS from backend data (similar to ReviewsSection approach)
   const realShopStats = useMemo(() => {
     // Calculate review count and average rating from shopReviews
     const reviewCount = shopReviews?.length || 0;
@@ -210,11 +209,10 @@ const ShopView = () => {
     }
   }, [sellerId, activeTab, currentPage, fetchShopListings, itemsPerPage]);
 
-  // ✅ FETCH SHOP REVIEWS for stats calculation (not just for feedback tab)
   useEffect(() => {
     if (shopId) {
       // Fetch all reviews to get accurate count and rating
-      fetchShopReviews(shopId, 1, 100); // Get more reviews for accurate stats
+      fetchShopReviews(shopId, 1, 100); 
     }
   }, [shopId, fetchShopReviews]);
 
@@ -341,11 +339,9 @@ const ShopView = () => {
       const wasInWishlist = isItemInProductWishlist(productId);
 
       if (wasInWishlist) {
-        // ✅ Use direct removeFromWishlist for removal
         await removeFromWishlist(authUser._id, productId);
         showToast.success(`"${productName}" removed from wishlist`);
       } else {
-        // ✅ Use quickToggleWishlist for adding
         await quickToggleWishlist(authUser._id, productId, "product");
         showToast.success(`"${productName}" added to wishlist!`, {
           text: "View Wishlist",
@@ -353,7 +349,6 @@ const ShopView = () => {
         });
       }
 
-      // ✅ Force refresh wishlist data after operation
       await fetchWishlist(authUser._id);
     } catch (error) {
       console.error("Error toggling wishlist:", error);
@@ -366,7 +361,7 @@ const ShopView = () => {
   };
 
   const getActualProductCount = () => {
-    // Use pagination total if available (most accurate)
+    // Use pagination total if available
     if (storesPagination?.total) {
       return storesPagination.total;
     }
@@ -815,7 +810,7 @@ const ShopView = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
-        {/* ✅ UPDATED: Shop Header with Real Stats */}
+
         <ShopHeader
           shop={currentShopDetails}
           className="mb-6 sm:mb-8"
@@ -843,7 +838,6 @@ const ShopView = () => {
         {/* Tab Content */}
         {activeTab === "home" && (
           <div className="space-y-6 sm:space-y-8">
-            {/* ✅ UPDATED: Shop Statistics with Real Data */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
               <Card className="text-center p-4 sm:p-6">
                 <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1 sm:mb-2">
