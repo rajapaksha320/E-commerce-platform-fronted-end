@@ -23,7 +23,7 @@ import { Button, Input } from "../../ui/ContactUis/Uis";
 import AuthModal from "../../authComponents/AuthModal";
 import SearchDropdown from "./SearchDropdown";
 import { useNavigate } from "react-router-dom";
-import useUser from "../../../hooks/useUser"; // Import the useUser hook
+import useUser from "../../../hooks/useUser";
 
 // Redux selectors
 import {
