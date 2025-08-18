@@ -100,6 +100,7 @@ const NavBar = () => {
     { name: "Home", href: "/" },
     { name: "Shops", href: "/shop-collections" },
     { name: "Categories", href: "/category-collections" },
+    { name: "Products", href: "/product-collections" },
     // { name: "Deals", href: "/deals" },
     { name: "About", href: "/about-us" },
     { name: "Contact", href: "/contact-us" },
