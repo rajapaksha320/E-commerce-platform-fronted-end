@@ -66,23 +66,46 @@ const OrderDetailsModal = ({
     });
   };
 
-  // Get product details
+  // Get product details - Updated to handle the API response structure
   const getProductImage = (item) => {
-    if (!item?.images?.length) return "/placehold.png";
-    const primaryImage = item.images.find((img) => img.isPrimary);
-    return primaryImage?.url || item.images[0]?.url || "/placehold.png";
+    console.log("Getting image for item:", item);
+
+    // Handle if listing has images array directly
+    if (item?.images?.length) {
+      const primaryImage = item.images.find((img) => img.isPrimary);
+      return primaryImage?.url || item.images[0]?.url || "/placehold.png";
+    }
+
+    // Handle if listing has variations with images
+    if (item?.variations?.length) {
+      const defaultVariation =
+        item.variations.find((v) => v.isDefault) || item.variations[0];
+      if (defaultVariation?.images?.length) {
+        return defaultVariation.images[0]?.url || "/placehold.png";
+      }
+    }
+
+    return "/placehold.png";
   };
 
   const getProductPrice = (item) => {
+    console.log("Getting price for item:", item);
+
     if (!item?.variations?.length) return 0;
     const defaultVariation =
       item.variations.find((v) => v.isDefault) || item.variations[0];
-    return defaultVariation?.price || 0;
+    return parseFloat(defaultVariation?.price || 0);
+  };
+
+  // Get the correct items array - use listings if available, fallback to listingIds
+  const getOrderItems = () => {
+    return order.listings || order.listingIds || [];
   };
 
   const calculateTotal = () => {
+    const items = getOrderItems();
     const subtotal =
-      order.listingIds?.reduce((sum, item) => sum + getProductPrice(item), 0) ||
+      items.reduce((sum, item) => sum + getProductPrice(item), 0) ||
       order.totalAmount ||
       0;
 
@@ -131,11 +154,29 @@ const OrderDetailsModal = ({
   // Format shipping address
   const formatShippingAddress = () => {
     if (!order.shippingAddress) return "No shipping address";
-    const addr = order.shippingAddress;
-    return `${addr.streetAddress}, ${addr.city}, ${addr.state} ${addr.zipCode}`;
+
+    // Handle if shippingAddress is an object
+    if (typeof order.shippingAddress === "object") {
+      const addr = order.shippingAddress;
+      return `${addr.streetAddress || ""}, ${addr.city || ""}, ${
+        addr.state || ""
+      } ${addr.zipCode || ""}`;
+    }
+
+    // Handle if shippingAddress is a string or ID
+    return "Shipping address provided";
+  };
+
+  // Get store name
+  const getStoreName = () => {
+    if (order.stores && order.stores.length > 0) {
+      return order.stores[0].basicInformation?.storeName || "Unknown Store";
+    }
+    return "Unknown Store";
   };
 
   const orderNumber = order.orderNumber || `#ORD-${order._id.slice(-6)}`;
+  const orderItems = getOrderItems();
 
   return (
     <div className="fixed inset-0 bg-transparent backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -201,6 +242,10 @@ const OrderDetailsModal = ({
                       {getStatusBadge(order.orderStatus)}
                     </div>
                     <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Store:</span>
+                      <span className="text-gray-900">{getStoreName()}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
                       <span className="text-gray-600">Total Amount:</span>
                       <span className="text-lg font-bold text-gray-900">
                         <span className="mr-1">LKR</span>
@@ -249,6 +294,14 @@ const OrderDetailsModal = ({
                         </p>
                       </div>
                     </div>
+                    {order.shippingOption && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Shipping Option:</span>
+                        <span className="text-gray-900 capitalize">
+                          {order.shippingOption}
+                        </span>
+                      </div>
+                    )}
                     {order.trackingNumber && (
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Tracking Number:</span>
@@ -297,10 +350,10 @@ const OrderDetailsModal = ({
             {/* Order Items */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Order Items ({order.listingIds?.length || 0})
+                Order Items ({orderItems.length})
               </h3>
               <div className="space-y-4">
-                {(order.listingIds || []).map((item, index) => (
+                {orderItems.map((item, index) => (
                   <div
                     key={item._id || index}
                     className="flex space-x-4 p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
@@ -318,7 +371,7 @@ const OrderDetailsModal = ({
                         {item.title || "Unknown Product"}
                       </h4>
                       <p className="text-sm text-gray-600 mb-2">
-                        {item.brandName || "Unknown Brand"}
+                        {item.brand || item.brandName || "Unknown Brand"}
                       </p>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
@@ -449,6 +502,19 @@ const OrderDetailsModal = ({
                 <p className="text-blue-700 mt-2">
                   Your order has been confirmed and is being prepared for
                   shipping.
+                </p>
+              </div>
+            )}
+
+            {order.orderStatus === "pending" && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center space-x-2 text-yellow-800">
+                  <Clock className="h-5 w-5" />
+                  <span className="font-medium">Order Pending</span>
+                </div>
+                <p className="text-yellow-700 mt-2">
+                  Your order is currently being processed. We'll update you once
+                  it's confirmed.
                 </p>
               </div>
             )}

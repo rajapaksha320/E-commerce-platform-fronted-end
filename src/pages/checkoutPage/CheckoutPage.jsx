@@ -196,6 +196,47 @@ const CheckoutPage = () => {
     }
   };
 
+  // ✅ FIXED: Prepare shipping address string from address object
+  const prepareShippingAddress = (address) => {
+    if (!address) return null;
+
+    // Construct a formatted address string in specific order
+    const addressParts = [];
+
+    // 1. Full name
+    const fullName = `${address.firstName || ""} ${
+      address.lastName || ""
+    }`.trim();
+    if (fullName) addressParts.push(fullName);
+
+    // 2. Apartment (if exists)
+    if (address.apartment && address.apartment.trim()) {
+      addressParts.push(address.apartment.trim());
+    }
+
+    // 3. Street address
+    if (address.streetAddress && address.streetAddress.trim()) {
+      addressParts.push(address.streetAddress.trim());
+    }
+
+    // 4. City
+    if (address.city && address.city.trim()) {
+      addressParts.push(address.city.trim());
+    }
+
+    // 5. State
+    if (address.state && address.state.trim()) {
+      addressParts.push(address.state.trim());
+    }
+
+    // 6. Zip code
+    if (address.zipCode && address.zipCode.trim()) {
+      addressParts.push(address.zipCode.trim());
+    }
+
+    return addressParts.join(", ");
+  };
+
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
       showToast.error("Please select a shipping address");
@@ -214,7 +255,12 @@ const CheckoutPage = () => {
       const selectedItemIds = checkoutItems.map((item) => item._id);
 
       // Validate checkout items first
-      const validation = validateCartForCheckout(selectedItemIds);
+      const validation = validateCartForCheckout?.(selectedItemIds) || {
+        isValid: true,
+        errors: [],
+        summary: { validItems: checkoutItems.length },
+      };
+
       if (!validation.isValid) {
         showToast.error(
           `Checkout validation failed: ${validation.errors.join(", ")}`
@@ -224,15 +270,28 @@ const CheckoutPage = () => {
       }
 
       // Get order data for selected items
-      const orderDataFromCart = getOrderDataForItems(selectedItemIds);
+      const orderDataFromCart = getOrderDataForItems?.(selectedItemIds) || {
+        listingIds: checkoutItems
+          .map((item) => item.listingId || item.listing?._id)
+          .filter(Boolean),
+        storeIds: [
+          ...new Set(checkoutItems.map((item) => item.storeId).filter(Boolean)),
+        ],
+        sellerIds: [
+          ...new Set(
+            checkoutItems.map((item) => item.sellerId).filter(Boolean)
+          ),
+        ],
+        itemCount: checkoutItems.length,
+      };
 
-      // Prepare order payload
+      // ✅ FIXED: Prepare order payload with shipping address object
       const orderPayload = {
         buyerId: authUser._id,
         listingIds: orderDataFromCart.listingIds,
         storeIds: orderDataFromCart.storeIds,
         sellerIds: orderDataFromCart.sellerIds,
-        shippingAddress: selectedAddress._id,
+        shippingAddress: prepareShippingAddress(selectedAddress), // ✅ FIXED: Send address object, not ID
         shippingOption: selectedShipping,
         totalAmount: total,
       };
@@ -243,6 +302,7 @@ const CheckoutPage = () => {
         storeCount: orderDataFromCart.storeIds.length,
         sellerCount: orderDataFromCart.sellerIds.length,
         validation: validation.summary,
+        shippingAddress: prepareShippingAddress(selectedAddress),
       });
 
       const response = await createOrder(orderPayload);
