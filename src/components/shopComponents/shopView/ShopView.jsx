@@ -208,13 +208,11 @@ const ShopView = () => {
       id: "products",
       name: "Products",
       icon: Package,
-      count: currentShopDetails?.totalProducts || 0,
     },
     {
       id: "feedback",
       name: "Reviews",
       icon: MessageSquare,
-      count: reviewCount,
     },
   ];
 
