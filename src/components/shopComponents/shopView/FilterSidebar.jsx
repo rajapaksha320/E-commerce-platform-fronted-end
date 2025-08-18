@@ -42,8 +42,11 @@ const FilterSidebar = ({
       newFilters.priceRange = value;
     } else if (filterType === "rating") {
       newFilters.rating = value;
+    } else if (filterType === "categories" || filterType === "brands") {
+      // For single-select filters (radio buttons) like categories and brands
+      newFilters[filterType] = checked ? value : null;
     } else {
-      // For multi-select filters like categories, brands, colors
+      // For multi-select filters like colors
       if (!newFilters[filterType]) {
         newFilters[filterType] = [];
       }
@@ -183,12 +186,15 @@ const FilterSidebar = ({
               className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-md p-1 -m-1 transition-colors"
             >
               <input
-                type="checkbox"
-                checked={filters.categories?.includes(category.id) || false}
+                type="radio"
+                name="categories"
+                checked={filters.categories === category.id}
                 onChange={(e) => {
-                  updateFilter("categories", category.id, e.target.checked);
+                  if (e.target.checked) {
+                    updateFilter("categories", category.id, true);
+                  }
                 }}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700 flex-1">
                 {category.name}
@@ -310,12 +316,15 @@ const FilterSidebar = ({
               className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-md p-1 -m-1 transition-colors"
             >
               <input
-                type="checkbox"
-                checked={filters.brands?.includes(brand.id) || false}
+                type="radio"
+                name="brands"
+                checked={filters.brands === brand.id}
                 onChange={(e) => {
-                  updateFilter("brands", brand.id, e.target.checked);
+                  if (e.target.checked) {
+                    updateFilter("brands", brand.id, true);
+                  }
                 }}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700 flex-1">{brand.name}</span>
             </label>

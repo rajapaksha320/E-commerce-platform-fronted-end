@@ -279,14 +279,14 @@ const ShopView = () => {
   const handleFiltersChange = (newFilters) => {
     // Convert UI filters to API format
     const apiFilters = {
-      categoryMain: newFilters.categories?.[0] || "",
+      categoryMain: newFilters.categories || "",
       PriceRange:
         newFilters.priceRange?.min && newFilters.priceRange?.max
           ? `${newFilters.priceRange.min}-${newFilters.priceRange.max}`
           : "",
       CustomerRating: newFilters.rating || 0,
       color: newFilters.colors?.[0] || "",
-      brandName: newFilters.brands?.[0] || "",
+      brandName: newFilters.brands || "",
     };
 
     setFilters(apiFilters);
@@ -893,9 +893,7 @@ const ShopView = () => {
             <div className="hidden lg:block w-80 flex-shrink-0">
               <FilterSidebar
                 filters={{
-                  categories: filters.categoryMain
-                    ? [filters.categoryMain]
-                    : [],
+                  categories: filters.categoryMain || null,
                   priceRange: filters.PriceRange
                     ? {
                         min: parseInt(filters.PriceRange.split("-")[0]),
@@ -903,7 +901,7 @@ const ShopView = () => {
                       }
                     : {},
                   rating: filters.CustomerRating,
-                  brands: filters.brandName ? [filters.brandName] : [],
+                  brands: filters.brandName || null,
                   colors: filters.color ? [filters.color] : [],
                 }}
                 onFiltersChange={handleFiltersChange}
@@ -1041,9 +1039,7 @@ const ShopView = () => {
                 <div className="lg:hidden mb-4 sm:mb-6">
                   <FilterSidebar
                     filters={{
-                      categories: filters.categoryMain
-                        ? [filters.categoryMain]
-                        : [],
+                      categories: filters.categoryMain || null,
                       priceRange: filters.PriceRange
                         ? {
                             min: parseInt(filters.PriceRange.split("-")[0]),
@@ -1051,7 +1047,7 @@ const ShopView = () => {
                           }
                         : {},
                       rating: filters.CustomerRating,
-                      brands: filters.brandName ? [filters.brandName] : [],
+                      brands: filters.brandName || null,
                       colors: filters.color ? [filters.color] : [],
                     }}
                     onFiltersChange={handleFiltersChange}
