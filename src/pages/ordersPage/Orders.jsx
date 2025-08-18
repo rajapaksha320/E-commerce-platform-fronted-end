@@ -632,16 +632,7 @@ const Orders = () => {
 
                       {orderData.status === "delivered" && (
                         <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleReorder(order)}
-                            className="flex items-center"
-                          >
-                            <RotateCcw className="h-4 w-4 mr-2" />
-                            Reorder
-                          </Button>
-
+                      
                           {/* Show review status */}
                           {orderData.isReviewed ? (
                             <Badge

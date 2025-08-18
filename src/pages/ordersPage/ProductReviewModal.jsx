@@ -63,7 +63,8 @@ const ProductReviewModal = ({
     if (!product?.variations?.length) return 0;
     const defaultVariation =
       product.variations.find((v) => v.isDefault) || product.variations[0];
-    return defaultVariation?.price || 0;
+    const price = defaultVariation?.price;
+    return typeof price === 'number' ? price : parseFloat(price) || 0;
   };
 
   // Rating categories with icons and descriptions
