@@ -6,7 +6,7 @@ import { useSelector } from 'react-redux';
 import { selectIsAuthenticated, selectUserRole } from '../../store/slices/authSlice';
 import AuthModal from '../authComponents/AuthModal';
 
-// 🏢 PROFESSIONAL: Enhanced UI component for unauthenticated users
+
 const LoginRequiredUI = ({ onShowLogin, routeName, intendedDestination }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
@@ -101,7 +101,7 @@ const LoginRequiredUI = ({ onShowLogin, routeName, intendedDestination }) => {
   );
 };
 
-// 🏢 PROFESSIONAL: Enhanced UI for role access denied
+
 const AccessDeniedUI = ({ userRole, requiredRoles }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center p-4">
@@ -157,9 +157,7 @@ const AccessDeniedUI = ({ userRole, requiredRoles }) => {
   );
 };
 
-// 🏢 PROFESSIONAL: ProtectedRoute with complete Redux integration
 const ProtectedRoute = ({ children, allowedRoles = [], requireAuth = true }) => {
-  // 🏢 PROFESSIONAL: Redux state selectors
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const userRole = useSelector(selectUserRole);
   const location = useLocation();
@@ -169,7 +167,6 @@ const ProtectedRoute = ({ children, allowedRoles = [], requireAuth = true }) => 
   const [hasTriedModal, setHasTriedModal] = useState(false);
   const [intendedDestination, setIntendedDestination] = useState(null);
 
-  // 🏢 PROFESSIONAL: Route definitions for role-based access
   const roleRoutes = {
     buyer: [
       '/wish-list', 
@@ -187,7 +184,6 @@ const ProtectedRoute = ({ children, allowedRoles = [], requireAuth = true }) => 
     ],
   };
 
-  // 🏢 PROFESSIONAL: Get user-friendly route names
   const getRouteName = (path) => {
     const routeNames = {
       '/profile': 'your profile',
@@ -203,7 +199,6 @@ const ProtectedRoute = ({ children, allowedRoles = [], requireAuth = true }) => 
     return routeNames[path] || 'this feature';
   };
 
-  // 🏢 PROFESSIONAL: Auto-show modal for unauthenticated users
   useEffect(() => {
     if (requireAuth && !isAuthenticated && !hasTriedModal) {
       // Store the current location as intended destination
@@ -213,7 +208,6 @@ const ProtectedRoute = ({ children, allowedRoles = [], requireAuth = true }) => 
     }
   }, [requireAuth, isAuthenticated, hasTriedModal, location]);
 
-  // 🏢 PROFESSIONAL: Handle successful authentication
   useEffect(() => {
     if (isAuthenticated && intendedDestination && hasTriedModal) {
       // User has successfully logged in, reset flags
@@ -239,7 +233,6 @@ const ProtectedRoute = ({ children, allowedRoles = [], requireAuth = true }) => 
     setShowAuthModal(true);
   };
 
-  // 🏢 PROFESSIONAL: Access control logic
   const hasAccess = () => {
     if (!requireAuth) return true;
     if (!isAuthenticated) return false;
@@ -251,7 +244,6 @@ const ProtectedRoute = ({ children, allowedRoles = [], requireAuth = true }) => 
     return allowedRoles.includes(userRole);
   };
 
-  // 🏢 PROFESSIONAL: Role-based path validation
   const isPathAllowedForRole = () => {
     if (!userRole || !roleRoutes[userRole]) return true;
     
@@ -314,7 +306,6 @@ const ProtectedRoute = ({ children, allowedRoles = [], requireAuth = true }) => 
     }
   }
 
-  // 🏢 PROFESSIONAL: Grant access to protected content
   return <>{children}</>;
 };
 

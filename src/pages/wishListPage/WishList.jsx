@@ -83,7 +83,7 @@ const WishList = () => {
   useEffect(() => {
     if (authUser?._id) {
       fetchWishlist(authUser._id);
-      fetchCartItems(authUser._id, 1, 100); // Fetch all cart items for checking
+      fetchCartItems(authUser._id, 1, 100); 
     }
   }, [authUser, fetchWishlist, fetchCartItems]);
 

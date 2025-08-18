@@ -294,11 +294,11 @@ const Orders = () => {
     return parseFloat(defaultVariation?.price || 0);
   };
 
-  // ✅ FIXED: Format shipping address to handle string response from API
+  // Format shipping address to handle string response from API
   const formatShippingAddress = (shippingAddress) => {
     if (!shippingAddress) return "No shipping address";
 
-    // ✅ If shippingAddress is a string (as from your API), return it directly
+    // If shippingAddress is a string (as from your API), return it directly
     if (typeof shippingAddress === "string") {
       return shippingAddress;
     }
@@ -326,7 +326,7 @@ const Orders = () => {
       total: order.totalAmount || 0,
       items: order.listings || order.listingIds || [], // Use listings if available, fallback to listingIds
       stores: order.stores || [],
-      shippingAddress: formatShippingAddress(order.shippingAddress), // ✅ Use updated function
+      shippingAddress: formatShippingAddress(order.shippingAddress), 
       trackingNumber: order.trackingNumber || null,
       estimatedDelivery: order.estimatedDelivery,
       actualDelivery: order.actualDelivery,
@@ -588,7 +588,7 @@ const Orders = () => {
                       ))}
                     </div>
 
-                    {/* ✅ FIXED: Shipping Info - Now properly displays string addresses */}
+                    {/* Shipping Info - Now properly displays string addresses */}
                     {orderData.shippingAddress &&
                       orderData.shippingAddress !== "No shipping address" && (
                         <div className="flex items-start space-x-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
