@@ -59,7 +59,7 @@ const MainSearchResult = () => {
     isItemInCart,
     fetchWishlist,
     removeFromWishlist,
-    resetSearchResults, // ✅ FIXED: Use resetSearchResults instead of clearSearchResults
+    resetSearchResults, 
   } = useUser();
 
   const [viewMode, setViewMode] = useState("grid");
@@ -95,15 +95,13 @@ const MainSearchResult = () => {
     { id: "popular", name: "Most Popular" },
   ];
 
-  // ✅ INITIALIZE SEARCH from URL parameters on component mount
   useEffect(() => {
     const queryFromUrl = searchParams.get("q");
     if (queryFromUrl && queryFromUrl !== searchQuery) {
       setSearchQuery(queryFromUrl);
     }
-  }, [searchParams]); // Run only on mount and URL changes
+  }, [searchParams]);
 
-  // ✅ PERFORM SEARCH when filters, query, or pagination changes
   useEffect(() => {
     const searchApiParams = {
       categoryMain: filters.categories?.[0] || "",
@@ -162,7 +160,6 @@ const MainSearchResult = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ✅ ADD TO CART functionality
   const handleAddToCart = async (product) => {
     if (!authUser) {
       navigate("/login");
@@ -182,7 +179,6 @@ const MainSearchResult = () => {
     }
   };
 
-  // ✅ WISHLIST functionality
   const handleToggleFavorite = async (product) => {
     if (!authUser) {
       navigate("/login");
@@ -226,7 +222,6 @@ const MainSearchResult = () => {
     return variants[badge] || "default";
   };
 
-  // ✅ GET PRODUCT BADGE based on real data
   const getProductBadge = (product) => {
     const variation = product.variations?.[0];
     if (variation?.originalPrice > variation?.price) {
@@ -244,7 +239,6 @@ const MainSearchResult = () => {
     return null;
   };
 
-  // ✅ GET DISCOUNT PERCENTAGE
   const getProductDiscount = (product) => {
     const variation = product.variations?.[0];
     if (variation?.originalPrice && variation?.price) {
@@ -257,7 +251,7 @@ const MainSearchResult = () => {
     return 0;
   };
 
-  // ✅ RENDER PRODUCT CARD with real API data structure
+
   const renderProductCard = (product) => {
     const variation = product.variations?.[0];
     const price = parseFloat(variation?.price || 0);
@@ -603,21 +597,6 @@ const MainSearchResult = () => {
                       </Badge>
                     )}
                   </Button>
-
-                  {/* Sort Dropdown */}
-                  {/* <div className="flex-shrink-0">
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="w-full lg:w-auto border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[180px] touch-manipulation"
-                    >
-                      {sortOptions.map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {option.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div> */}
 
                   {/* Search Bar - In the middle */}
                   <div className="flex-1 max-w-2xl">

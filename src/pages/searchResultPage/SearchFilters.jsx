@@ -76,7 +76,6 @@ const SearchFilters = ({
     onFiltersChange(newFilters);
   };
 
-  // ✅ UPDATED: Real categories that match API expectations
   const categories = [
     { id: "electronics", name: "Electronics", count: 1456 },
     { id: "clothing", name: "Clothing & Fashion", count: 2324 },
@@ -90,7 +89,7 @@ const SearchFilters = ({
     { id: "jewelry", name: "Jewelry & Watches", count: 334 },
   ];
 
-  // ✅ UPDATED: Brand names (not IDs) to match API expectations
+
   const brands = [
     { id: "Apple", name: "Apple", count: 245 },
     { id: "Samsung", name: "Samsung", count: 198 },
@@ -104,7 +103,6 @@ const SearchFilters = ({
     { id: "Dell", name: "Dell", count: 65 },
   ];
 
-  // ✅ UPDATED: Colors with hex values for API compatibility
   const colors = [
     { id: "#000000", name: "Black", hex: "#000000", count: 289 },
     { id: "#FFFFFF", name: "White", hex: "#FFFFFF", count: 276 },
@@ -116,8 +114,8 @@ const SearchFilters = ({
     { id: "#6B7280", name: "Gray", hex: "#6B7280", count: 167 },
     { id: "#EC4899", name: "Pink", hex: "#EC4899", count: 89 },
     { id: "#F97316", name: "Orange", hex: "#F97316", count: 76 },
-    { id: "#e2d7e2", name: "Light Pink", hex: "#e2d7e2", count: 45 }, // From API example
-    { id: "#306616", name: "Dark Green", hex: "#306616", count: 38 }, // From API example
+    { id: "#e2d7e2", name: "Light Pink", hex: "#e2d7e2", count: 45 }, 
+    { id: "#306616", name: "Dark Green", hex: "#306616", count: 38 }, 
   ];
 
   const sizes = [
