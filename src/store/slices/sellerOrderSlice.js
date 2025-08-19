@@ -519,6 +519,7 @@ const sellerOrderSlice = createSlice({
         state.ui.ordersLoading = false;
         state.ui.error = action.payload;
       });
+    
   },
 });
 
