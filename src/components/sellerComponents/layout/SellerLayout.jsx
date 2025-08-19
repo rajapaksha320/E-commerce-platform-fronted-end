@@ -46,6 +46,8 @@ import {
   Dropdown,
 } from "../../ui/sellerUis/Uis";
 
+// Import child components
+import SellerOverview from "../sellerDashboardComponents/OverviewContent/SellerOverview";
 import OrderManagement from "../sellerDashboardComponents/OrderManagement/OrderManagement";
 import ListingManagement from "../sellerDashboardComponents/ListingManagement/ListingManagement";
 import ProfileManagement from "../sellerDashboardComponents/ProfileManagement/ProfileManagement";
@@ -71,7 +73,7 @@ const SellerLayout = ({ children }) => {
 
   const navigation = [
     { id: "overview", name: "Overview", href: "/seller/overview" },
-    { id: "orders", name: "Orders", href: "/seller/orders"},
+    { id: "orders", name: "Orders", href: "/seller/orders" },
     { id: "listings", name: "Listings", href: "/seller/listings" },
     { id: "store", name: "Store", href: "/seller/profile" },
   ];
@@ -124,6 +126,10 @@ const SellerLayout = ({ children }) => {
 
   const handleSubNavigation = (subTabId) => {
     setActiveSubTab(subTabId);
+  };
+
+  const handleInternalNavigation = (tabId) => {
+    handleNavigation(tabId);
   };
 
   const handleProfileNavigation = () => {
@@ -193,167 +199,6 @@ const SellerLayout = ({ children }) => {
       </div>
     );
   };
-
-  // Overview Content Component
-  const OverviewContent = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-blue-600">Unread messages</p>
-                <p className="text-2xl font-bold text-blue-900">0</p>
-              </div>
-              <MessageSquare className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-orange-600">Awaiting shipment</p>
-                <p className="text-2xl font-bold text-orange-900">0</p>
-              </div>
-              <Package className="h-8 w-8 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-green-600">Sales (31 days)</p>
-                <p className="text-2xl font-bold text-green-900">LKR 0.00</p>
-              </div>
-              <DollarSign className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-purple-600">Seller level forecast</p>
-                <p className="text-lg font-semibold text-purple-700">
-                  Above Standard
-                </p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tasks, Sales, Orders Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Tasks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600 text-center py-8">No tasks pending.</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Sales</CardTitle>
-            <ArrowRight className="h-5 w-5 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="h-48 bg-gray-50 rounded-lg flex items-center justify-center mb-6">
-              <div className="text-gray-400">
-                <BarChart3 className="h-12 w-12 mx-auto mb-2" />
-                <p className="text-sm">Sales chart visualization</p>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Today</span>
-                <span className="font-medium">LKR 0.00</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Last 7 days</span>
-                <span className="font-medium">LKR 0.00</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Last 31 days</span>
-                <span className="font-medium">LKR 0.00</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Orders</CardTitle>
-            <ArrowRight className="h-5 w-5 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Awaiting shipment</span>
-                <Badge variant="default">0</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Awaiting payment</span>
-                <Badge variant="default">0</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Delivered</span>
-                <Badge variant="default">0</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Button
-              variant="ghost"
-              className="flex items-center gap-3 p-4 h-auto"
-              onClick={() => navigate("/create-listing")}
-            >
-              <PlusCircle className="h-5 w-5 text-blue-600" />
-              <span className="text-sm font-medium">Create Listing</span>
-            </Button>
-            <Button
-              variant="ghost"
-              className="flex items-center gap-3 p-4 h-auto"
-            >
-              <Package className="h-5 w-5 text-purple-600" />
-              <span className="text-sm font-medium">Manage Inventory</span>
-            </Button>
-            <Button
-              variant="ghost"
-              className="flex items-center gap-3 p-4 h-auto"
-            >
-              <BarChart3 className="h-5 w-5 text-green-600" />
-              <span className="text-sm font-medium">View Analytics</span>
-            </Button>
-            <Button
-              variant="ghost"
-              className="flex items-center gap-3 p-4 h-auto"
-            >
-              <MessageSquare className="h-5 w-5 text-orange-600" />
-              <span className="text-sm font-medium">Messages</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -529,10 +374,10 @@ const SellerLayout = ({ children }) => {
         <main className="flex-1">
           {children || (
             <>
-              {/* Overview Dashboard */}
+              {/* Overview Dashboard - Now using the separate component */}
               {activeTab === "overview" && (
                 <div className="px-4 sm:px-6 lg:px-8 py-8">
-                  <OverviewContent />
+                  <SellerOverview onNavigate={handleInternalNavigation} />
                 </div>
               )}
 
