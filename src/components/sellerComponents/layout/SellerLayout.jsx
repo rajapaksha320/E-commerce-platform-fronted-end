@@ -24,10 +24,10 @@ import {
 } from "lucide-react";
 
 // Import Redux actions and selectors
-import { 
-  logout, 
-  selectUser, 
-  selectIsAuthenticated 
+import {
+  logout,
+  selectUser,
+  selectIsAuthenticated,
 } from "../../../store/slices/authSlice";
 
 // Import UI components
@@ -53,7 +53,7 @@ import ProfileManagement from "../sellerDashboardComponents/ProfileManagement/Pr
 const SellerLayout = ({ children }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  
+
   // Redux selectors
   const user = useSelector(selectUser);
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -65,43 +65,42 @@ const SellerLayout = ({ children }) => {
   // Check authentication on mount
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate('/');
+      navigate("/");
     }
   }, [isAuthenticated, navigate]);
 
   const navigation = [
     { id: "overview", name: "Overview", href: "/seller/overview" },
-    { id: "orders", name: "Orders", href: "/seller/orders", badge: "12" },
+    { id: "orders", name: "Orders", href: "/seller/orders"},
     { id: "listings", name: "Listings", href: "/seller/listings" },
-    { id: "customer", name: "Customer", href: "/seller/customer", badge: "3" },
     { id: "store", name: "Store", href: "/seller/profile" },
   ];
 
-  // Updated sidebar navigation with correct status mapping for backend
+  // Updated sidebar navigation with actual order statuses
   const sidebarNavigation = {
     orders: [
-      { id: "all-orders", name: "All orders" },
-      { id: "awaiting-payment", name: "Awaiting payment" },
-      { id: "awaiting-shipment", name: "Awaiting shipment" },
-      { id: "paid-shipped", name: "Paid and shipped" },
-      { id: "cancellations", name: "Cancellations" },
-      { id: "returns", name: "Returns" },
-      { id: "disputes", name: "Requests and disputes" },
+      { id: "all-orders", name: "All orders", status: null },
+      { id: "pending", name: "Awaiting shipment", status: "pending" },
+      { id: "shipped", name: "Paid and shipped", status: "shipped" },
+      { id: "delivered", name: "Delivered orders", status: "delivered" },
+      { id: "confirmed", name: "Completed orders", status: "confirmed" },
+      { id: "cancelled", name: "Cancelled orders", status: "cancelled" },
     ],
     listings: [
       { id: "all-listings", name: "All listings", backendStatus: null },
-      { id: "active-listings", name: "Active listings", backendStatus: "active" },
-      { id: "inactive-listings", name: "Inactive listings", backendStatus: "inactive" },
+      {
+        id: "active-listings",
+        name: "Active listings",
+        backendStatus: "active",
+      },
+      {
+        id: "inactive-listings",
+        name: "Inactive listings",
+        backendStatus: "inactive",
+      },
       { id: "out-of-stock", name: "Out of stock", backendStatus: "outOfStock" },
       { id: "draft-listings", name: "Draft listings", backendStatus: "draft" },
       { id: "sold-listings", name: "Sold listings", backendStatus: "sold" },
-    ],
-    customer: [
-      { id: "messages", name: "Customer messages" },
-      { id: "questions", name: "Item questions" },
-      { id: "cases", name: "Open cases" },
-      { id: "feedback", name: "Feedback management" },
-      { id: "reviews", name: "Reviews and ratings" },
     ],
     payments: [
       { id: "payouts", name: "Payouts" },
@@ -111,7 +110,6 @@ const SellerLayout = ({ children }) => {
       { id: "payment-methods", name: "Payment methods" },
     ],
   };
-
 
   // Navigation handlers
   const handleNavigation = (tabId) => {
@@ -139,8 +137,6 @@ const SellerLayout = ({ children }) => {
     navigate("/");
     setProfileDropdownOpen(false);
   };
-
-
 
   const showSidebar =
     activeTab !== "overview" &&
@@ -231,7 +227,7 @@ const SellerLayout = ({ children }) => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-green-600">Sales (31 days)</p>
-                <p className="text-2xl font-bold text-green-900">$0.00</p>
+                <p className="text-2xl font-bold text-green-900">LKR 0.00</p>
               </div>
               <DollarSign className="h-8 w-8 text-green-600" />
             </div>
@@ -279,15 +275,15 @@ const SellerLayout = ({ children }) => {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Today</span>
-                <span className="font-medium">$0.00</span>
+                <span className="font-medium">LKR 0.00</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Last 7 days</span>
-                <span className="font-medium">$0.00</span>
+                <span className="font-medium">LKR 0.00</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Last 31 days</span>
-                <span className="font-medium">$0.00</span>
+                <span className="font-medium">LKR 0.00</span>
               </div>
             </div>
           </CardContent>
@@ -309,7 +305,7 @@ const SellerLayout = ({ children }) => {
                 <Badge variant="default">0</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Returns</span>
+                <span className="text-sm text-gray-600">Delivered</span>
                 <Badge variant="default">0</Badge>
               </div>
             </div>
@@ -327,7 +323,7 @@ const SellerLayout = ({ children }) => {
             <Button
               variant="ghost"
               className="flex items-center gap-3 p-4 h-auto"
-              onClick={() => navigate('/create-listing')}
+              onClick={() => navigate("/create-listing")}
             >
               <PlusCircle className="h-5 w-5 text-blue-600" />
               <span className="text-sm font-medium">Create Listing</span>
@@ -387,16 +383,22 @@ const SellerLayout = ({ children }) => {
                       variant="ghost"
                       className="flex items-center space-x-3 p-2 border border-gray-200 rounded-lg hover:bg-gray-50"
                     >
-                      <Avatar 
-                        size="sm" 
-                        fallback={user?.firstName?.charAt(0) || user?.email?.charAt(0) || "S"} 
+                      <Avatar
+                        size="sm"
+                        fallback={
+                          user?.firstName?.charAt(0) ||
+                          user?.email?.charAt(0) ||
+                          "S"
+                        }
                       />
                       <div className="hidden md:block text-left">
                         <div className="text-sm font-medium text-gray-900">
-                          {user?.firstName || user?.email?.split('@')[0] || 'Seller'}
+                          {user?.firstName ||
+                            user?.email?.split("@")[0] ||
+                            "Seller"}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {user?.userRole || 'seller'}
+                          {user?.userRole || "seller"}
                         </div>
                       </div>
                       <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -408,25 +410,30 @@ const SellerLayout = ({ children }) => {
                 >
                   <div className="p-3 border-b border-gray-100 bg-gray-50">
                     <div className="flex items-center space-x-3">
-                      <Avatar 
-                        size="md" 
-                        fallback={user?.firstName?.charAt(0) || user?.email?.charAt(0) || "S"} 
+                      <Avatar
+                        size="md"
+                        fallback={
+                          user?.firstName?.charAt(0) ||
+                          user?.email?.charAt(0) ||
+                          "S"
+                        }
                       />
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 
-                           user?.email?.split('@')[0] || 'Seller'}
+                          {user?.firstName
+                            ? `${user.firstName} ${user.lastName || ""}`.trim()
+                            : user?.email?.split("@")[0] || "Seller"}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {user?.email || 'No email'}
+                          {user?.email || "No email"}
                         </div>
                         <div className="text-xs text-blue-600 font-medium capitalize">
-                          {user?.userRole || 'seller'}
+                          {user?.userRole || "seller"}
                         </div>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="py-2">
                     <button
                       className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center text-left"
@@ -437,13 +444,13 @@ const SellerLayout = ({ children }) => {
                     </button>
                     <button
                       className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center text-left"
-                      onClick={() => navigate('/seller-dashboard')}
+                      onClick={() => navigate("/seller-dashboard")}
                     >
                       <Settings className="mr-3 h-4 w-4" />
                       Dashboard
                     </button>
                   </div>
-                  
+
                   <div className="border-t border-gray-100 py-2">
                     <button
                       className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center text-left"
@@ -455,9 +462,7 @@ const SellerLayout = ({ children }) => {
                   </div>
                 </Dropdown>
               ) : (
-                <div className="text-sm text-gray-500">
-                  Not authenticated
-                </div>
+                <div className="text-sm text-gray-500">Not authenticated</div>
               )}
             </div>
           </div>
@@ -547,14 +552,25 @@ const SellerLayout = ({ children }) => {
                     <div className="space-y-6">
                       {/* Orders Management */}
                       {activeTab === "orders" && activeSubTab && (
-                        <OrderManagement activeSection={activeSubTab} />
+                        <OrderManagement
+                          activeSection={activeSubTab}
+                          orderStatus={
+                            sidebarNavigation.orders.find(
+                              (item) => item.id === activeSubTab
+                            )?.status
+                          }
+                        />
                       )}
 
                       {/* Listings Management - Pass the backend status */}
                       {activeTab === "listings" && activeSubTab && (
-                        <ListingManagement 
+                        <ListingManagement
                           activeSection={activeSubTab}
-                          backendStatus={sidebarNavigation.listings.find(item => item.id === activeSubTab)?.backendStatus}
+                          backendStatus={
+                            sidebarNavigation.listings.find(
+                              (item) => item.id === activeSubTab
+                            )?.backendStatus
+                          }
                         />
                       )}
 
@@ -586,9 +602,6 @@ const SellerLayout = ({ children }) => {
                           <Card>
                             <CardContent className="text-center py-12">
                               <div className="text-gray-400 mb-4">
-                                {activeTab === "customer" && (
-                                  <Users className="h-16 w-16 mx-auto" />
-                                )}
                                 {activeTab === "payments" && (
                                   <CreditCard className="h-16 w-16 mx-auto" />
                                 )}
