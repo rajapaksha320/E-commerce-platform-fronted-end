@@ -15,13 +15,13 @@ import {
   Clock,
   XCircle,
   Ban,
-  Trash2,
   MessageCircle,
   Printer,
   Edit,
   Send,
   FileText,
   AlertTriangle,
+  Star,
 } from "lucide-react";
 
 // Import UI components
@@ -45,20 +45,9 @@ import {
 
 const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
   const [copiedFields, setCopiedFields] = useState({});
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showRefundModal, setShowRefundModal] = useState(false);
-  const [showMarkShippedModal, setShowMarkShippedModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
-
-  // Form states
-  const [cancelReason, setCancelReason] = useState("");
-  const [cancelNotes, setCancelNotes] = useState("");
-  const [refundAmount, setRefundAmount] = useState(order?.total || 0);
-  const [refundReason, setRefundReason] = useState("");
-  const [trackingNumber, setTrackingNumber] = useState("");
-  const [shippingCarrier, setShippingCarrier] = useState("");
   const [customerMessage, setCustomerMessage] = useState("");
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const handleCopy = (fieldName) => {
     setCopiedFields((prev) => ({ ...prev, [fieldName]: true }));
@@ -67,20 +56,23 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
     }, 2000);
   };
 
+  // Helper function to format order number like user page
+  const getOrderDisplayNumber = (order) => {
+    return order.orderNumber || `#ORD-${order._id.slice(-6)}`;
+  };
+
   const getStatusIcon = (status) => {
     switch (status) {
       case "shipped":
         return <Truck className="h-5 w-5 text-blue-600" />;
       case "delivered":
         return <CheckCircle className="h-5 w-5 text-green-600" />;
-      case "awaiting-shipment":
+      case "confirmed":
         return <Package className="h-5 w-5 text-orange-600" />;
-      case "awaiting-payment":
+      case "pending":
         return <Clock className="h-5 w-5 text-yellow-600" />;
       case "cancelled":
         return <XCircle className="h-5 w-5 text-red-600" />;
-      case "returned":
-        return <RefreshCw className="h-5 w-5 text-purple-600" />;
       default:
         return <Package className="h-5 w-5 text-gray-600" />;
     }
@@ -92,123 +84,49 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
         return "primary";
       case "delivered":
         return "success";
-      case "awaiting-shipment":
+      case "confirmed":
         return "orange";
-      case "awaiting-payment":
+      case "pending":
         return "warning";
       case "cancelled":
         return "danger";
-      case "returned":
-        return "purple";
       default:
         return "default";
     }
   };
 
-  // Cancel reasons
-  const cancelReasons = [
-    { value: "out-of-stock", label: "Out of Stock" },
-    { value: "pricing-error", label: "Pricing Error" },
-    { value: "customer-request", label: "Customer Request" },
-    { value: "payment-issue", label: "Payment Issue" },
-    { value: "shipping-issue", label: "Shipping Issue" },
-    { value: "duplicate-order", label: "Duplicate Order" },
-    { value: "other", label: "Other" },
-  ];
-
-  // Refund reasons
-  const refundReasons = [
-    { value: "defective-item", label: "Defective Item" },
-    { value: "wrong-item", label: "Wrong Item Sent" },
-    { value: "customer-request", label: "Customer Request" },
-    { value: "not-as-described", label: "Not as Described" },
-    { value: "damaged-shipping", label: "Damaged in Shipping" },
-    { value: "other", label: "Other" },
-  ];
-
-  // Shipping carriers
-  const shippingCarriers = [
-    { value: "fedex", label: "FedEx" },
-    { value: "ups", label: "UPS" },
-    { value: "usps", label: "USPS" },
-    { value: "dhl", label: "DHL" },
-    { value: "other", label: "Other" },
-  ];
-
-  // Action handlers
-  const handleCancelOrder = () => {
-    if (!cancelReason) {
-      alert("Please select a cancellation reason");
-      return;
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case "pending":
+        return "Pending Payment";
+      case "confirmed":
+        return "Confirmed";
+      case "shipped":
+        return "Shipped";
+      case "delivered":
+        return "Delivered";
+      case "cancelled":
+        return "Cancelled";
+      default:
+        return status || "Unknown";
     }
-
-    const updatedOrder = {
-      ...order,
-      status: "cancelled",
-      cancelReason: cancelReasons.find((r) => r.value === cancelReason)?.label,
-      cancelNotes: cancelNotes,
-      cancelledDate: new Date().toISOString().split("T")[0],
-    };
-
-    onOrderUpdate?.(updatedOrder);
-    setShowCancelModal(false);
-    onClose();
   };
 
-  const handleDeleteOrder = () => {
-    onOrderUpdate?.(null, "delete");
-    setShowDeleteModal(false);
-    onClose();
+  const getCustomerName = (order) => {
+    if (!order.shippingAddress) return "Unknown Customer";
+    return order.shippingAddress.split(",")[0] || "Unknown Customer";
   };
 
-  const handleMarkAsShipped = () => {
-    if (!trackingNumber || !shippingCarrier) {
-      alert("Please provide tracking number and shipping carrier");
-      return;
+  const handleStatusChange = async (newStatus) => {
+    try {
+      setIsUpdatingStatus(true);
+      await onOrderUpdate?.(order, newStatus);
+      onClose();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+    } finally {
+      setIsUpdatingStatus(false);
     }
-
-    const updatedOrder = {
-      ...order,
-      status: "shipped",
-      trackingNumber: trackingNumber,
-      shippingCarrier: shippingCarriers.find((c) => c.value === shippingCarrier)
-        ?.label,
-      shippedDate: new Date().toISOString().split("T")[0],
-    };
-
-    onOrderUpdate?.(updatedOrder);
-    setShowMarkShippedModal(false);
-    onClose();
-  };
-
-  const handleMarkAsDelivered = () => {
-    const updatedOrder = {
-      ...order,
-      status: "delivered",
-      deliveredDate: new Date().toISOString().split("T")[0],
-    };
-
-    onOrderUpdate?.(updatedOrder);
-    onClose();
-  };
-
-  const handleRefundOrder = () => {
-    if (!refundReason) {
-      alert("Please select a refund reason");
-      return;
-    }
-
-    const updatedOrder = {
-      ...order,
-      status: "returned",
-      refundAmount: refundAmount,
-      refundReason: refundReasons.find((r) => r.value === refundReason)?.label,
-      refundDate: new Date().toISOString().split("T")[0],
-    };
-
-    onOrderUpdate?.(updatedOrder);
-    setShowRefundModal(false);
-    onClose();
   };
 
   const handleContactCustomer = () => {
@@ -218,86 +136,80 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
     setCustomerMessage("");
   };
 
-  // Get available actions based on order status
+  const renderRatingStars = (rating) => {
+    if (!rating) {
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-gray-400 text-sm">No rating yet</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-2">
+        <div className="flex items-center">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star
+              key={star}
+              className={`h-5 w-5 ${
+                star <= rating
+                  ? "text-yellow-400 fill-current"
+                  : "text-gray-300"
+              }`}
+            />
+          ))}
+        </div>
+        <span className="text-sm font-medium text-gray-700">({rating}/5)</span>
+      </div>
+    );
+  };
+
+  // Get available actions based on order status - UPDATED WORKFLOW
   const getAvailableActions = () => {
     const actions = [];
 
-    // Always available actions
-    actions.push({
-      key: "contact",
-      label: "Contact Customer",
-      icon: <MessageCircle />,
-      variant: "secondary",
-      onClick: () => setShowContactModal(true),
-    });
-
-    actions.push({
-      key: "print",
-      label: "Print Details",
-      icon: <Printer />,
-      variant: "secondary",
-      onClick: () => window.print(),
-    });
-
-    // Status-specific actions
-    switch (order?.status) {
-      case "awaiting-payment":
-        actions.push({
-          key: "cancel",
-          label: "Cancel Order",
-          icon: <Ban />,
-          variant: "danger",
-          onClick: () => setShowCancelModal(true),
-        });
-        break;
-
-      case "awaiting-shipment":
+    // Status-specific actions for seller workflow
+    switch (order?.orderStatus) {
+      case "pending":
+        // Seller can mark as shipped and cancel only in pending state
         actions.push({
           key: "ship",
           label: "Mark as Shipped",
           icon: <Truck />,
           variant: "primary",
-          onClick: () => setShowMarkShippedModal(true),
+          onClick: () => handleStatusChange("shipped"),
+          disabled: isUpdatingStatus,
         });
         actions.push({
           key: "cancel",
           label: "Cancel Order",
           icon: <Ban />,
           variant: "danger",
-          onClick: () => setShowCancelModal(true),
+          onClick: () => {
+            // You can integrate with cancel modal here if needed
+            handleStatusChange("cancelled");
+          },
+          disabled: isUpdatingStatus,
         });
         break;
 
       case "shipped":
+        // Seller can mark as delivered
         actions.push({
           key: "delivered",
           label: "Mark as Delivered",
           icon: <CheckCircle />,
           variant: "success",
-          onClick: handleMarkAsDelivered,
+          onClick: () => handleStatusChange("delivered"),
+          disabled: isUpdatingStatus,
         });
         break;
 
+      // No actions for confirmed, delivered or cancelled orders
+      case "confirmed":
       case "delivered":
-        actions.push({
-          key: "refund",
-          label: "Process Refund",
-          icon: <RefreshCw />,
-          variant: "warning",
-          onClick: () => setShowRefundModal(true),
-        });
+      case "cancelled":
         break;
-    }
-
-    // Delete action (available for most statuses except active ones)
-    if (!["shipped", "awaiting-shipment"].includes(order?.status)) {
-      actions.push({
-        key: "delete",
-        label: "Delete Order",
-        icon: <Trash2 />,
-        variant: "danger",
-        onClick: () => setShowDeleteModal(true),
-      });
     }
 
     return actions;
@@ -321,24 +233,22 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
           <div className="p-8 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
-                {getStatusIcon(order.status)}
+                {getStatusIcon(order.orderStatus)}
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Order {order.id}
+                  <h2 className="text-2xl font-bold text-gray-900 font-mono">
+                    {getOrderDisplayNumber(order)}
                   </h2>
                   <p className="text-sm text-gray-600 mt-1">
-                    Placed on {order.orderDate}
+                    Placed on {new Date(order.createdAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
               <Badge
-                variant={getStatusVariant(order.status)}
+                variant={getStatusVariant(order.orderStatus)}
                 size="lg"
-                icon={getStatusIcon(order.status)}
+                icon={getStatusIcon(order.orderStatus)}
               >
-                {order.status
-                  .replace("-", " ")
-                  .replace(/\b\w/g, (l) => l.toUpperCase())}
+                {getStatusLabel(order.orderStatus)}
               </Badge>
             </div>
           </div>
@@ -358,7 +268,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                     </span>
                   </div>
                   <p className="text-2xl font-bold text-blue-900">
-                    {order.orderDate}
+                    {new Date(order.createdAt).toLocaleDateString()}
                   </p>
                 </CardContent>
               </Card>
@@ -374,7 +284,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                     </span>
                   </div>
                   <p className="text-2xl font-bold text-green-900">
-                    LKR {order.total.toLocaleString()}
+                    LKR {order.totalAmount.toLocaleString()}
                   </p>
                 </CardContent>
               </Card>
@@ -386,18 +296,50 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                       <CreditCard className="h-5 w-5 text-white" />
                     </div>
                     <span className="text-sm font-semibold text-purple-800">
-                      Payment
+                      Shipping
                     </span>
                   </div>
                   <p className="text-xl font-bold text-purple-900">
-                    {order.paymentMethod}
+                    {order.shippingOption}
                   </p>
-                  <p className="text-sm text-purple-700 capitalize">
-                    {order.paymentStatus}
-                  </p>
+                  {order.isReviewed && (
+                    <p className="text-sm text-purple-700 capitalize">
+                      Reviewed
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </div>
+
+            {/* Customer Rating */}
+            {order.orderRating && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <div className="p-2 bg-yellow-500 rounded-lg">
+                      <Star className="h-5 w-5 text-white" />
+                    </div>
+                    Customer Rating
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {renderRatingStars(order.orderRating)}
+                      <p className="text-sm text-gray-600 mt-2">
+                        Customer feedback helps improve your service
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-yellow-500">
+                        {order.orderRating}
+                      </div>
+                      <div className="text-sm text-gray-500">out of 5</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Customer Information */}
             <Card>
@@ -411,32 +353,18 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <CopyField
-                  label="Full Name"
-                  value={order.buyer.name}
+                  label="Customer Name"
+                  value={getCustomerName(order)}
                   icon={<User />}
                   onCopy={() => handleCopy("customerName")}
                   copied={copiedFields.customerName}
                 />
                 <CopyField
-                  label="Username"
-                  value={order.buyer.username}
-                  icon={<User />}
-                  onCopy={() => handleCopy("customerUsername")}
-                  copied={copiedFields.customerUsername}
-                />
-                <CopyField
-                  label="Email Address"
-                  value={order.buyer.email}
-                  icon={<Mail />}
-                  onCopy={() => handleCopy("customerEmail")}
-                  copied={copiedFields.customerEmail}
-                />
-                <CopyField
-                  label="Phone Number"
-                  value={order.buyer.phone}
-                  icon={<Phone />}
-                  onCopy={() => handleCopy("customerPhone")}
-                  copied={copiedFields.customerPhone}
+                  label="Shipping Option"
+                  value={order.shippingOption}
+                  icon={<Truck />}
+                  onCopy={() => handleCopy("shippingOption")}
+                  copied={copiedFields.shippingOption}
                 />
               </CardContent>
             </Card>
@@ -452,50 +380,21 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <CopyField
-                    label="Street Address"
-                    value={order.shippingAddress.street}
-                    icon={<MapPin />}
-                    onCopy={() => handleCopy("street")}
-                    copied={copiedFields.street}
-                  />
-                  <CopyField
-                    label="City"
-                    value={order.shippingAddress.city}
-                    icon={<MapPin />}
-                    onCopy={() => handleCopy("city")}
-                    copied={copiedFields.city}
-                  />
-                  <CopyField
-                    label="State"
-                    value={order.shippingAddress.state}
-                    icon={<MapPin />}
-                    onCopy={() => handleCopy("state")}
-                    copied={copiedFields.state}
-                  />
-                  <CopyField
-                    label="ZIP Code"
-                    value={order.shippingAddress.zip}
-                    icon={<MapPin />}
-                    onCopy={() => handleCopy("zip")}
-                    copied={copiedFields.zip}
-                  />
-                  <CopyField
-                    label="Full Address"
-                    value={`${order.shippingAddress.street}, ${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.zip}`}
-                    icon={<MapPin />}
-                    onCopy={() => handleCopy("fullAddress")}
-                    copied={copiedFields.fullAddress}
-                  />
-                  <CopyField
-                    label="Shipping Method"
-                    value={order.shippingMethod}
-                    icon={<Truck />}
-                    onCopy={() => handleCopy("shippingMethod")}
-                    copied={copiedFields.shippingMethod}
-                  />
-                </div>
+                <CopyField
+                  label="Full Shipping Address"
+                  value={order.shippingAddress}
+                  icon={<MapPin />}
+                  onCopy={() => handleCopy("fullAddress")}
+                  copied={copiedFields.fullAddress}
+                />
+
+                <CopyField
+                  label="Shipping Method"
+                  value={order.shippingOption}
+                  icon={<Truck />}
+                  onCopy={() => handleCopy("shippingMethod")}
+                  copied={copiedFields.shippingMethod}
+                />
 
                 {order.trackingNumber && (
                   <div className="flex items-center gap-4">
@@ -523,32 +422,43 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                   <div className="p-2 bg-orange-600 rounded-lg">
                     <Package className="h-5 w-5 text-white" />
                   </div>
-                  Order Items ({order.items.length}{" "}
-                  {order.items.length === 1 ? "item" : "items"})
+                  Order Items ({order.listings?.length || 0}{" "}
+                  {(order.listings?.length || 0) === 1 ? "item" : "items"})
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {order.items.map((item, index) => (
+                {order.listings?.map((item, index) => (
                   <div
                     key={index}
                     className="flex items-center gap-6 p-6 bg-gray-50 rounded-xl border border-gray-100"
                   >
                     <img
-                      src={item.image}
-                      alt={item.name}
+                      src={item.images?.[0]?.url || "/placehold.png"}
+                      alt={item.title}
                       className="w-20 h-20 object-cover rounded-xl border-2 border-gray-200 shadow-sm"
+                      onError={(e) => {
+                        e.target.src = "/placehold.png";
+                      }}
                     />
                     <div className="flex-1">
                       <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                        {item.name}
+                        {item.title}
                       </h4>
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-sm text-gray-600 font-medium">
+                          Brand:
+                        </span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {item.brand}
+                        </span>
+                      </div>
                       <div className="flex items-center gap-3 mb-3">
                         <span className="text-sm text-gray-600 font-medium">
                           SKU:
                         </span>
                         <CopyField
                           label=""
-                          value={item.sku}
+                          value={item.id}
                           onCopy={() => handleCopy(`sku-${index}`)}
                           copied={copiedFields[`sku-${index}`]}
                           className="bg-white"
@@ -557,28 +467,35 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                       <div className="flex items-center gap-8">
                         <div className="text-center">
                           <p className="text-xs text-gray-500 uppercase tracking-wide">
-                            Quantity
+                            Category
                           </p>
-                          <p className="text-lg font-semibold text-gray-900">
-                            {item.quantity}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-gray-500 uppercase tracking-wide">
-                            Unit Price
-                          </p>
-                          <p className="text-lg font-semibold text-gray-900">
-                            LKR {item.price.toLocaleString()}
+                          <p className="text-sm font-semibold text-gray-900">
+                            {item.category?.main} / {item.category?.sub}
                           </p>
                         </div>
-                        <div className="text-center">
-                          <p className="text-xs text-gray-500 uppercase tracking-wide">
-                            Item Total
-                          </p>
-                          <p className="text-lg font-bold text-green-600">
-                            LKR {(item.quantity * item.price).toLocaleString()}
-                          </p>
-                        </div>
+                        {item.averageRating > 0 && (
+                          <div className="text-center">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide">
+                              Product Rating
+                            </p>
+                            <div className="flex items-center gap-1">
+                              <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                              <span className="text-sm font-semibold text-gray-900">
+                                {item.averageRating}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        {item.review && (
+                          <div className="text-center">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide">
+                              Review
+                            </p>
+                            <p className="text-sm italic text-gray-700">
+                              "{item.review}"
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -592,7 +509,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                         Order Total:
                       </span>
                       <span className="text-3xl font-bold text-green-600">
-                        LKR {order.total.toLocaleString()}
+                        LKR {order.totalAmount.toLocaleString()}
                       </span>
                     </CardContent>
                   </Card>
@@ -601,68 +518,27 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
             </Card>
 
             {/* Additional Information */}
-            {(order.cancelReason ||
-              order.returnReason ||
-              order.estimatedDelivery ||
-              order.deliveredDate) && (
+            {order.orderStatus === "cancelled" && order.cancelReason && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Additional Information</CardTitle>
+                  <CardTitle>Cancellation Information</CardTitle>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {order.estimatedDelivery && (
-                    <Card className="bg-blue-50 border-blue-200">
-                      <CardContent className="p-6">
-                        <p className="text-xs text-blue-600 uppercase tracking-wide font-semibold mb-2">
-                          Estimated Delivery
+                <CardContent>
+                  <Card className="bg-red-50 border-red-200">
+                    <CardContent className="p-6">
+                      <p className="text-xs text-red-600 uppercase tracking-wide font-semibold mb-2">
+                        Cancel Reason
+                      </p>
+                      <p className="text-lg font-bold text-red-900">
+                        {order.cancelReason}
+                      </p>
+                      {order.cancelNotes && (
+                        <p className="text-sm text-red-700 mt-2 italic">
+                          "{order.cancelNotes}"
                         </p>
-                        <p className="text-lg font-bold text-blue-900">
-                          {order.estimatedDelivery}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-                  {order.deliveredDate && (
-                    <Card className="bg-green-50 border-green-200">
-                      <CardContent className="p-6">
-                        <p className="text-xs text-green-600 uppercase tracking-wide font-semibold mb-2">
-                          Delivered Date
-                        </p>
-                        <p className="text-lg font-bold text-green-900">
-                          {order.deliveredDate}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-                  {order.cancelReason && (
-                    <Card className="bg-red-50 border-red-200">
-                      <CardContent className="p-6">
-                        <p className="text-xs text-red-600 uppercase tracking-wide font-semibold mb-2">
-                          Cancel Reason
-                        </p>
-                        <p className="text-lg font-bold text-red-900">
-                          {order.cancelReason}
-                        </p>
-                        {order.cancelNotes && (
-                          <p className="text-sm text-red-700 mt-2 italic">
-                            "{order.cancelNotes}"
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-                  {order.returnReason && (
-                    <Card className="bg-purple-50 border-purple-200">
-                      <CardContent className="p-6">
-                        <p className="text-xs text-purple-600 uppercase tracking-wide font-semibold mb-2">
-                          Return Reason
-                        </p>
-                        <p className="text-lg font-bold text-purple-900">
-                          {order.returnReason}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
+                      )}
+                    </CardContent>
+                  </Card>
                 </CardContent>
               </Card>
             )}
@@ -672,6 +548,12 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
         {/* Action Buttons Footer */}
         <ModalFooter className="bg-gray-50 border-t border-gray-200">
           <div className="flex flex-wrap gap-3 justify-end">
+            {isUpdatingStatus && (
+              <div className="flex items-center gap-2 text-sm text-blue-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <span>Updating status...</span>
+              </div>
+            )}
             {availableActions.map((action) => (
               <Button
                 key={action.key}
@@ -679,219 +561,12 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                 icon={action.icon}
                 onClick={action.onClick}
                 size="sm"
+                disabled={action.disabled}
               >
                 {action.label}
               </Button>
             ))}
           </div>
-        </ModalFooter>
-      </Modal>
-
-      {/* Cancel Order Modal */}
-      <Modal
-        isOpen={showCancelModal}
-        onClose={() => setShowCancelModal(false)}
-        title="Cancel Order"
-        size="md"
-      >
-        <ModalContent className="space-y-4">
-          <Alert variant="warning" title={`Cancel Order ${order.id}`}>
-            This action cannot be undone. The customer will be notified of the
-            cancellation.
-          </Alert>
-
-          <FormField label="Cancellation Reason" required>
-            <Select
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Select a reason..."
-            >
-              {cancelReasons.map((reason) => (
-                <option key={reason.value} value={reason.value}>
-                  {reason.label}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-
-          <FormField label="Additional Notes (Optional)">
-            <Textarea
-              value={cancelNotes}
-              onChange={(e) => setCancelNotes(e.target.value)}
-              placeholder="Provide additional details about the cancellation..."
-              rows={3}
-              resize={false}
-            />
-          </FormField>
-        </ModalContent>
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => setShowCancelModal(false)}>
-            Keep Order
-          </Button>
-          <Button variant="danger" onClick={handleCancelOrder} icon={<Ban />}>
-            Cancel Order
-          </Button>
-        </ModalFooter>
-      </Modal>
-
-      {/* Delete Order Modal */}
-      <Modal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        title="Delete Order"
-        size="md"
-      >
-        <ModalContent className="space-y-4">
-          <Alert
-            variant="danger"
-            title={`Permanently Delete Order ${order.id}`}
-          >
-            This action cannot be undone. All order data will be permanently
-            removed from the system.
-          </Alert>
-
-          <Card className="bg-gray-50">
-            <CardContent className="p-4">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">
-                Order Details:
-              </h4>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p>
-                  <span className="font-medium">Customer:</span>{" "}
-                  {order.buyer.name}
-                </p>
-                <p>
-                  <span className="font-medium">Total:</span> LKR{" "}
-                  {order.total.toLocaleString()}
-                </p>
-                <p>
-                  <span className="font-medium">Date:</span> {order.orderDate}
-                </p>
-                <p>
-                  <span className="font-medium">Status:</span>{" "}
-                  <span className="capitalize">
-                    {order.status.replace("-", " ")}
-                  </span>
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </ModalContent>
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="danger"
-            onClick={handleDeleteOrder}
-            icon={<Trash2 />}
-          >
-            Delete Order
-          </Button>
-        </ModalFooter>
-      </Modal>
-
-      {/* Mark as Shipped Modal */}
-      <Modal
-        isOpen={showMarkShippedModal}
-        onClose={() => setShowMarkShippedModal(false)}
-        title="Mark as Shipped"
-        size="md"
-      >
-        <ModalContent className="space-y-4">
-          <Alert variant="primary" title={`Ship Order ${order.id}`}>
-            Please provide tracking information for the shipment.
-          </Alert>
-
-          <FormField label="Shipping Carrier" required>
-            <Select
-              value={shippingCarrier}
-              onChange={(e) => setShippingCarrier(e.target.value)}
-              placeholder="Select shipping carrier..."
-            >
-              {shippingCarriers.map((carrier) => (
-                <option key={carrier.value} value={carrier.value}>
-                  {carrier.label}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-
-          <FormField label="Tracking Number" required>
-            <input
-              type="text"
-              value={trackingNumber}
-              onChange={(e) => setTrackingNumber(e.target.value)}
-              placeholder="Enter tracking number..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </FormField>
-        </ModalContent>
-        <ModalFooter>
-          <Button
-            variant="secondary"
-            onClick={() => setShowMarkShippedModal(false)}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleMarkAsShipped}
-            icon={<Truck />}
-          >
-            Mark as Shipped
-          </Button>
-        </ModalFooter>
-      </Modal>
-
-      {/* Refund Modal */}
-      <Modal
-        isOpen={showRefundModal}
-        onClose={() => setShowRefundModal(false)}
-        title="Process Refund"
-        size="md"
-      >
-        <ModalContent className="space-y-4">
-          <Alert variant="warning" title={`Refund Order ${order.id}`}>
-            This will process a refund for the customer.
-          </Alert>
-
-          <FormField label="Refund Amount" required>
-            <input
-              type="number"
-              value={refundAmount}
-              onChange={(e) => setRefundAmount(parseFloat(e.target.value))}
-              max={order.total}
-              step="0.01"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </FormField>
-
-          <FormField label="Refund Reason" required>
-            <Select
-              value={refundReason}
-              onChange={(e) => setRefundReason(e.target.value)}
-              placeholder="Select a reason..."
-            >
-              {refundReasons.map((reason) => (
-                <option key={reason.value} value={reason.value}>
-                  {reason.label}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-        </ModalContent>
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => setShowRefundModal(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="warning"
-            onClick={handleRefundOrder}
-            icon={<RefreshCw />}
-          >
-            Process Refund
-          </Button>
         </ModalFooter>
       </Modal>
 
@@ -907,10 +582,12 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
             <div className="flex items-center gap-3 mb-2">
               <User className="h-5 w-5 text-blue-600" />
               <span className="font-medium text-blue-900">
-                {order.buyer.name}
+                {getCustomerName(order)}
               </span>
             </div>
-            <p className="text-sm text-blue-700">{order.buyer.email}</p>
+            <p className="text-sm text-blue-700 font-mono">
+              Order: {getOrderDisplayNumber(order)}
+            </p>
           </div>
 
           <FormField label="Message" required>

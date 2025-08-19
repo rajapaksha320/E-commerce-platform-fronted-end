@@ -1,9 +1,7 @@
-import React, { useState, useMemo } from "react";
+/* eslint-disable no-unused-vars */
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Eye,
-  Trash2,
-  ChevronDown,
-  ChevronUp,
   Package,
   Truck,
   CheckCircle,
@@ -15,7 +13,22 @@ import {
   XCircle,
   Copy,
   Ban,
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  Printer,
+  Download,
+  Star,
 } from "lucide-react";
+
+// Import Redux hooks
+import {
+  useOrders,
+  useOrdersByStatus,
+  useOrderPagination,
+  useSelectedOrders,
+} from "../../../../hooks/useSellerOrderData";
 
 // Import UI components
 import {
@@ -41,252 +54,68 @@ import {
   TableHead,
   TableCell,
   Alert,
+  SearchInput,
+  LoadingSpinner,
 } from "../../../ui/sellerUis/Uis";
 
 import OrderDetails from "./OrderDetails";
+import PrintOrderReport from "./PrintOrderReport";
+import { OrderCancelConfirmationDialog } from "../../../ui/OrderConfirmationDialogs";
 
-const OrderManagement = ({ activeSection = "all-orders" }) => {
-  const [sortField, setSortField] = useState("orderDate");
-  const [sortDirection, setSortDirection] = useState("desc");
-  const [selectedOrders, setSelectedOrders] = useState([]);
-  const [showOrderDetails, setShowOrderDetails] = useState(false);
+const OrderManagement = ({
+  activeSection = "all-orders",
+  orderStatus = null,
+}) => {
+  // Redux hooks
+  const {
+    orders,
+    pagination,
+    statusCounts,
+    isLoading,
+    error,
+    success,
+    message,
+    isEmpty,
+    updateStatus,
+    fetchByStatus,
+    refreshOrders,
+    clearMessages,
+  } = useOrders();
+
+  const {
+    goToPage,
+    changePageSize,
+    nextPage,
+    previousPage,
+    hasNextPage,
+    hasPreviousPage,
+  } = useOrderPagination();
+
+  const { selectedIds, selectedCount, toggleOrder, selectAll, clearSelection } =
+    useSelectedOrders();
+
+  // Local state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState(orderStatus || "");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [showPrintReport, setShowPrintReport] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelNotes, setCancelNotes] = useState("");
-  const [orderToCancel, setOrderToCancel] = useState(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [orders, setOrders] = useState([]);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  // Delete modal states
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
-  const [orderToDelete, setOrderToDelete] = useState(null);
-
-  // Complete orders dataset
-  const allOrdersData = [
-    {
-      id: "ORD-001234",
-      orderDate: "2024-06-15",
-      buyer: {
-        name: "John Smith",
-        username: "johnsmith_99",
-        email: "john.smith@email.com",
-        phone: "+1 (555) 123-4567",
-      },
-      items: [
-        {
-          name: "iPhone 15 Pro Max 256GB",
-          sku: "IPH15PM-256",
-          quantity: 1,
-          price: 1199.0,
-          image:
-            "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=100&h=100&fit=crop",
-        },
-      ],
-      total: 1199.0,
-      status: "shipped",
-      paymentStatus: "paid",
-      paymentMethod: "PayPal",
-      shippingMethod: "Express Shipping",
-      trackingNumber: "TRK123456789",
-      estimatedDelivery: "2024-06-17",
-      shippingAddress: {
-        street: "123 Main St",
-        city: "New York",
-        state: "NY",
-        zip: "10001",
-        country: "US",
-      },
-    },
-    {
-      id: "ORD-001235",
-      orderDate: "2024-06-14",
-      buyer: {
-        name: "Sarah Johnson",
-        username: "sarah_j2024",
-        email: "sarah.johnson@email.com",
-        phone: "+1 (555) 234-5678",
-      },
-      items: [
-        {
-          name: "MacBook Air M3 13-inch",
-          sku: "MBA-M3-13",
-          quantity: 1,
-          price: 1299.0,
-          image:
-            "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=100&h=100&fit=crop",
-        },
-        {
-          name: "Magic Mouse",
-          sku: "MM-WHT",
-          quantity: 1,
-          price: 79.0,
-          image:
-            "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=100&h=100&fit=crop",
-        },
-      ],
-      total: 1378.0,
-      status: "awaiting-shipment",
-      paymentStatus: "paid",
-      paymentMethod: "Credit Card",
-      shippingMethod: "Standard Shipping",
-      trackingNumber: null,
-      estimatedDelivery: "2024-06-20",
-      shippingAddress: {
-        street: "456 Oak Ave",
-        city: "Los Angeles",
-        state: "CA",
-        zip: "90210",
-        country: "US",
-      },
-    },
-    {
-      id: "ORD-001236",
-      orderDate: "2024-06-13",
-      buyer: {
-        name: "Mike Wilson",
-        username: "mikew_tech",
-        email: "mike.wilson@email.com",
-        phone: "+1 (555) 345-6789",
-      },
-      items: [
-        {
-          name: "Samsung Galaxy S24 Ultra",
-          sku: "SGS24U-512",
-          quantity: 1,
-          price: 1199.99,
-          image:
-            "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=100&h=100&fit=crop",
-        },
-      ],
-      total: 1199.99,
-      status: "awaiting-payment",
-      paymentStatus: "pending",
-      paymentMethod: "Bank Transfer",
-      shippingMethod: "Standard Shipping",
-      trackingNumber: null,
-      estimatedDelivery: null,
-      shippingAddress: {
-        street: "789 Pine St",
-        city: "Chicago",
-        state: "IL",
-        zip: "60601",
-        country: "US",
-      },
-    },
-    {
-      id: "ORD-001240",
-      orderDate: "2024-06-12",
-      buyer: {
-        name: "Tom Davis",
-        username: "tom_davis92",
-        email: "tom.davis@email.com",
-        phone: "+1 (555) 456-7890",
-      },
-      items: [
-        {
-          name: 'iPad Pro 12.9" M4',
-          sku: "IPADPM4-512",
-          quantity: 1,
-          price: 1299.0,
-          image:
-            "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=100&h=100&fit=crop",
-        },
-      ],
-      total: 1299.0,
-      status: "awaiting-shipment",
-      paymentStatus: "paid",
-      paymentMethod: "PayPal",
-      shippingMethod: "Express Shipping",
-      trackingNumber: null,
-      estimatedDelivery: "2024-06-16",
-      shippingAddress: {
-        street: "321 Elm St",
-        city: "Miami",
-        state: "FL",
-        zip: "33101",
-        country: "US",
-      },
-    },
-    {
-      id: "ORD-001241",
-      orderDate: "2024-06-10",
-      buyer: {
-        name: "Emily Davis",
-        username: "emily_davis91",
-        email: "emily.davis@email.com",
-        phone: "+1 (555) 456-7890",
-      },
-      items: [
-        {
-          name: 'iPad Pro 12.9" M4',
-          sku: "IPADPM4-512",
-          quantity: 1,
-          price: 1299.0,
-          image:
-            "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=100&h=100&fit=crop",
-        },
-      ],
-      total: 1299.0,
-      status: "delivered",
-      paymentStatus: "paid",
-      paymentMethod: "PayPal",
-      shippingMethod: "Express Shipping",
-      trackingNumber: "TRK987654321",
-      estimatedDelivery: "2024-06-12",
-      deliveredDate: "2024-06-12",
-      shippingAddress: {
-        street: "321 Elm St",
-        city: "Miami",
-        state: "FL",
-        zip: "33101",
-        country: "US",
-      },
-    },
-    {
-      id: "ORD-001242",
-      orderDate: "2024-06-09",
-      buyer: {
-        name: "David Brown",
-        username: "david_brown88",
-        email: "david.brown@email.com",
-        phone: "+1 (555) 567-8901",
-      },
-      items: [
-        {
-          name: "AirPods Pro 2nd Gen",
-          sku: "APP2-USB-C",
-          quantity: 2,
-          price: 249.0,
-          image:
-            "https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=100&h=100&fit=crop",
-        },
-      ],
-      total: 498.0,
-      status: "cancelled",
-      paymentStatus: "refunded",
-      paymentMethod: "Credit Card",
-      shippingMethod: "Standard Shipping",
-      trackingNumber: null,
-      cancelledDate: "2024-06-10",
-      cancelReason: "Customer Request",
-      shippingAddress: {
-        street: "654 Maple Ave",
-        city: "Seattle",
-        state: "WA",
-        zip: "98101",
-        country: "US",
-      },
-    },
+  // Order statuses for filter dropdown - Updated to reflect new workflow
+  const orderStatuses = [
+    { value: "", label: "All Orders" },
+    { value: "pending", label: "Pending" },
+    { value: "shipped", label: "Shipped" },
+    { value: "delivered", label: "Delivered" },
+    { value: "cancelled", label: "Cancelled" },
   ];
 
-  // Initialize orders state
-  React.useEffect(() => {
-    setOrders(allOrdersData);
-  }, []);
-
-  // Cancel order reasons
+  // Cancel reasons
   const cancelReasons = [
     { value: "out-of-stock", label: "Out of Stock" },
     { value: "pricing-error", label: "Pricing Error" },
@@ -297,93 +126,76 @@ const OrderManagement = ({ activeSection = "all-orders" }) => {
     { value: "other", label: "Other" },
   ];
 
-  // Handle cancel order
-  const handleCancelOrder = (order) => {
-    setOrderToCancel(order);
-    setShowCancelModal(true);
-    setCancelReason("");
-    setCancelNotes("");
-  };
+  // Load orders based on active section and status
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        if (orderStatus) {
+          await fetchByStatus(orderStatus);
+        } else {
+          await refreshOrders();
+        }
+      } catch (error) {
+        console.error("Error loading orders:", error);
+      }
+    };
 
-  // Handle delete order
-  const handleDeleteOrder = (order) => {
-    setOrderToDelete(order);
-    setShowDeleteModal(true);
-  };
+    loadOrders();
+  }, [activeSection, orderStatus, fetchByStatus, refreshOrders]);
 
-  // Confirm cancellation
-  const confirmCancellation = () => {
-    if (!cancelReason) {
-      alert("Please select a cancellation reason");
-      return;
+  // Auto-dismiss success and error messages after 5 seconds
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        clearMessages();
+      }, 5000); // 5 seconds
+
+      return () => clearTimeout(timer);
     }
+  }, [success, error, clearMessages]);
 
-    // Update the order status in the orders array
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order.id === orderToCancel.id
-          ? {
-              ...order,
-              status: "cancelled",
-              cancelReason: cancelReasons.find((r) => r.value === cancelReason)
-                ?.label,
-              cancelNotes: cancelNotes,
-              cancelledDate: new Date().toISOString().split("T")[0],
-            }
-          : order
-      )
-    );
-
-    setShowCancelModal(false);
-    setShowSuccessModal(true);
-    setOrderToCancel(null);
-    setCancelReason("");
-    setCancelNotes("");
+  // Handle status filter change
+  const handleStatusFilterChange = async (status) => {
+    setStatusFilter(status);
+    try {
+      if (status) {
+        await fetchByStatus(status);
+      } else {
+        await refreshOrders();
+      }
+    } catch (error) {
+      console.error("Error filtering orders:", error);
+    }
   };
 
-  // Confirm deletion
-  const confirmDeletion = () => {
-    // Remove the order from the orders array
-    setOrders((prevOrders) =>
-      prevOrders.filter((order) => order.id !== orderToDelete.id)
-    );
-
-    setShowDeleteModal(false);
-    setShowDeleteSuccessModal(true);
-    setOrderToDelete(null);
+  // Helper function to format order number like user page
+  const getOrderDisplayNumber = (order) => {
+    return order.orderNumber || `#ORD-${order._id.slice(-6)}`;
   };
 
-  // Handle view order details
-  const handleViewOrder = (order) => {
-    setSelectedOrder(order);
-    setShowOrderDetails(true);
-  };
-
-  // Filter orders based on active section
+  // Frontend search by formatted order number and order ID
   const filteredOrders = useMemo(() => {
-    switch (activeSection) {
-      case "all-orders":
-        return orders;
-      case "awaiting-payment":
-        return orders.filter((order) => order.status === "awaiting-payment");
-      case "awaiting-shipment":
-        return orders.filter((order) => order.status === "awaiting-shipment");
-      case "paid-shipped":
-        return orders.filter(
-          (order) => order.status === "shipped" || order.status === "delivered"
-        );
-      case "cancellations":
-        return orders.filter((order) => order.status === "cancelled");
-      case "returns":
-        return orders.filter((order) => order.status === "returned");
-      case "disputes":
-        return orders.filter((order) => order.status === "dispute");
-      default:
-        return orders;
-    }
-  }, [activeSection, orders]);
+    if (!searchQuery.trim()) return orders;
 
-  // Get section configuration
+    const query = searchQuery.toLowerCase();
+    return orders.filter((order) => {
+      const formattedOrderId = getOrderDisplayNumber(order).toLowerCase();
+      const orderId = order._id.toLowerCase();
+
+      return (
+        formattedOrderId.includes(query) ||
+        orderId.includes(query) ||
+        // Also search in listings
+        order.listings?.some(
+          (listing) =>
+            listing.title?.toLowerCase().includes(query) ||
+            listing.brand?.toLowerCase().includes(query)
+        )
+      );
+    });
+  }, [orders, searchQuery]);
+
+  // Get section configuration - Updated to reflect new workflow
   const getSectionConfig = () => {
     const configs = {
       "all-orders": {
@@ -395,52 +207,44 @@ const OrderManagement = ({ activeSection = "all-orders" }) => {
           "items",
           "total",
           "status",
+          "rating",
           "date",
           "actions",
         ],
       },
-      "awaiting-payment": {
-        title: "Awaiting Payment",
-        description: "Orders waiting for payment confirmation",
-        showColumns: [
-          "order",
-          "buyer",
-          "items",
-          "total",
-          "paymentMethod",
-          "date",
-          "actions",
-        ],
+      pending: {
+        title: "Pending Orders",
+        description: "Orders awaiting shipment",
+        showColumns: ["order", "buyer", "items", "total", "date", "actions"],
       },
-      "awaiting-shipment": {
-        title: "Awaiting Shipment",
-        description: "Paid orders ready to ship",
-        showColumns: [
-          "order",
-          "buyer",
-          "items",
-          "total",
-          "shippingMethod",
-          "date",
-          "actions",
-        ],
-      },
-      "paid-shipped": {
-        title: "Paid and Shipped",
-        description: "Orders that have been paid and shipped",
+      shipped: {
+        title: "Shipped Orders",
+        description: "Orders that have been shipped",
         showColumns: [
           "order",
           "buyer",
           "items",
           "total",
           "tracking",
-          "status",
           "date",
           "actions",
         ],
       },
-      cancellations: {
-        title: "Cancellations",
+      delivered: {
+        title: "Delivered Orders",
+        description: "Successfully delivered orders",
+        showColumns: [
+          "order",
+          "buyer",
+          "items",
+          "total",
+          "rating",
+          "date",
+          "actions",
+        ],
+      },
+      cancelled: {
+        title: "Cancelled Orders",
         description: "Cancelled orders and refunds",
         showColumns: [
           "order",
@@ -448,19 +252,6 @@ const OrderManagement = ({ activeSection = "all-orders" }) => {
           "items",
           "total",
           "cancelReason",
-          "date",
-          "actions",
-        ],
-      },
-      returns: {
-        title: "Returns",
-        description: "Returned items and return requests",
-        showColumns: [
-          "order",
-          "buyer",
-          "items",
-          "total",
-          "returnReason",
           "date",
           "actions",
         ],
@@ -479,14 +270,12 @@ const OrderManagement = ({ activeSection = "all-orders" }) => {
         return <Truck className="h-4 w-4" />;
       case "delivered":
         return <CheckCircle className="h-4 w-4" />;
-      case "awaiting-shipment":
+      case "confirmed":
         return <Package className="h-4 w-4" />;
-      case "awaiting-payment":
+      case "pending":
         return <Clock className="h-4 w-4" />;
       case "cancelled":
         return <XCircle className="h-4 w-4" />;
-      case "returned":
-        return <RefreshCw className="h-4 w-4" />;
       default:
         return <Package className="h-4 w-4" />;
     }
@@ -498,530 +287,617 @@ const OrderManagement = ({ activeSection = "all-orders" }) => {
         return "primary";
       case "delivered":
         return "success";
-      case "awaiting-shipment":
+      case "confirmed":
         return "orange";
-      case "awaiting-payment":
+      case "pending":
         return "warning";
       case "cancelled":
         return "danger";
-      case "returned":
-        return "purple";
       default:
         return "default";
     }
   };
 
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case "pending":
+        return "Pending";
+      case "confirmed":
+        return "Confirmed";
+      case "shipped":
+        return "Shipped";
+      case "delivered":
+        return "Delivered";
+      case "cancelled":
+        return "Cancelled";
+      default:
+        return status || "Unknown";
     }
   };
 
-  const handleSelectOrder = (orderId) => {
-    setSelectedOrders((prev) =>
-      prev.includes(orderId)
-        ? prev.filter((id) => id !== orderId)
-        : [...prev, orderId]
-    );
+  const getCustomerName = (order) => {
+    if (!order.shippingAddress) return "Unknown Customer";
+    return order.shippingAddress.split(",")[0] || "Unknown Customer";
+  };
+
+  // Action handlers
+  const handleViewOrder = (order) => {
+    setSelectedOrder(order);
+    setShowOrderDetails(true);
+  };
+
+  const handleCancelOrder = (order) => {
+    setOrderToCancel(order);
+    setShowCancelModal(true);
+    setCancelReason("");
+    setCancelNotes("");
+  };
+
+  const confirmCancellation = async () => {
+    if (!cancelReason) {
+      alert("Please select a cancellation reason");
+      return;
+    }
+
+    try {
+      setIsUpdatingStatus(true);
+      await updateStatus(orderToCancel._id, "cancelled");
+      setShowCancelModal(false);
+      setOrderToCancel(null);
+      setCancelReason("");
+      setCancelNotes("");
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleStatusChange = async (order, newStatus) => {
+    try {
+      setIsUpdatingStatus(true);
+      await updateStatus(order._id, newStatus);
+    } catch (error) {
+      console.error("Error updating order status:", error);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   const handleSelectAll = () => {
-    setSelectedOrders(
-      selectedOrders.length === filteredOrders.length
-        ? []
-        : filteredOrders.map((order) => order.id)
+    if (selectedCount === filteredOrders.length && filteredOrders.length > 0) {
+      clearSelection();
+    } else {
+      selectAll(filteredOrders.map((order) => order._id));
+    }
+  };
+
+  const handlePrintReport = () => {
+    setShowPrintReport(true);
+  };
+
+  const renderRatingStars = (rating) => {
+    if (!rating)
+      return <span className="text-gray-400 text-sm">No rating</span>;
+
+    return (
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`h-4 w-4 ${
+              star <= rating ? "text-yellow-400 fill-current" : "text-gray-300"
+            }`}
+          />
+        ))}
+        <span className="text-sm text-gray-600 ml-1">({rating})</span>
+      </div>
     );
   };
 
-  // Cancel Order Modal Component
-  const CancelOrderModal = () => (
-    <Modal
-      isOpen={showCancelModal}
-      onClose={() => setShowCancelModal(false)}
-      title="Cancel Order"
-      size="md"
-    >
-      <ModalContent className="space-y-4">
-        <Alert variant="warning" title={`Cancel Order ${orderToCancel?.id}`}>
-          This action cannot be undone. The customer will be notified of the
-          cancellation.
-        </Alert>
-
-        <FormField label="Cancellation Reason" required>
-          <Select
-            value={cancelReason}
-            onChange={(e) => setCancelReason(e.target.value)}
-            placeholder="Select a reason..."
-          >
-            {cancelReasons.map((reason) => (
-              <option key={reason.value} value={reason.value}>
-                {reason.label}
-              </option>
-            ))}
-          </Select>
-        </FormField>
-
-        <FormField label="Additional Notes (Optional)">
-          <Textarea
-            value={cancelNotes}
-            onChange={(e) => setCancelNotes(e.target.value)}
-            placeholder="Provide additional details about the cancellation..."
-            rows={3}
-            resize={false}
-          />
-        </FormField>
-      </ModalContent>
-      <ModalFooter>
-        <Button variant="secondary" onClick={() => setShowCancelModal(false)}>
-          Keep Order
-        </Button>
-        <Button variant="danger" onClick={confirmCancellation} icon={<Ban />}>
-          Cancel Order
-        </Button>
-      </ModalFooter>
-    </Modal>
-  );
-
-  // Delete Order Modal Component
-  const DeleteOrderModal = () => (
-    <Modal
-      isOpen={showDeleteModal}
-      onClose={() => setShowDeleteModal(false)}
-      title="Delete Order"
-      size="md"
-    >
-      <ModalContent className="space-y-4">
-        <Alert
-          variant="danger"
-          title={`Permanently Delete Order ${orderToDelete?.id}`}
-        >
-          This action cannot be undone. All order data will be permanently
-          removed from the system.
-        </Alert>
-
-        <Card className="bg-gray-50">
-          <CardContent className="p-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-2">
-              Order Details:
-            </h4>
-            <div className="text-sm text-gray-600 space-y-1">
-              <p>
-                <span className="font-medium">Customer:</span>{" "}
-                {orderToDelete?.buyer.name}
-              </p>
-              <p>
-                <span className="font-medium">Total:</span> LKR{" "}
-                {orderToDelete?.total.toLocaleString()}
-              </p>
-              <p>
-                <span className="font-medium">Date:</span>{" "}
-                {orderToDelete?.orderDate}
-              </p>
-              <p>
-                <span className="font-medium">Status:</span>{" "}
-                <span className="capitalize">
-                  {orderToDelete?.status.replace("-", " ")}
-                </span>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </ModalContent>
-      <ModalFooter>
-        <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
-          Cancel
-        </Button>
-        <Button variant="danger" onClick={confirmDeletion} icon={<Trash2 />}>
-          Delete Order
-        </Button>
-      </ModalFooter>
-    </Modal>
-  );
-
-  // Success Modals
-  const SuccessModal = () => (
-    <Modal
-      isOpen={showSuccessModal}
-      onClose={() => setShowSuccessModal(false)}
-      title=""
-      size="sm"
-    >
-      <ModalContent className="text-center">
-        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-          <CheckCircle className="h-6 w-6 text-green-600" />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Order Cancelled Successfully
-        </h3>
-        <p className="text-sm text-gray-600 mb-6">
-          Order {orderToCancel?.id} has been cancelled and the customer has been
-          notified.
-        </p>
-        <Button onClick={() => setShowSuccessModal(false)} className="w-full">
-          Continue
-        </Button>
-      </ModalContent>
-    </Modal>
-  );
-
-  const DeleteSuccessModal = () => (
-    <Modal
-      isOpen={showDeleteSuccessModal}
-      onClose={() => setShowDeleteSuccessModal(false)}
-      title=""
-      size="sm"
-    >
-      <ModalContent className="text-center">
-        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-          <CheckCircle className="h-6 w-6 text-green-600" />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Order Deleted Successfully
-        </h3>
-        <p className="text-sm text-gray-600 mb-6">
-          Order {orderToDelete?.id} has been permanently deleted from the
-          system.
-        </p>
-        <Button
-          onClick={() => setShowDeleteSuccessModal(false)}
-          className="w-full"
-        >
-          Continue
-        </Button>
-      </ModalContent>
-    </Modal>
-  );
-
   return (
     <div className="space-y-6">
+      {/* Error Messages */}
+      {error && !isEmpty && (
+        <Alert
+          variant="danger"
+          title="Error"
+          onClose={() => clearMessages()}
+          className="z-10 relative"
+        >
+          {error}
+        </Alert>
+      )}
+
+      {/* Success Messages */}
+      {success && (
+        <Alert
+          variant="success"
+          title="Success"
+          onClose={() => clearMessages()}
+          className="z-10 relative"
+        >
+          {message}
+        </Alert>
+      )}
+
+      {/* Header with Search and Filters */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-3">
+                <Package className="h-6 w-6 text-blue-600" />
+                {config.title}
+              </CardTitle>
+              <p className="text-sm text-gray-600 mt-1">{config.description}</p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {isLoading && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <LoadingSpinner size="sm" />
+                  <span>Loading...</span>
+                </div>
+              )}
+              <Button
+                variant="secondary"
+                icon={<Printer />}
+                onClick={handlePrintReport}
+                disabled={isLoading || filteredOrders.length === 0}
+              >
+                Print Report
+              </Button>
+              <Button
+                variant="secondary"
+                icon={<RefreshCw />}
+                onClick={refreshOrders}
+                disabled={isLoading}
+              >
+                Refresh
+              </Button>
+            </div>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="flex flex-col lg:flex-row gap-4 mt-4">
+            <div className="flex-1">
+              <SearchInput
+                placeholder="Search by order number (#ORD-xxx), product name, or brand..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                disabled={isLoading}
+                icon={<Search className="h-4 w-4" />}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              {/* Only show status filter for all-orders */}
+              {activeSection === "all-orders" && (
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => handleStatusFilterChange(e.target.value)}
+                  disabled={isLoading}
+                >
+                  {orderStatuses.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </Select>
+              )}
+
+              <Button
+                variant="secondary"
+                icon={<RefreshCw />}
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("");
+                  refreshOrders();
+                }}
+                disabled={isLoading}
+                title="Reset all filters"
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
       {/* Orders Table */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>{config.title}</CardTitle>
-            {selectedOrders.length > 0 && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-600">
-                  {selectedOrders.length} selected
-                </span>
-                <Button size="sm">Bulk Actions</Button>
+            <div className="flex items-center gap-4">
+              <h3 className="text-lg font-semibold">
+                {filteredOrders.length}{" "}
+                {filteredOrders.length === 1 ? "Order" : "Orders"}
+              </h3>
+              {selectedCount > 0 && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600">
+                    {selectedCount} selected
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span>Rows per page:</span>
+                <Select
+                  value={pagination.pageSize}
+                  onChange={(e) => changePageSize(parseInt(e.target.value))}
+                  className="w-20"
+                  disabled={isLoading}
+                >
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                </Select>
               </div>
-            )}
+
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span>
+                  {(pagination.currentPage - 1) * pagination.pageSize + 1}-
+                  {Math.min(
+                    pagination.currentPage * pagination.pageSize,
+                    pagination.totalOrders
+                  )}{" "}
+                  of {pagination.totalOrders}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <IconButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={previousPage}
+                  disabled={!hasPreviousPage || isLoading}
+                  title="Previous page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </IconButton>
+                <IconButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={nextPage}
+                  disabled={!hasNextPage || isLoading}
+                  title="Next page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </IconButton>
+              </div>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <Checkbox
-                    checked={
-                      selectedOrders.length === filteredOrders.length &&
-                      filteredOrders.length > 0
-                    }
-                    onChange={handleSelectAll}
-                  />
-                </TableHead>
 
-                {config.showColumns.includes("order") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("id")}
-                    sortDirection={sortField === "id" ? sortDirection : null}
-                  >
-                    Order ID
-                  </TableHead>
-                )}
+        <CardContent className="p-0 relative">
+          {isLoading && (
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
+              <div className="flex items-center gap-3 text-gray-600">
+                <LoadingSpinner size="md" />
+                <span className="text-sm font-medium">Loading orders...</span>
+              </div>
+            </div>
+          )}
 
-                {config.showColumns.includes("buyer") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("buyer")}
-                    sortDirection={sortField === "buyer" ? sortDirection : null}
-                  >
-                    Buyer
-                  </TableHead>
-                )}
-
-                {config.showColumns.includes("items") && (
-                  <TableHead>Items</TableHead>
-                )}
-
-                {config.showColumns.includes("total") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("total")}
-                    sortDirection={sortField === "total" ? sortDirection : null}
-                  >
-                    Total
-                  </TableHead>
-                )}
-
-                {config.showColumns.includes("status") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("status")}
-                    sortDirection={
-                      sortField === "status" ? sortDirection : null
-                    }
-                  >
-                    Status
-                  </TableHead>
-                )}
-
-                {config.showColumns.includes("paymentMethod") && (
-                  <TableHead>Payment Method</TableHead>
-                )}
-
-                {config.showColumns.includes("shippingMethod") && (
-                  <TableHead>Shipping</TableHead>
-                )}
-
-                {config.showColumns.includes("tracking") && (
-                  <TableHead>Tracking</TableHead>
-                )}
-
-                {config.showColumns.includes("cancelReason") && (
-                  <TableHead>Cancel Reason</TableHead>
-                )}
-
-                {config.showColumns.includes("date") && (
-                  <TableHead
-                    sortable
-                    onSort={() => handleSort("orderDate")}
-                    sortDirection={
-                      sortField === "orderDate" ? sortDirection : null
-                    }
-                  >
-                    Date
-                  </TableHead>
-                )}
-
-                {config.showColumns.includes("actions") && (
-                  <TableHead>Actions</TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell>
+          {/* Show table only if we have orders */}
+          {!isLoading && filteredOrders.length > 0 && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
                     <Checkbox
-                      checked={selectedOrders.includes(order.id)}
-                      onChange={() => handleSelectOrder(order.id)}
+                      checked={
+                        selectedCount === filteredOrders.length &&
+                        filteredOrders.length > 0
+                      }
+                      onChange={handleSelectAll}
                     />
-                  </TableCell>
+                  </TableHead>
 
                   {config.showColumns.includes("order") && (
-                    <TableCell>
-                      <div className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer">
-                        {order.id}
-                      </div>
-                    </TableCell>
+                    <TableHead>Order ID</TableHead>
                   )}
 
                   {config.showColumns.includes("buyer") && (
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Avatar
-                          size="sm"
-                          fallback={order.buyer.name.charAt(0)}
-                        />
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">
-                            {order.buyer.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {order.buyer.username}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
+                    <TableHead>Customer</TableHead>
                   )}
 
                   {config.showColumns.includes("items") && (
-                    <TableCell>
-                      <div className="max-w-xs">
-                        {order.items.map((item, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-2 mb-1"
-                          >
-                            <img
-                              src={item.image}
-                              alt={item.name}
-                              className="h-8 w-8 rounded object-cover"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <div className="text-sm font-medium text-gray-900 truncate">
-                                {item.name}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                Qty: {item.quantity} × LKR {item.price}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
+                    <TableHead>Items</TableHead>
                   )}
 
                   {config.showColumns.includes("total") && (
-                    <TableCell>
-                      <div className="text-sm font-medium text-gray-900">
-                        LKR {order.total.toLocaleString()}
-                      </div>
-                    </TableCell>
+                    <TableHead>Total</TableHead>
                   )}
 
                   {config.showColumns.includes("status") && (
-                    <TableCell>
-                      <Badge
-                        variant={getStatusVariant(order.status)}
-                        icon={getStatusIcon(order.status)}
-                      >
-                        {order.status
-                          .replace("-", " ")
-                          .replace(/\b\w/g, (l) => l.toUpperCase())}
-                      </Badge>
-                    </TableCell>
+                    <TableHead>Status</TableHead>
                   )}
 
-                  {config.showColumns.includes("paymentMethod") && (
-                    <TableCell>
-                      <div className="text-sm text-gray-900">
-                        {order.paymentMethod}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {order.paymentStatus}
-                      </div>
-                    </TableCell>
+                  {config.showColumns.includes("rating") && (
+                    <TableHead>Rating</TableHead>
                   )}
 
                   {config.showColumns.includes("shippingMethod") && (
-                    <TableCell>
-                      <div className="text-sm text-gray-900">
-                        {order.shippingMethod}
-                      </div>
-                      {order.estimatedDelivery && (
-                        <div className="text-xs text-gray-500">
-                          Est: {order.estimatedDelivery}
-                        </div>
-                      )}
-                    </TableCell>
+                    <TableHead>Shipping</TableHead>
                   )}
 
                   {config.showColumns.includes("tracking") && (
-                    <TableCell>
-                      {order.trackingNumber ? (
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm font-mono text-blue-600">
-                            {order.trackingNumber}
-                          </span>
-                          <IconButton size="sm">
-                            <Copy className="h-3 w-3" />
-                          </IconButton>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400">
-                          No tracking
-                        </span>
-                      )}
-                    </TableCell>
+                    <TableHead>Tracking</TableHead>
                   )}
 
                   {config.showColumns.includes("cancelReason") && (
-                    <TableCell>
-                      <div className="text-sm text-gray-900">
-                        {order.cancelReason || "N/A"}
-                      </div>
-                      {order.cancelledDate && (
-                        <div className="text-xs text-gray-500">
-                          Cancelled: {order.cancelledDate}
-                        </div>
-                      )}
-                    </TableCell>
+                    <TableHead>Cancel Reason</TableHead>
                   )}
 
                   {config.showColumns.includes("date") && (
-                    <TableCell>
-                      <div className="text-sm text-gray-900">
-                        {order.orderDate}
-                      </div>
-                    </TableCell>
+                    <TableHead>Date</TableHead>
                   )}
 
                   {config.showColumns.includes("actions") && (
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <IconButton
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewOrder(order)}
-                          title="View Order Details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </IconButton>
+                    <TableHead>Actions</TableHead>
+                  )}
+                </TableRow>
+              </TableHeader>
 
-                        {/* Show cancel button only for awaiting-shipment orders */}
-                        {order.status === "awaiting-shipment" && (
+              <TableBody>
+                {filteredOrders.map((order) => (
+                  <TableRow key={order._id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(order._id)}
+                        onChange={() => toggleOrder(order._id)}
+                      />
+                    </TableCell>
+
+                    {config.showColumns.includes("order") && (
+                      <TableCell>
+                        <div className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer font-mono">
+                          {getOrderDisplayNumber(order)}
+                        </div>
+                      </TableCell>
+                    )}
+
+                    {config.showColumns.includes("buyer") && (
+                      <TableCell>
+                        <div className="flex items-center">
+                          <Avatar
+                            size="sm"
+                            fallback={getCustomerName(order).charAt(0)}
+                          />
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-gray-900">
+                              {getCustomerName(order)}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {order.shippingOption}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                    )}
+
+                    {config.showColumns.includes("items") && (
+                      <TableCell>
+                        <div className="max-w-xs">
+                          {order.listings?.map((item, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2 mb-1"
+                            >
+                              <img
+                                src={item.images?.[0]?.url || "/placehold.png"}
+                                alt={item.title}
+                                className="h-8 w-8 rounded object-cover"
+                                onError={(e) => {
+                                  e.target.src = "/placehold.png";
+                                }}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-medium text-gray-900 truncate">
+                                  {item.title}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Brand: {item.brand}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </TableCell>
+                    )}
+
+                    {config.showColumns.includes("total") && (
+                      <TableCell>
+                        <div className="text-sm font-medium text-gray-900">
+                          LKR {order.totalAmount.toLocaleString()}
+                        </div>
+                      </TableCell>
+                    )}
+
+                    {config.showColumns.includes("status") && (
+                      <TableCell>
+                        <Badge
+                          variant={getStatusVariant(order.orderStatus)}
+                          icon={getStatusIcon(order.orderStatus)}
+                        >
+                          {getStatusLabel(order.orderStatus)}
+                        </Badge>
+                      </TableCell>
+                    )}
+
+                    {config.showColumns.includes("rating") && (
+                      <TableCell>
+                        {renderRatingStars(order.orderRating)}
+                      </TableCell>
+                    )}
+
+                    {config.showColumns.includes("shippingMethod") && (
+                      <TableCell>
+                        <div className="text-sm text-gray-900">
+                          {order.shippingOption}
+                        </div>
+                      </TableCell>
+                    )}
+
+                    {config.showColumns.includes("tracking") && (
+                      <TableCell>
+                        {order.trackingNumber ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-mono text-blue-600">
+                              {order.trackingNumber}
+                            </span>
+                            <IconButton size="sm">
+                              <Copy className="h-3 w-3" />
+                            </IconButton>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">
+                            No tracking
+                          </span>
+                        )}
+                      </TableCell>
+                    )}
+
+                    {config.showColumns.includes("cancelReason") && (
+                      <TableCell>
+                        <div className="text-sm text-gray-900">
+                          {order.cancelReason || "N/A"}
+                        </div>
+                      </TableCell>
+                    )}
+
+                    {config.showColumns.includes("date") && (
+                      <TableCell>
+                        <div className="text-sm text-gray-900">
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </div>
+                      </TableCell>
+                    )}
+
+                    {config.showColumns.includes("actions") && (
+                      <TableCell>
+                        <div className="flex items-center gap-2">
                           <IconButton
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleCancelOrder(order)}
-                            title="Cancel Order"
-                            className="text-red-600 hover:text-red-900 hover:bg-red-50"
+                            onClick={() => handleViewOrder(order)}
+                            title="View Order Details"
                           >
-                            <Ban className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </IconButton>
-                        )}
 
-                        <IconButton
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteOrder(order)}
-                          title="Delete Order"
-                          className="text-red-600 hover:text-red-900 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </IconButton>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                          {/* Updated Status-specific actions for new workflow */}
+                          {order.orderStatus === "pending" && (
+                            <>
+                              <IconButton
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleStatusChange(order, "shipped")
+                                }
+                                title="Mark as Shipped"
+                                className="text-blue-600 hover:text-blue-900 hover:bg-blue-50"
+                                disabled={isUpdatingStatus}
+                              >
+                                <Truck className="h-4 w-4" />
+                              </IconButton>
+                              <IconButton
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCancelOrder(order)}
+                                title="Cancel Order"
+                                className="text-red-600 hover:text-red-900 hover:bg-red-50"
+                                disabled={isUpdatingStatus}
+                              >
+                                <Ban className="h-4 w-4" />
+                              </IconButton>
+                            </>
+                          )}
+
+                          {order.orderStatus === "shipped" && (
+                            <IconButton
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                handleStatusChange(order, "delivered")
+                              }
+                              title="Mark as Delivered"
+                              className="text-green-600 hover:text-green-900 hover:bg-green-50"
+                              disabled={isUpdatingStatus}
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </IconButton>
+                          )}
+
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
 
           {/* Empty State */}
-          {filteredOrders.length === 0 && (
+          {!isLoading && filteredOrders.length === 0 && (
             <div className="text-center py-12">
               <Package className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">
-                No orders found
+                {isEmpty && message ? message : "No orders found"}
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                No orders match your current filters for{" "}
-                {config.title.toLowerCase()}.
+                {searchQuery
+                  ? `No orders match your search for "${searchQuery}".`
+                  : statusFilter
+                  ? `No orders found with status "${getStatusLabel(
+                      statusFilter
+                    )}".`
+                  : `No ${config.title.toLowerCase()} available.`}
               </p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Modals */}
-      <CancelOrderModal />
-      <DeleteOrderModal />
-      <SuccessModal />
-      <DeleteSuccessModal />
-      {showOrderDetails && (
+      {/* Order Cancel Confirmation Modal */}
+      <OrderCancelConfirmationDialog
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={confirmCancellation}
+        order={orderToCancel}
+        cancelReason={cancelReason}
+        setCancelReason={setCancelReason}
+        cancelNotes={cancelNotes}
+        setCancelNotes={setCancelNotes}
+        cancelReasons={cancelReasons}
+        isLoading={isUpdatingStatus}
+      />
+
+      {/* Order Details Modal */}
+      {showOrderDetails && selectedOrder && (
         <OrderDetails
           order={selectedOrder}
-          onClose={() => setShowOrderDetails(false)}
+          onClose={() => {
+            setShowOrderDetails(false);
+            setSelectedOrder(null);
+          }}
+          onOrderUpdate={handleStatusChange}
+        />
+      )}
+
+      {/* Print Report Modal */}
+      {showPrintReport && (
+        <PrintOrderReport
+          orders={filteredOrders}
+          config={config}
+          onClose={() => setShowPrintReport(false)}
         />
       )}
     </div>
