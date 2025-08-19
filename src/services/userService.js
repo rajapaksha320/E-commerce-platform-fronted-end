@@ -571,7 +571,6 @@ const userService = {
       return response;
     } catch (error) {
       console.error("Quick search error:", error);
-      // Return empty results on error to prevent breaking the UI
       return { data: { data: [] } };
     }
   },
@@ -830,7 +829,7 @@ const userService = {
         stockIssues: [],
       };
 
-      // Advanced validation - check if all items are still available
+      // check if all items are still available
       if (orderData.listingIds && orderData.listingIds.length > 0) {
         try {
           const listingChecks = orderData.listingIds.map((listingId) =>
