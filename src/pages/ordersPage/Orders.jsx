@@ -23,6 +23,7 @@ import {
   Loader2,
   ShoppingBag,
   CheckSquare,
+  ThumbsUp,
 } from "lucide-react";
 import {
   Button,
@@ -56,11 +57,16 @@ const Orders = () => {
     // Actions
     fetchBuyerOrders,
     submitReview,
+    handleConfirmOrder, // NEW: Confirm order action
     clearErrors,
 
     // Helper functions
     getOrdersByStatus,
     getPendingReviewOrders,
+    getDeliveredUnconfirmedOrders, // NEW
+    getConfirmedUnreviewedOrders, // NEW
+    canConfirmOrder, // NEW
+    canReviewOrder, // NEW
     ordersSummary,
   } = useUser();
 
@@ -75,6 +81,9 @@ const Orders = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [reviewOrder, setReviewOrder] = useState(null);
+
+  // Confirmation loading state
+  const [confirmingOrderId, setConfirmingOrderId] = useState(null);
 
   const itemsPerPage = 10;
 
@@ -106,26 +115,31 @@ const Orders = () => {
 
   // Updated status options to match backend enum
   const statusOptions = [
-    { value: "all", label: "All Orders" },
+    { value: "all", label: "All Orders", count: ordersSummary.total },
     {
       value: "pending",
       label: "Pending",
+      count: ordersSummary.pending,
     },
     {
       value: "confirmed",
       label: "Confirmed",
+      count: ordersSummary.confirmed,
     },
     {
       value: "shipped",
       label: "Shipped",
+      count: ordersSummary.shipped,
     },
     {
       value: "delivered",
       label: "Delivered",
+      count: ordersSummary.delivered,
     },
     {
       value: "cancelled",
       label: "Cancelled",
+      count: ordersSummary.cancelled,
     },
   ];
 
@@ -212,6 +226,29 @@ const Orders = () => {
   const handleReorder = (order) => {
     console.log("Reordering:", order);
     navigate("/shopping-cart");
+  };
+
+  // NEW: Handle order confirmation
+  const handleOrderConfirmation = async (order) => {
+    if (!canConfirmOrder(order)) {
+      console.warn("Cannot confirm this order:", order);
+      return;
+    }
+
+    setConfirmingOrderId(order._id);
+
+    try {
+      await handleConfirmOrder(order._id, buyerId).unwrap();
+
+      // Refresh orders to update confirmation status
+      if (buyerId) {
+        fetchBuyerOrders(buyerId, currentPage, itemsPerPage);
+      }
+    } catch (error) {
+      console.error("Failed to confirm order:", error);
+    } finally {
+      setConfirmingOrderId(null);
+    }
   };
 
   // Review handling functions
@@ -326,12 +363,13 @@ const Orders = () => {
       total: order.totalAmount || 0,
       items: order.listings || order.listingIds || [], // Use listings if available, fallback to listingIds
       stores: order.stores || [],
-      shippingAddress: formatShippingAddress(order.shippingAddress), 
+      shippingAddress: formatShippingAddress(order.shippingAddress),
       trackingNumber: order.trackingNumber || null,
       estimatedDelivery: order.estimatedDelivery,
       actualDelivery: order.actualDelivery,
       cancelReason: order.cancelReason,
       isReviewed: order.isReviewed,
+      isConfirmed: order.isConfirmed, // NEW
     };
   };
 
@@ -567,23 +605,20 @@ const Orders = () => {
                             </div>
                           </div>
 
-                          {/* Individual Product Review Button */}
-                          {orderData.status === "delivered" &&
-                            !orderData.isReviewed && (
-                              <div className="flex items-center">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleReviewProduct(order, item)
-                                  }
-                                  className="flex items-center text-yellow-600 hover:text-yellow-700 border-yellow-300 hover:border-yellow-400 hover:bg-yellow-50"
-                                >
-                                  <Star className="h-3 w-3 mr-1" />
-                                  Review
-                                </Button>
-                              </div>
-                            )}
+                          {/* Individual Product Review Button - NEW LOGIC */}
+                          {canReviewOrder(order) && (
+                            <div className="flex items-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleReviewProduct(order, item)}
+                                className="flex items-center text-yellow-600 hover:text-yellow-700 border-yellow-300 hover:border-yellow-400 hover:bg-yellow-50"
+                              >
+                                <Star className="h-3 w-3 mr-1" />
+                                Review
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -603,6 +638,39 @@ const Orders = () => {
                           </div>
                         </div>
                       )}
+
+                    {/* NEW: Order Confirmation Prompt */}
+                    {canConfirmOrder(order) && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-center space-x-2 text-green-800 mb-2">
+                          <CheckCircle className="h-5 w-5" />
+                          <span className="font-medium">Order Delivered!</span>
+                        </div>
+                        <p className="text-green-700 text-sm mb-3">
+                          Your order has been delivered. Please confirm that you
+                          have received your items.
+                        </p>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleOrderConfirmation(order)}
+                          disabled={confirmingOrderId === order._id}
+                          className="bg-green-600 hover:bg-green-700 flex items-center"
+                        >
+                          {confirmingOrderId === order._id ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Confirming...
+                            </>
+                          ) : (
+                            <>
+                              <ThumbsUp className="h-4 w-4 mr-2" />
+                              Confirm Receipt
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
 
                     {/* Cancelled Info */}
                     {orderData.status === "cancelled" &&
@@ -630,9 +698,9 @@ const Orders = () => {
                         View Details
                       </Button>
 
-                      {orderData.status === "delivered" && (
+                      {/* NEW: Updated review logic */}
+                      {canReviewOrder(order) && (
                         <>
-                      
                           {/* Show review status */}
                           {orderData.isReviewed ? (
                             <Badge
@@ -692,6 +760,12 @@ const Orders = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         order={selectedOrder}
+        onSubmitReview={handleSubmitReview}
+        fetchOrders={() =>
+          buyerId && fetchBuyerOrders(buyerId, currentPage, itemsPerPage)
+        }
+        onConfirmOrder={handleOrderConfirmation}
+        confirmingOrderId={confirmingOrderId}
       />
 
       {/* Product Review Modal */}

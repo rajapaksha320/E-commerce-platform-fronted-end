@@ -16,6 +16,7 @@ import {
   updateWishlist,
   deleteWishlistItem,
   placeOrder,
+  confirmOrder, // NEW: Add confirmOrder import
   getBuyerOrders,
   addReview,
   getShopReviews,
@@ -299,6 +300,14 @@ const useUser = () => {
   const createOrder = useCallback(
     (orderData) => {
       return dispatch(placeOrder(orderData));
+    },
+    [dispatch]
+  );
+
+  // NEW: Confirm order action
+  const handleConfirmOrder = useCallback(
+    (orderId, buyerId) => {
+      return dispatch(confirmOrder({ orderId, buyerId }));
     },
     [dispatch]
   );
@@ -688,6 +697,32 @@ const useUser = () => {
     [orders]
   );
 
+  // NEW: Helper functions for order confirmation and review logic
+  const getDeliveredUnconfirmedOrders = useCallback(() => {
+    return orders.filter(
+      (order) => order.orderStatus === "delivered" && !order.isConfirmed
+    );
+  }, [orders]);
+
+  const getConfirmedUnreviewedOrders = useCallback(() => {
+    return orders.filter(
+      (order) =>
+        (order.orderStatus === "confirmed" || order.isConfirmed) &&
+        !order.isReviewed
+    );
+  }, [orders]);
+
+  const canConfirmOrder = useCallback((order) => {
+    return order.orderStatus === "delivered" && !order.isConfirmed;
+  }, []);
+
+  const canReviewOrder = useCallback((order) => {
+    return (
+      (order.orderStatus === "confirmed" || order.isConfirmed) &&
+      !order.isReviewed
+    );
+  }, []);
+
   // LISTING DETAIL HELPERS
   const getCurrentListingData = useCallback(() => {
     if (!currentListing) return null;
@@ -939,12 +974,18 @@ const useUser = () => {
     isEmpty: productWishlist.length === 0 && shopWishlist.length === 0,
   };
 
+  // UPDATED: Enhanced orders summary with new statuses
   const ordersSummary = {
     total: orders.length,
     pending: getOrdersByStatus("pending").length,
-    completed: getOrdersByStatus("completed").length,
+    confirmed: getOrdersByStatus("confirmed").length,
+    shipped: getOrdersByStatus("shipped").length,
+    delivered: getOrdersByStatus("delivered").length,
     cancelled: getOrdersByStatus("cancelled").length,
     pendingReviews: getPendingReviewOrders().length,
+    // NEW: Additional counts for confirmation flow
+    deliveredUnconfirmed: getDeliveredUnconfirmedOrders().length,
+    confirmedUnreviewed: getConfirmedUnreviewedOrders().length,
   };
 
   const addressesSummary = {
@@ -1068,6 +1109,7 @@ const useUser = () => {
     addToWishlist,
     removeFromWishlist,
     createOrder,
+    handleConfirmOrder, // NEW: Confirm order action
     fetchBuyerOrders,
     submitReview,
     fetchShopReviews,
@@ -1101,6 +1143,11 @@ const useUser = () => {
     getAddressByType,
     getPendingReviewOrders,
     getOrdersByStatus,
+    // NEW: Order confirmation and review helpers
+    getDeliveredUnconfirmedOrders,
+    getConfirmedUnreviewedOrders,
+    canConfirmOrder,
+    canReviewOrder,
     getCurrentListingData,
     getListingVariations,
     getDefaultVariation,

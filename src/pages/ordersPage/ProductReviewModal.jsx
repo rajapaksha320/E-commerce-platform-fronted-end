@@ -64,7 +64,7 @@ const ProductReviewModal = ({
     const defaultVariation =
       product.variations.find((v) => v.isDefault) || product.variations[0];
     const price = defaultVariation?.price;
-    return typeof price === 'number' ? price : parseFloat(price) || 0;
+    return typeof price === "number" ? price : parseFloat(price) || 0;
   };
 
   // Rating categories with icons and descriptions
@@ -171,10 +171,23 @@ const ProductReviewModal = ({
         reviewText: reviewText.trim(),
       };
 
-      await onSubmitReview(reviewData);
+      console.log("Submitting review data:", reviewData);
+      console.log("Product:", product);
+      console.log("Order:", order);
+
+      // Call the parent's submit handler
+      if (onSubmitReview) {
+        await onSubmitReview(reviewData);
+      } else {
+        throw new Error("No submit review handler provided");
+      }
+
+      // Success - modal will be closed by parent component
     } catch (error) {
       console.error("Failed to submit review:", error);
-      setErrors({ submit: "Failed to submit review. Please try again." });
+      setErrors({
+        submit: error.message || "Failed to submit review. Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -195,6 +208,7 @@ const ProductReviewModal = ({
             onClick={() => handleRatingClick(category, star)}
             onMouseEnter={() => handleRatingHover(category, star)}
             onMouseLeave={() => handleRatingLeave(category)}
+            disabled={isSubmitting}
           >
             <Star
               className={`h-6 w-6 transition-colors duration-150 ${
@@ -284,7 +298,7 @@ const ProductReviewModal = ({
                     {product.title || "Unknown Product"}
                   </h4>
                   <p className="text-sm text-gray-600 mb-2">
-                    {product.brandName || "Unknown Brand"}
+                    {product.brandName || product.brand || "Unknown Brand"}
                   </p>
                   <div className="flex items-center space-x-4 text-sm">
                     <span className="text-gray-600">
