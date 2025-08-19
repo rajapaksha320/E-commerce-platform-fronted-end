@@ -290,6 +290,21 @@ export const placeOrder = createAsyncThunk(
   }
 );
 
+// NEW: Confirm order async thunk
+export const confirmOrder = createAsyncThunk(
+  "user/confirmOrder",
+  async ({ orderId, buyerId }, { rejectWithValue }) => {
+    try {
+      const response = await userService.confirmOrder(orderId, buyerId);
+      return { ...response.data, orderId };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to confirm order"
+      );
+    }
+  }
+);
+
 export const getBuyerOrders = createAsyncThunk(
   "user/getBuyerOrders",
   async ({ buyerId, page = 1, size = 10 }, { rejectWithValue }) => {
@@ -634,7 +649,6 @@ const userSlice = createSlice({
         state.cartError = action.payload;
       });
 
-
     builder
       .addCase(getCartItems.pending, (state) => {
         state.cartLoading = true;
@@ -822,6 +836,37 @@ const userSlice = createSlice({
         state.ordersError = action.payload;
       });
 
+    // NEW: Confirm order cases
+    builder
+      .addCase(confirmOrder.pending, (state) => {
+        state.ordersLoading = true;
+        state.ordersError = null;
+      })
+      .addCase(confirmOrder.fulfilled, (state, action) => {
+        state.ordersLoading = false;
+        state.success = true;
+        state.message =
+          action.payload.message || "Order confirmed successfully";
+
+        // Update the specific order in the state
+        const orderIndex = state.orders.findIndex(
+          (order) => order._id === action.payload.orderId
+        );
+        if (orderIndex !== -1) {
+          // Update the order status to confirmed and set isConfirmed flag
+          state.orders[orderIndex] = {
+            ...state.orders[orderIndex],
+            orderStatus: "confirmed",
+            isConfirmed: true,
+            confirmedAt: new Date().toISOString(),
+          };
+        }
+      })
+      .addCase(confirmOrder.rejected, (state, action) => {
+        state.ordersLoading = false;
+        state.ordersError = action.payload;
+      });
+
     builder
       .addCase(getBuyerOrders.pending, (state) => {
         state.ordersLoading = true;
@@ -846,6 +891,16 @@ const userSlice = createSlice({
         state.reviewsLoading = false;
         state.success = true;
         state.message = action.payload.message;
+
+        // Update the order's review status
+        if (action.meta.arg.orderId) {
+          const orderIndex = state.orders.findIndex(
+            (order) => order._id === action.meta.arg.orderId
+          );
+          if (orderIndex !== -1) {
+            state.orders[orderIndex].isReviewed = true;
+          }
+        }
       })
       .addCase(addReview.rejected, (state, action) => {
         state.reviewsLoading = false;
@@ -1216,7 +1271,7 @@ export const makeSelectOrderDataFromCart = () =>
     }
   );
 
-// Static order data selector 
+// Static order data selector
 export const selectOrderDataFromCart = createSelector(
   [selectCartItems],
   (cartItems) => {

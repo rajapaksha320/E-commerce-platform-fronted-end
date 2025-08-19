@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+
 import {
   X,
   Package,
@@ -19,20 +19,24 @@ import {
   MessageCircle,
   AlertCircle,
   CheckSquare,
+  ThumbsUp,
+  Loader2,
 } from "lucide-react";
 import { Button, Badge } from "../../components/ui/ContactUis/Uis";
 import ProductReviewModal from "./ProductReviewModal";
+import useUser from "../../hooks/useUser";
 
 const OrderDetailsModal = ({
   isOpen,
   onClose,
   order,
-  onSubmitReview,
   fetchOrders,
+  onConfirmOrder,
+  confirmingOrderId,
 }) => {
-  // Review modal state
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+ 
+  // Get helper functions from useUser hook
+  const { canConfirmOrder, canReviewOrder } = useUser();
 
   if (!isOpen || !order) return null;
 
@@ -123,31 +127,19 @@ const OrderDetailsModal = ({
     navigator.clipboard.writeText(orderNumber);
   };
 
-  // Review handling functions
-  const handleReviewProduct = (product) => {
-    setSelectedProduct(product);
-    setIsReviewModalOpen(true);
-  };
+  // Handle order confirmation from modal
+  const handleConfirmOrderClick = async () => {
+    if (onConfirmOrder && canConfirmOrder(order)) {
+      try {
+        await onConfirmOrder(order);
 
-  const handleCloseReviewModal = () => {
-    setIsReviewModalOpen(false);
-    setSelectedProduct(null);
-  };
-
-  const handleSubmitProductReview = async (reviewData) => {
-    try {
-      if (onSubmitReview) {
-        await onSubmitReview(reviewData);
+        // Refresh orders if callback provided
+        if (fetchOrders) {
+          fetchOrders();
+        }
+      } catch (error) {
+        console.error("Failed to confirm order:", error);
       }
-
-      // Refresh orders if callback provided
-      if (fetchOrders) {
-        fetchOrders();
-      }
-
-      handleCloseReviewModal();
-    } catch (error) {
-      console.error("Failed to submit review:", error);
     }
   };
 
@@ -264,8 +256,33 @@ const OrderDetailsModal = ({
                         {(order.totalAmount || total).toFixed(2)}
                       </span>
                     </div>
-                    {/* Review Status */}
+                    {/* NEW: Confirmation Status */}
                     {order.orderStatus === "delivered" && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">
+                          Confirmation Status:
+                        </span>
+                        {order.isConfirmed ? (
+                          <Badge
+                            variant="success"
+                            className="flex items-center"
+                          >
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Confirmed
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="warning"
+                            className="flex items-center"
+                          >
+                            <Clock className="h-3 w-3 mr-1" />
+                            Pending Confirmation
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                    {/* Review Status - Updated Logic */}
+                    {canReviewOrder(order) && (
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Review Status:</span>
                         {order.isReviewed ? (
@@ -360,6 +377,39 @@ const OrderDetailsModal = ({
               </div>
             </div>
 
+            {/* NEW: Order Confirmation Section */}
+            {canConfirmOrder(order) && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <div className="flex items-center space-x-2 text-green-800 mb-3">
+                  <CheckCircle className="h-5 w-5" />
+                  <span className="font-medium text-lg">Order Delivered!</span>
+                </div>
+                <p className="text-green-700 mb-4">
+                  Your order has been delivered successfully. Please confirm
+                  that you have received all items in good condition to enable
+                  the review feature.
+                </p>
+                <Button
+                  variant="primary"
+                  onClick={handleConfirmOrderClick}
+                  disabled={confirmingOrderId === order._id}
+                  className="bg-green-600 hover:bg-green-700 flex items-center"
+                >
+                  {confirmingOrderId === order._id ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Confirming Receipt...
+                    </>
+                  ) : (
+                    <>
+                      <ThumbsUp className="h-4 w-4 mr-2" />
+                      Confirm Receipt of Order
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
             {/* Order Items */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -401,20 +451,6 @@ const OrderDetailsModal = ({
                             <span className="mr-1">LKR</span>
                             {getProductPrice(item).toFixed(2)}
                           </span>
-
-                          {/* Individual Product Review Button */}
-                          {order.orderStatus === "delivered" &&
-                            !order.isReviewed && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleReviewProduct(item)}
-                                className="flex items-center text-yellow-600 hover:text-yellow-700 border-yellow-300 hover:border-yellow-400 hover:bg-yellow-50"
-                              >
-                                <Star className="h-3 w-3 mr-1" />
-                                Review
-                              </Button>
-                            )}
                         </div>
                       </div>
                     </div>
@@ -475,18 +511,19 @@ const OrderDetailsModal = ({
               </div>
             )}
 
-            {order.orderStatus === "delivered" && (
+            {order.orderStatus === "delivered" && order.isConfirmed && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-center space-x-2 text-green-800">
                   <CheckCircle className="h-5 w-5" />
                   <span className="font-medium">
-                    Order Delivered Successfully
+                    Order Confirmed & Delivered Successfully
                   </span>
                 </div>
                 <p className="text-green-700 mt-2">
-                  Your order was delivered on{" "}
+                  Your order was delivered and confirmed on{" "}
                   {formatDate(
-                    order.actualDelivery ||
+                    order.confirmedAt ||
+                      order.actualDelivery ||
                       order.estimatedDelivery ||
                       order.createdAt
                   )}
@@ -539,7 +576,7 @@ const OrderDetailsModal = ({
               <Button variant="ghost" onClick={onClose}>
                 Close
               </Button>
-              {order.orderStatus === "delivered" && (
+              {(order.orderStatus === "delivered" || order.isConfirmed) && (
                 <Button variant="outline" className="flex items-center">
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Reorder
@@ -555,15 +592,6 @@ const OrderDetailsModal = ({
           </div>
         </div>
       </div>
-
-      {/* Product Review Modal */}
-      <ProductReviewModal
-        isOpen={isReviewModalOpen}
-        onClose={handleCloseReviewModal}
-        product={selectedProduct}
-        order={order}
-        onSubmitReview={handleSubmitProductReview}
-      />
     </div>
   );
 };

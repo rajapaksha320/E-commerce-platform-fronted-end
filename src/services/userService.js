@@ -81,7 +81,7 @@ const userService = {
     return await axiosInstance.delete(`/api/v1/cart/delete-cart/${cartItemId}`);
   },
 
-  // Get detailed cart information for checkout 
+  // Get detailed cart information for checkout
   getCartForCheckout: async (buyerId) => {
     try {
       const response = await userService.getCartItems(buyerId, 1, 100);
@@ -273,7 +273,7 @@ const userService = {
 
     const payload = {
       buyerId: orderData.buyerId,
-      listingIds: orderData.listingIds.filter(Boolean), 
+      listingIds: orderData.listingIds.filter(Boolean),
       storeIds: (orderData.storeIds || []).filter(Boolean),
       sellerIds: (orderData.sellerIds || []).filter(Boolean),
       shippingAddress: orderData.shippingAddress,
@@ -309,6 +309,13 @@ const userService = {
         throw new Error("Failed to place order. Please try again.");
       }
     }
+  },
+
+  // Confirm order by buyer using status update API
+  confirmOrder: async (orderId, buyerId) => {
+    return await axiosInstance.put(
+      `/api/v1/order/update-order-status/${orderId}?status=confirmed`
+    );
   },
 
   // Validate order data before submission
