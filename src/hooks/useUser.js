@@ -16,7 +16,7 @@ import {
   updateWishlist,
   deleteWishlistItem,
   placeOrder,
-  confirmOrder, // NEW: Add confirmOrder import
+  confirmOrder, 
   getBuyerOrders,
   addReview,
   getShopReviews,
@@ -304,7 +304,7 @@ const useUser = () => {
     [dispatch]
   );
 
-  // NEW: Confirm order action
+  // Confirm order action
   const handleConfirmOrder = useCallback(
     (orderId, buyerId) => {
       return dispatch(confirmOrder({ orderId, buyerId }));
@@ -697,7 +697,7 @@ const useUser = () => {
     [orders]
   );
 
-  // NEW: Helper functions for order confirmation and review logic
+  // Helper functions for order confirmation and review logic
   const getDeliveredUnconfirmedOrders = useCallback(() => {
     return orders.filter(
       (order) => order.orderStatus === "delivered" && !order.isConfirmed
@@ -983,7 +983,6 @@ const useUser = () => {
     delivered: getOrdersByStatus("delivered").length,
     cancelled: getOrdersByStatus("cancelled").length,
     pendingReviews: getPendingReviewOrders().length,
-    // NEW: Additional counts for confirmation flow
     deliveredUnconfirmed: getDeliveredUnconfirmedOrders().length,
     confirmedUnreviewed: getConfirmedUnreviewedOrders().length,
   };
@@ -1109,7 +1108,7 @@ const useUser = () => {
     addToWishlist,
     removeFromWishlist,
     createOrder,
-    handleConfirmOrder, // NEW: Confirm order action
+    handleConfirmOrder,
     fetchBuyerOrders,
     submitReview,
     fetchShopReviews,
@@ -1143,7 +1142,6 @@ const useUser = () => {
     getAddressByType,
     getPendingReviewOrders,
     getOrdersByStatus,
-    // NEW: Order confirmation and review helpers
     getDeliveredUnconfirmedOrders,
     getConfirmedUnreviewedOrders,
     canConfirmOrder,
