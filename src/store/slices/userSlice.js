@@ -290,7 +290,7 @@ export const placeOrder = createAsyncThunk(
   }
 );
 
-// NEW: Confirm order async thunk
+// Confirm order async thunk
 export const confirmOrder = createAsyncThunk(
   "user/confirmOrder",
   async ({ orderId, buyerId }, { rejectWithValue }) => {
@@ -836,7 +836,7 @@ const userSlice = createSlice({
         state.ordersError = action.payload;
       });
 
-    // NEW: Confirm order cases
+
     builder
       .addCase(confirmOrder.pending, (state) => {
         state.ordersLoading = true;
