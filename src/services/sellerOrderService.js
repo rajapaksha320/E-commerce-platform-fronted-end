@@ -125,20 +125,28 @@ const sellerOrderService = {
   // Get order statistics for dashboard
   getOrderStatistics: async (sellerId) => {
     try {
-      const [pending, shipped, delivered, cancelled] = await Promise.all([
-        axiosInstance.get("/api/v1/order/filter-order-status", {
-          params: { status: "pending", page: 1, size: 1 },
-        }),
-        axiosInstance.get("/api/v1/order/filter-order-status", {
-          params: { status: "shipped", page: 1, size: 1 },
-        }),
-        axiosInstance.get("/api/v1/order/filter-order-status", {
-          params: { status: "delivered", page: 1, size: 1 },
-        }),
-        axiosInstance.get("/api/v1/order/filter-order-status", {
-          params: { status: "cancelled", page: 1, size: 1 },
-        }),
-      ]);
+      const [pending, shipped, delivered, cancelled, confirmed, confimed] =
+        await Promise.all([
+          axiosInstance.get("/api/v1/order/filter-order-status", {
+            params: { status: "pending", page: 1, size: 1 },
+          }),
+          axiosInstance.get("/api/v1/order/filter-order-status", {
+            params: { status: "shipped", page: 1, size: 1 },
+          }),
+          axiosInstance.get("/api/v1/order/filter-order-status", {
+            params: { status: "delivered", page: 1, size: 1 },
+          }),
+          axiosInstance.get("/api/v1/order/filter-order-status", {
+            params: { status: "cancelled", page: 1, size: 1 },
+          }),
+          axiosInstance.get("/api/v1/order/filter-order-status", {
+            params: { status: "confirmed", page: 1, size: 1 },
+          }),
+          // ADD: Query for the typo version too
+          axiosInstance.get("/api/v1/order/filter-order-status", {
+            params: { status: "confimed", page: 1, size: 1 },
+          }),
+        ]);
 
       return {
         data: {
@@ -146,8 +154,10 @@ const sellerOrderService = {
           shipped: shipped.data.pagination?.totalOrders || 0,
           delivered: delivered.data.pagination?.totalOrders || 0,
           cancelled: cancelled.data.pagination?.totalOrders || 0,
-          // Note: confirmed status removed from new workflow
-          confirmed: 0,
+          // COMBINE: Add both confirmed and confimed counts
+          confirmed:
+            (confirmed.data.pagination?.totalOrders || 0) +
+            (confimed.data.pagination?.totalOrders || 0),
         },
       };
     } catch (error) {
