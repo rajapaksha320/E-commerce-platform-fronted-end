@@ -142,7 +142,6 @@ const sellerOrderService = {
           axiosInstance.get("/api/v1/order/filter-order-status", {
             params: { status: "confirmed", page: 1, size: 1 },
           }),
-          // ADD: Query for the typo version too
           axiosInstance.get("/api/v1/order/filter-order-status", {
             params: { status: "confimed", page: 1, size: 1 },
           }),
@@ -154,7 +153,7 @@ const sellerOrderService = {
           shipped: shipped.data.pagination?.totalOrders || 0,
           delivered: delivered.data.pagination?.totalOrders || 0,
           cancelled: cancelled.data.pagination?.totalOrders || 0,
-          // COMBINE: Add both confirmed and confimed counts
+          
           confirmed:
             (confirmed.data.pagination?.totalOrders || 0) +
             (confimed.data.pagination?.totalOrders || 0),
@@ -176,12 +175,11 @@ const sellerOrderService = {
 
   // Search orders by customer name, order ID, or product name
   searchOrders: async (searchTerm, sellerId, page = 1, pageSize = 10) => {
-    // Since there's no direct search endpoint, we'll get all orders and filter locally
-    // In a real implementation, you might want to add a search endpoint to your backend
+
     const response = await axiosInstance.get(
       `/api/v1/order/seller-orders/${sellerId}`,
       {
-        params: { page: 1, size: 1000 }, // Get more records for local filtering
+        params: { page: 1, size: 1000 }, 
       }
     );
 
@@ -300,7 +298,7 @@ const sellerOrderService = {
     };
   },
 
-  // Validate order status transitions for correct seller workflow
+  // Validate order status transitions 
   isValidStatusTransition: (currentStatus, newStatus) => {
     const validTransitions = {
       // Correct seller workflow
@@ -314,7 +312,7 @@ const sellerOrderService = {
     return validTransitions[currentStatus]?.includes(newStatus) || false;
   },
 
-  // UPDATED: Get next possible statuses for an order (correct seller workflow)
+  // Get next possible statuses for an order 
   getNextPossibleStatuses: (currentStatus) => {
     const statusFlow = {
       // Correct seller workflow
@@ -327,7 +325,7 @@ const sellerOrderService = {
       ],
       delivered: [],
       cancelled: [],
-      confirmed: [], // No actions available for confirmed status
+      confirmed: [], 
     };
 
     return statusFlow[currentStatus] || [];
@@ -348,7 +346,7 @@ const sellerOrderService = {
     );
   },
 
-  // UPDATED: Status mapping utilities for seller workflow
+  // Status mapping utilities
   mapStatusToDisplayName: (status) => {
     const statusMap = {
       pending: "Pending Payment",
@@ -367,28 +365,26 @@ const sellerOrderService = {
       shipped: "blue",
       delivered: "green",
       cancelled: "red",
-      // Legacy support
       confirmed: "orange",
     };
     return colorMap[status] || "gray";
   },
 
-  // UPDATED: Get seller workflow status priorities for sorting
+  // Get seller workflow status priorities for sorting
   getStatusPriority: (status) => {
     const priorities = {
-      pending: 1, // Highest priority - needs action
-      shipped: 2, // Medium priority - awaiting delivery
-      delivered: 3, // Low priority - completed
-      cancelled: 4, // Lowest priority - resolved
-      // Legacy support
-      confirmed: 1.5, // Between pending and shipped
+      pending: 1, 
+      shipped: 2,
+      delivered: 3, 
+      cancelled: 4, 
+      confirmed: 1.5, 
     };
     return priorities[status] || 999;
   },
 
   // Helper to check if order needs seller attention
   orderNeedsAttention: (order) => {
-    const urgentStatuses = ["pending"]; // Only pending orders need attention
+    const urgentStatuses = ["pending"]; 
     return urgentStatuses.includes(order.orderStatus);
   },
 
