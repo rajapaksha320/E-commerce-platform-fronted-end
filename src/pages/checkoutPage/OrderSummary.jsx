@@ -89,12 +89,12 @@ const OrderSummary = ({
                         item.listing?.images?.[0]?.url ||
                         item.listing?.variations?.[0]?.images?.[0]?.url ||
                         item.image ||
-                        "/placeholder-product.jpg"
+                        "/placehold.png"
                       }
                       alt={item.listing?.title || item.name}
                       className="w-12 h-12 object-cover rounded-lg"
                       onError={(e) => {
-                        e.target.src = "/placeholder-product.jpg";
+                        e.target.src = "/placehold.png";
                       }}
                     />
                     <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">

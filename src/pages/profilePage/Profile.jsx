@@ -707,6 +707,9 @@ const Profile = () => {
                       src={profileData.avatar}
                       alt="Profile"
                       className="w-20 h-20 rounded-full object-cover border-4 border-blue-100"
+                      onError={(e) => {
+                        e.target.src = "/user.png";
+                      }}
                     />
                   ) : (
                     <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg border-4 border-blue-100">

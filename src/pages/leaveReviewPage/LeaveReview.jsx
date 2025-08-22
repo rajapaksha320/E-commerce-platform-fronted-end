@@ -627,6 +627,9 @@ const LeaveReview = () => {
                             src={image.preview}
                             alt={image.name}
                             className="w-full h-20 object-cover rounded-lg"
+                            onError={(e) => {
+                              e.target.src = "/placehold.png";
+                            }}
                           />
                           <button
                             onClick={() => removeImage(image.id)}

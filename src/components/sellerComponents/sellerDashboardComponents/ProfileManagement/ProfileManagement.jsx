@@ -378,7 +378,7 @@ const ProfileManagement = () => {
           {uploadError}
         </Alert>
       )}
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Shop Media</CardTitle>
@@ -419,6 +419,9 @@ const ProfileManagement = () => {
                   src={shopProfile.bannerImage}
                   alt="Cover"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.src = "/user.png";
+                  }}
                 />
                 {isEditing && (
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">

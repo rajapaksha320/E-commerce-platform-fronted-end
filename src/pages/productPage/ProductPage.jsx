@@ -513,6 +513,9 @@ const ProductPage = () => {
                   alt={currentImages[selectedImage]?.alt || product.title}
                   className="w-full h-full object-cover cursor-zoom-in"
                   onClick={() => setSelectedImageZoom(true)}
+                  onError={(e) => {
+                    e.target.src = "/placehold.png";
+                  }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gray-100">
@@ -569,6 +572,9 @@ const ProductPage = () => {
                       src={image.url}
                       alt={image.alt || `${product.title} ${index + 1}`}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = "/placehold.png";
+                      }}
                     />
                   </button>
                 ))}
@@ -888,8 +894,6 @@ const ProductPage = () => {
                   <span>Professional Seller</span>
                 </div>
               </div>
-
-             
             </Card>
           </div>
         </div>

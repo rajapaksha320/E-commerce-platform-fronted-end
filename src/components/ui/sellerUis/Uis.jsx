@@ -555,6 +555,9 @@ export const Avatar = ({
         src={src}
         alt={alt}
         className={`${baseClasses} ${sizes[size]} ${className}`}
+        onError={(e) => {
+          e.target.src = "/user.png";
+        }}
       />
     );
   }
@@ -1152,6 +1155,9 @@ export const ImageUpload = ({
                   src={image.url}
                   alt={image.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.src = "/user.png";
+                  }}
                 />
 
                 {/* Main Image Badge */}
