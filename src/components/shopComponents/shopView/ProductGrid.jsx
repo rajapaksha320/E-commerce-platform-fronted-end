@@ -137,7 +137,7 @@ const ProductGrid = ({
     const productImage =
       variation?.images?.[0]?.url ||
       product.images?.[0]?.url ||
-      "/placeholder-product.jpg";
+      "/placehold.png";
 
     // Get product colors
     const colors = variation?.color || [];
@@ -163,7 +163,7 @@ const ProductGrid = ({
             alt={product.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {
-              e.target.src = "/placeholder-product.jpg";
+              e.target.src = "/placehold.png";
             }}
           />
 

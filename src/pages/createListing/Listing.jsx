@@ -2293,6 +2293,9 @@ const Listing = () => {
                           src={previewData.images[0].url}
                           alt="Product preview"
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src = "/placehold.png";
+                          }}
                         />
                       </div>
                     ) : (

@@ -137,7 +137,6 @@ const ContactShop = () => {
                 <ArrowLeft className="h-4 w-4" />
                 <span>Back</span>
               </Button>
-
             </div>
 
             <div className="text-sm text-gray-600">Contact Shop</div>
@@ -157,6 +156,9 @@ const ContactShop = () => {
                     src={shopData.logo}
                     alt={shopData.name}
                     className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
+                    onError={(e) => {
+                      e.target.src = "/placehold.png";
+                    }}
                   />
                   {shopData.verified && (
                     <div className="absolute -bottom-1 -right-1 bg-blue-600 rounded-full p-1">

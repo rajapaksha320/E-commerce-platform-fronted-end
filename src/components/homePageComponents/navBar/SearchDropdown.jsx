@@ -181,6 +181,9 @@ const SearchDropdown = ({
                       className={`rounded-lg object-cover ${
                         isMobile ? "w-12 h-12" : "w-10 h-10"
                       }`}
+                      onError={(e) => {
+                        e.target.src = "/placehold.png";
+                      }}
                     />
                   ) : (
                     <div

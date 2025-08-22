@@ -645,10 +645,13 @@ const CheckoutPage = () => {
                           src={
                             item.image ||
                             item.listing?.images?.[0]?.url ||
-                            "/placeholder-product.jpg"
+                            "/placehold.png"
                           }
                           alt={item.name || item.listing?.title}
                           className="w-16 h-16 object-cover rounded-lg"
+                          onError={(e) => {
+                            e.target.src = "/placehold.png";
+                          }}
                         />
                         <div className="flex-1">
                           <h3 className="font-semibold text-gray-900">

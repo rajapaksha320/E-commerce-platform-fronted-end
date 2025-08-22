@@ -375,6 +375,9 @@ const NavBar = () => {
                               src={userInfo.avatar}
                               alt="Profile"
                               className="w-7 h-7 xl:w-9 xl:h-9 rounded-full ring-2 ring-blue-100 object-cover"
+                              onError={(e) => {
+                                e.target.src = "/placehold.png";
+                              }}
                             />
                           ) : (
                             <div className="w-7 h-7 xl:w-9 xl:h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-xs xl:text-sm shadow-inner border-0">
