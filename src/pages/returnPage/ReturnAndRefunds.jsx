@@ -680,6 +680,9 @@ const ReturnAndTrackingItems = () => {
                                   src={item.image}
                                   alt={item.name}
                                   className="w-16 h-16 object-cover rounded-md border border-gray-200"
+                                  onError={(e) => {
+                                    e.target.src = "/placehold.png";
+                                  }}
                                 />
                                 <div className="flex-1">
                                   <h5 className="font-medium text-sm">
@@ -892,22 +895,9 @@ const ReturnAndTrackingItems = () => {
                                         "✅ Image displayed successfully:",
                                         image.name
                                       );
-                                      console.log(
-                                        "📏 Image dimensions:",
-                                        e.target.naturalWidth,
-                                        "x",
-                                        e.target.naturalHeight
-                                      );
                                     }}
                                     onError={(e) => {
-                                      console.error(
-                                        "❌ Image failed to load:",
-                                        image.name
-                                      );
-                                      console.log(
-                                        "🔍 Checking image URL...",
-                                        image.url?.substring(0, 100)
-                                      );
+                                      e.target.src = "/placehold.png";
                                     }}
                                   />
 

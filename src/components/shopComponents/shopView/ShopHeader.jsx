@@ -135,6 +135,9 @@ const ShopHeader = ({
               src={shop.shopMedia.bannerImage}
               alt={`${shop.basicInformation?.storeName} cover`}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.src = "/placehold.png";
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
           </>
@@ -191,6 +194,9 @@ const ShopHeader = ({
                   src={shop.shopMedia.storeLogo}
                   alt={shop.basicInformation?.storeName}
                   className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white shadow-lg object-cover"
+                  onError={(e) => {
+                    e.target.src = "/placehold.png";
+                  }}
                 />
               ) : (
                 <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white shadow-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -230,7 +236,6 @@ const ShopHeader = ({
                     {shop.basicInformation.storeTagLine}
                   </p>
                 )}
-
 
                 <div className="flex flex-wrap items-center gap-6 mb-6">
                   <div className="flex items-center space-x-2">

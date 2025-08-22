@@ -354,6 +354,9 @@ const ShopProducts = () => {
           src={product.image}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          onError={(e) => {
+            e.target.src = "/placehold.png";
+          }}
         />
 
         {/* Badges */}
@@ -442,7 +445,8 @@ const ShopProducts = () => {
           </div>
           {product.discount && (
             <Badge variant="success" size="sm">
-              Save <span className="m-1">LKR</span> {(product.originalPrice - product.price).toFixed(2)}
+              Save <span className="m-1">LKR</span>{" "}
+              {(product.originalPrice - product.price).toFixed(2)}
             </Badge>
           )}
         </div>
@@ -484,6 +488,9 @@ const ShopProducts = () => {
               src={shopData.logo}
               alt={shopData.name}
               className="w-20 h-20 rounded-2xl border-4 border-white/20"
+              onError={(e) => {
+                e.target.src = "/placehold.png";
+              }}
             />
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">

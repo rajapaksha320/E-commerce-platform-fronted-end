@@ -368,8 +368,7 @@ const PopularShops = () => {
                       alt={store.basicInformation?.storeName}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
-                        e.target.src =
-                          "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=200&fit=crop";
+                        e.target.src = "/placehold.png";
                       }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
@@ -427,8 +426,7 @@ const PopularShops = () => {
                           alt={`${store.basicInformation?.storeName} logo`}
                           className="w-16 h-16 rounded-xl border-4 border-white shadow-lg object-cover"
                           onError={(e) => {
-                            e.target.src =
-                              "https://images.unsplash.com/photo-1611077518981-8f02a0c20acc?w=80&h=80&fit=crop";
+                            e.target.src = "/placehold.png";
                           }}
                         />
                       </div>
@@ -470,8 +468,6 @@ const PopularShops = () => {
                         <p className="text-xs text-gray-500">Products</p>
                       </div>
                     </div>
-
-                   
 
                     {/* Contact Info */}
                     <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
