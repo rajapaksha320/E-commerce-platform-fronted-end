@@ -387,11 +387,9 @@ const ProductPage = () => {
     }
   };
 
-  // Buy Now - NO authentication check, direct navigation (exact same as ProductCollection)
+  // Buy Now - NO authentication check
   const handleBuyNow = (e) => {
     if (e) e.stopPropagation();
-
-    // Direct navigation to checkout like ProductCollection - no auth check
     navigate(`/checkout?product=${product._id}&quantity=${quantity}`);
   };
 
@@ -893,7 +891,7 @@ const ProductPage = () => {
                   {cartButton.text}
                 </Button>
                 <Button
-                  onClick={handleBuyNow}
+                  onClick={(e) => handleBuyNow(product, e)}
                   variant="outline"
                   className="flex-1 py-3 text-lg font-semibold border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white touch-manipulation"
                   size="lg"
