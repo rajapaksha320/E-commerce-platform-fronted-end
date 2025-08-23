@@ -20,4 +20,5 @@ export const countries = [
   { code: "NG", name: "Nigeria", flag: "🇳🇬", dialCode: "+234" },
   { code: "RU", name: "Russia", flag: "🇷🇺", dialCode: "+7" },
   { code: "TR", name: "Turkey", flag: "🇹🇷", dialCode: "+90" },
+  { code: "LK", name: "Sri Lanka", flag: "🇱🇰", dialCode: "+94" },
 ];
