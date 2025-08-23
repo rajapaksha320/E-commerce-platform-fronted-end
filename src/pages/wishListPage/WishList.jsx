@@ -83,7 +83,7 @@ const WishList = () => {
   useEffect(() => {
     if (authUser?._id) {
       fetchWishlist(authUser._id);
-      fetchCartItems(authUser._id, 1, 100); 
+      fetchCartItems(authUser._id, 1, 100);
     }
   }, [authUser, fetchWishlist, fetchCartItems]);
 
@@ -99,113 +99,138 @@ const WishList = () => {
   const shopWishlists = wishlist?.shopWishlists || [];
 
   // Flatten wishlist items and enhance with extracted data
-  const products = productWishlists.flatMap((list) =>
-    (list.items || []).map((product) => {
-      // Extract product name from image alt text or use category
-      const extractProductName = () => {
-        if (product.images && product.images.length > 0) {
-          const primaryImage =
-            product.images.find((img) => img.isPrimary) || product.images[0];
-          if (primaryImage && primaryImage.alt) {
-            // Extract product name from alt text (remove "- Main Product Image" etc.)
-            const cleanName = primaryImage.alt
-              .replace(
-                /\s*-\s*(Main Product Image|Product Image|Image|Back View Detail|Front View|Detail).*$/i,
-                ""
-              )
-              .replace(/\s*Collection.*$/i, "")
-              .trim();
-            if (cleanName) return cleanName;
+  const products = productWishlists
+    .flatMap((list) =>
+      (list.items || []).map((product) => {
+        // Ensure product has an ID - use fallback if missing
+        const productId =
+          product._id || product.id || `temp-${Date.now()}-${Math.random()}`;
+
+        // Extract product name from image alt text or use category
+        const extractProductName = () => {
+          if (product.images && product.images.length > 0) {
+            const primaryImage =
+              product.images.find((img) => img.isPrimary) || product.images[0];
+            if (primaryImage && primaryImage.alt) {
+              // Extract product name from alt text
+              const cleanName = primaryImage.alt
+                .replace(
+                  /\s*-\s*(Main Product Image|Product Image|Image|Back View Detail|Front View|Detail).*$/i,
+                  ""
+                )
+                .replace(/\s*Collection.*$/i, "")
+                .trim();
+              if (cleanName) return cleanName;
+            }
           }
-        }
 
-        // Fallback to category information
-        if (product.category) {
-          const categoryName = product.category.sub || product.category.main;
-          return categoryName ? `${categoryName} Item` : "Product";
-        }
-
-        return "Product";
-      };
-
-      // Extract brand from product name or use category
-      const extractBrand = () => {
-        if (product.images && product.images.length > 0) {
-          const primaryImage =
-            product.images.find((img) => img.isPrimary) || product.images[0];
-          if (primaryImage && primaryImage.alt) {
-            const alt = primaryImage.alt;
-            // Try to extract brand from alt text
-            if (alt.toLowerCase().includes("premium")) return "Premium";
-            if (alt.toLowerCase().includes("cotton")) return "Cotton";
+          // Fallback to category information
+          if (product.category) {
+            const categoryName = product.category.sub || product.category.main;
+            return categoryName ? `${categoryName} Item` : "Product";
           }
-        }
 
-        // Use category main as brand fallback
-        if (product.category && product.category.main) {
-          const categoryMain = product.category.main;
-          return categoryMain.charAt(0).toUpperCase() + categoryMain.slice(1);
-        }
-
-        return "Generic";
-      };
-
-      // Generate a price based on category (for display purposes)
-      const generatePrice = () => {
-        if (!product.category) return "99";
-
-        const categoryPrices = {
-          fashion: ["2500", "3500", "4500", "5500"],
-          electronics: ["15000", "25000", "35000", "45000"],
-          home: ["5000", "8000", "12000", "18000"],
-          jewelry: ["8000", "15000", "25000", "40000"],
+          return "Product";
         };
 
-        const prices = categoryPrices[product.category.main] || [
-          "1500",
-          "2500",
-          "3500",
-          "4500",
-        ];
-        // Use product ID to consistently select the same price
-        const index = parseInt(product._id.slice(-1), 16) % prices.length;
-        return prices[index];
-      };
+        // Extract brand from product name or use category
+        const extractBrand = () => {
+          if (product.images && product.images.length > 0) {
+            const primaryImage =
+              product.images.find((img) => img.isPrimary) || product.images[0];
+            if (primaryImage && primaryImage.alt) {
+              const alt = primaryImage.alt;
+              // Try to extract brand from alt text
+              if (alt.toLowerCase().includes("premium")) return "Premium";
+              if (alt.toLowerCase().includes("cotton")) return "Cotton";
+            }
+          }
 
-      // Generate rating based on product ID (for consistency)
-      const generateRating = () => {
-        const lastChar = product._id.slice(-1);
-        const num = parseInt(lastChar, 16) || 0;
-        return (num % 5) + 1; // Rating between 1-5
-      };
+          // Use category main as brand fallback
+          if (product.category && product.category.main) {
+            const categoryMain = product.category.main;
+            return categoryMain.charAt(0).toUpperCase() + categoryMain.slice(1);
+          }
 
-      return {
-        ...product,
-        // Enhanced extracted data
-        title: extractProductName(),
-        brand: extractBrand(),
-        name: extractProductName(),
-        productName: extractProductName(),
-        brandName: extractBrand(),
+          return "Generic";
+        };
 
-        // Generated data for display (since API doesn't provide actual values)
-        variations: [
-          {
-            price: generatePrice(),
-            originalPrice: (parseInt(generatePrice()) + 500).toString(),
-            quantity: product.status === "outOfStock" ? 0 : 10,
-          },
-        ],
-        averageRating: generateRating(),
-        totalReviews: (parseInt(product._id.slice(-2), 16) % 50) + 5,
+        // Generate a price based on category (for display purposes)
+        const generatePrice = () => {
+          if (!product.category) return "99";
 
-        // Clean up status
-        status: product.status || "active",
-      };
-    })
+          const categoryPrices = {
+            fashion: ["2500", "3500", "4500", "5500"],
+            electronics: ["15000", "25000", "35000", "45000"],
+            home: ["5000", "8000", "12000", "18000"],
+            jewelry: ["8000", "15000", "25000", "40000"],
+          };
+
+          const prices = categoryPrices[product.category.main] || [
+            "1500",
+            "2500",
+            "3500",
+            "4500",
+          ];
+
+          // Use product ID to consistently select the same price - with safety check
+          if (productId && productId.length > 0) {
+            const index = parseInt(productId.slice(-1), 16) % prices.length;
+            return prices[index];
+          }
+
+          // Fallback to first price if no valid ID
+          return prices[0];
+        };
+
+        // Generate rating based on product ID (for consistency)
+        const generateRating = () => {
+          // Safety check for product ID
+          if (!productId || productId.length === 0) {
+            return 4; // Default rating
+          }
+
+          const lastChar = productId.slice(-1);
+          const num = parseInt(lastChar, 16) || 0;
+          return (num % 5) + 1; // Rating between 1-5
+        };
+
+        return {
+          ...product,
+          // Ensure ID is always present
+          _id: productId,
+
+          // Enhanced extracted data
+          title: extractProductName(),
+          brand: extractBrand(),
+          name: extractProductName(),
+          productName: extractProductName(),
+          brandName: extractBrand(),
+
+          // Generated data for display (since API doesn't provide actual values)
+          variations: [
+            {
+              price: generatePrice(),
+              originalPrice: (parseInt(generatePrice()) + 500).toString(),
+              quantity: product.status === "outOfStock" ? 0 : 10,
+            },
+          ],
+          averageRating: generateRating(),
+          totalReviews:
+            productId && productId.length >= 2
+              ? (parseInt(productId.slice(-2), 16) % 50) + 5
+              : 15, // Default review count
+
+          // Clean up status
+          status: product.status || "active",
+        };
+      })
+    )
+    .filter((product) => product._id); // Filter out any products without IDs
+
+  const shops = shopWishlists.flatMap((list) =>
+    (list.items || []).filter((shop) => shop._id || shop.id)
   );
-
-  const shops = shopWishlists.flatMap((list) => list.items || []);
 
   // Get unique categories
   const categories = [
@@ -297,11 +322,13 @@ const WishList = () => {
 
   // Handle remove from wishlist
   const handleRemoveFromWishlist = async (type, itemId) => {
-    if (!authUser?._id) return;
+    if (!authUser?._id || !itemId) return;
 
     try {
       await removeFromWishlist(authUser._id, itemId);
       showToast.success("Item removed from wishlist");
+      // Refresh wishlist after removal
+      fetchWishlist(authUser._id);
     } catch (error) {
       console.error("Failed to remove from wishlist:", error);
       showToast.error("Failed to remove from wishlist. Please try again.");
@@ -310,13 +337,21 @@ const WishList = () => {
 
   // Check if product is in cart
   const isProductInCart = (productId) => {
+    if (!productId) return false;
     return isItemInCart(productId);
   };
 
   // Handle add to cart
   const handleAddToCart = async (product) => {
     if (!authUser?._id) {
-      showToast.error("Please log in to add products to your whishlist!");
+      showToast.error("Please log in to add products to your wishlist!");
+      return;
+    }
+
+    // Validate product ID
+    if (!product._id) {
+      console.error("Product ID is missing", product);
+      showToast.error("Unable to add item to cart - invalid product.");
       return;
     }
 
@@ -359,19 +394,27 @@ const WishList = () => {
   };
 
   const handleViewProduct = (productId) => {
+    if (!productId) return;
     navigate(`/product/${productId}`);
   };
 
   const handleViewShop = (shopId) => {
+    if (!shopId) return;
     navigate(`/shop/${shopId}`);
   };
 
   const handleShare = async (type, item) => {
+    if (!item._id && !item.id) {
+      showToast.error("Unable to share this item.");
+      return;
+    }
+
+    const itemId = item._id || item.id;
     const baseUrl = window.location.origin;
     const url =
       type === "shop"
-        ? `${baseUrl}/shop/${item._id}`
-        : `${baseUrl}/product/${item._id}`;
+        ? `${baseUrl}/shop/${itemId}`
+        : `${baseUrl}/product/${itemId}`;
 
     const title =
       type === "shop"
@@ -424,6 +467,16 @@ const WishList = () => {
   // Get cart button content
   const getCartButtonContent = (product) => {
     const productId = product._id;
+
+    if (!productId) {
+      return {
+        text: "Invalid",
+        icon: <AlertCircle className="h-3 w-3 mr-1" />,
+        disabled: true,
+        variant: "outline",
+      };
+    }
+
     const isLoading = addingToCart.has(productId);
     const inCart = isProductInCart(productId);
     const isOutOfStock = product.status === "outOfStock";
@@ -440,7 +493,6 @@ const WishList = () => {
     if (inCart) {
       return {
         text: "In Cart",
-       
         disabled: false,
         variant: "success",
       };
@@ -681,95 +733,103 @@ const WishList = () => {
                       : "grid-cols-1"
                   }`}
                 >
-                  {displayShops.map((shop) => (
-                    <Card
-                      key={shop._id}
-                      className="group hover:shadow-lg transition-all duration-300"
-                    >
-                      <div className="relative">
-                        <img
-                          src={
-                            shop.shopMedia?.storeLogo ||
-                            shop.shopMedia?.bannerImage ||
-                            "/placehold.png"
-                          }
-                          alt={shop.basicInformation?.storeName || "Shop"}
-                          className="w-full h-36 sm:h-48 object-cover rounded-lg mb-3 sm:mb-4"
-                          onError={(e) => {
-                            e.target.src = "/placehold.png";
-                          }}
-                        />
-                        <div className="absolute top-2 sm:top-3 left-2 sm:left-3">
-                          <Badge
-                            variant={getBadgeVariant(shop.status)}
-                            size="sm"
-                          >
-                            {shop.status || "Active"}
-                          </Badge>
-                        </div>
-                        <button
-                          onClick={() =>
-                            handleRemoveFromWishlist("shops", shop._id)
-                          }
-                          className="absolute top-2 sm:top-3 right-2 sm:right-3 p-1.5 sm:p-2 bg-white/90 hover:bg-white rounded-full shadow-sm transition-all group-hover:scale-110"
-                        >
-                          <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-600 hover:text-red-600" />
-                        </button>
-                      </div>
+                  {displayShops.map((shop) => {
+                    const shopId = shop._id || shop.id;
+                    if (!shopId) return null;
 
-                      <div className="space-y-2 sm:space-y-3">
-                        <div>
-                          <div className="flex items-center space-x-2 mb-1">
-                            <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
-                              {shop.basicInformation?.storeName || "Shop Name"}
-                            </h3>
-                            <BadgeCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600" />
+                    return (
+                      <Card
+                        key={shopId}
+                        className="group hover:shadow-lg transition-all duration-300"
+                      >
+                        <div className="relative">
+                          <img
+                            src={
+                              shop.shopMedia?.storeLogo ||
+                              shop.shopMedia?.bannerImage ||
+                              "/placehold.png"
+                            }
+                            alt={shop.basicInformation?.storeName || "Shop"}
+                            className="w-full h-36 sm:h-48 object-cover rounded-lg mb-3 sm:mb-4"
+                            onError={(e) => {
+                              e.target.src = "/placehold.png";
+                            }}
+                          />
+                          <div className="absolute top-2 sm:top-3 left-2 sm:left-3">
+                            <Badge
+                              variant={getBadgeVariant(shop.status)}
+                              size="sm"
+                            >
+                              {shop.status || "Active"}
+                            </Badge>
                           </div>
-                          <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
-                            {shop.basicInformation?.storeDescription ||
-                              "Shop description"}
-                          </p>
+                          <button
+                            onClick={() =>
+                              handleRemoveFromWishlist("shops", shopId)
+                            }
+                            className="absolute top-2 sm:top-3 right-2 sm:right-3 p-1.5 sm:p-2 bg-white/90 hover:bg-white rounded-full shadow-sm transition-all group-hover:scale-110"
+                          >
+                            <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-600 hover:text-red-600" />
+                          </button>
                         </div>
 
-                        <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
-                            {renderStars(shop.rating || 0)}
-                            <span className="font-medium">
-                              {shop.rating || 0}
+                        <div className="space-y-2 sm:space-y-3">
+                          <div>
+                            <div className="flex items-center space-x-2 mb-1">
+                              <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
+                                {shop.basicInformation?.storeName ||
+                                  "Shop Name"}
+                              </h3>
+                              <BadgeCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600" />
+                            </div>
+                            <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
+                              {shop.basicInformation?.storeDescription ||
+                                "Shop description"}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm text-gray-600">
+                            <div className="flex items-center space-x-1">
+                              {renderStars(shop.rating || 0)}
+                              <span className="font-medium">
+                                {shop.rating || 0}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-1 text-xs sm:text-sm text-gray-600">
+                            <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            <span>
+                              {shop.contactDetails?.storeLocation || "Location"}
                             </span>
                           </div>
-                        </div>
 
-                        <div className="flex items-center space-x-1 text-xs sm:text-sm text-gray-600">
-                          <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                          <span>
-                            {shop.contactDetails?.storeLocation || "Location"}
-                          </span>
+                          <div className="flex space-x-2 pt-2">
+                            <Button
+                              onClick={() => handleViewShop(shopId)}
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 text-xs sm:text-sm"
+                            >
+                              <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                              <span className="hidden sm:inline">
+                                Visit Shop
+                              </span>
+                              <span className="sm:hidden">Visit</span>
+                            </Button>
+                            <Button
+                              onClick={() => handleShare("shop", shop)}
+                              size="sm"
+                              className="p-2"
+                              title="Share shop"
+                            >
+                              <Share2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          </div>
                         </div>
-
-                        <div className="flex space-x-2 pt-2">
-                          <Button
-                            onClick={() => handleViewShop(shop._id)}
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 text-xs sm:text-sm"
-                          >
-                            <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                            <span className="hidden sm:inline">Visit Shop</span>
-                            <span className="sm:hidden">Visit</span>
-                          </Button>
-                          <Button
-                            onClick={() => handleShare("shop", shop)}
-                            size="sm"
-                            className="p-2"
-                            title="Share shop"
-                          >
-                            <Share2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    );
+                  })}
                 </div>
 
                 {/* Shops Pagination */}
@@ -867,12 +927,12 @@ const WishList = () => {
                             onClick={() =>
                               handleRemoveFromWishlist("products", product._id)
                             }
-                            className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1 sm:p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-all group-hover:scale-110"
+                            className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1 sm:p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-all group-hover:scale-110 z-10"
                           >
-                            <X className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-600 hover:text-red-600" />
+                            <X className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-600 hover:text-red-600 " />
                           </button>
                           {product.status === "outOfStock" && (
-                            <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center z-0">
                               <span className="text-white font-medium text-xs bg-red-600 px-2 py-1 rounded-full">
                                 Out of Stock
                               </span>
@@ -922,6 +982,7 @@ const WishList = () => {
                               variant="outline"
                               size="sm"
                               className="flex-1 text-xs py-1.5"
+                              disabled={!product._id}
                             >
                               <Eye className="h-3 w-3 mr-1" />
                               View
