@@ -731,24 +731,8 @@ const CategoriesCollection = () => {
 
                   {/* Action Buttons */}
                   <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => toggleLike(category.id, e)}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors touch-manipulation ${
-                        likedCategories.has(category.id)
-                          ? "bg-red-500 text-white"
-                          : "bg-white/90 text-gray-600 hover:text-red-500"
-                      }`}
-                      aria-label="Add to favorites"
-                    >
-                      <Heart className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={(e) => handleQuickView(category, e)}
-                      className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:text-blue-500 transition-colors touch-manipulation"
-                      aria-label="Quick view"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
+                    
+                    
                   </div>
 
                   {/* Discount Badge */}
