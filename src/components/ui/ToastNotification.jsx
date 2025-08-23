@@ -16,7 +16,7 @@ import {
 
 const ToastNotification = forwardRef((props, ref) => {
   const [notifications, setNotifications] = useState([]);
-  const maxNotifications = 3; // Maximum number of toasts to show at once
+  const maxNotifications = 1; 
 
   // Expose methods to parent components
   useImperativeHandle(ref, () => ({

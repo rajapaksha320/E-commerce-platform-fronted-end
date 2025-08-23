@@ -426,7 +426,7 @@ const ProductCollection = () => {
     e.stopPropagation();
 
     if (!authUser?._id) {
-      navigate("/login");
+      showToast.error("Please log in to add products to your wishlist!");
       return;
     }
 
@@ -471,7 +471,7 @@ const ProductCollection = () => {
     e.stopPropagation();
 
     if (!authUser?._id) {
-      navigate("/login");
+      showToast.error("Please log in to add products to your cart!");
       return;
     }
 

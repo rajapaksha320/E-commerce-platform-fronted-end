@@ -213,7 +213,7 @@ const Shops = () => {
     e.stopPropagation();
 
     if (!authUser?._id) {
-      navigate("/login");
+      showToast.error("Please log in to add shops to your wishlist!");
       return;
     }
 

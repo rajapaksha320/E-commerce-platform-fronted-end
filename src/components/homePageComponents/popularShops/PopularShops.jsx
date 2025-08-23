@@ -176,7 +176,7 @@ const PopularShops = () => {
     e.stopPropagation();
 
     if (!authUser) {
-      navigate("/login");
+         showToast.error("Please log in to add shops to your whishlist!");
       return;
     }
 
