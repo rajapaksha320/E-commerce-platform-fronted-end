@@ -29,6 +29,7 @@ import {
   AlertCircle,
   Loader,
   Building,
+  Loader2,
 } from "lucide-react";
 
 import {
@@ -40,11 +41,17 @@ import Pagination from "../../components/ui/ContactUis/Pagination";
 import useUser from "../../hooks/useUser";
 import { useSelector } from "react-redux";
 import { selectUser as selectAuthUser } from "../../store/slices/authSlice";
+import ToastNotification, {
+  useToast,
+} from "../../components/ui/ToastNotification";
 
 const ProductPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
   const authUser = useSelector(selectAuthUser);
+
+  // Toast notification hook
+  const { toastRef, showToast } = useToast();
 
   // Redux hooks
   const {
@@ -67,6 +74,8 @@ const ProductPage = () => {
     fetchWishlist,
     wishlist,
     wishlistLoading,
+    fetchCartItems,
+    removeFromWishlist,
     // Add shop-related functions
     fetchShopDetailsById,
     currentShopDetails,
@@ -84,6 +93,10 @@ const ProductPage = () => {
   const [selectedImageZoom, setSelectedImageZoom] = useState(false);
   const [wishlistOperationLoading, setWishlistOperationLoading] =
     useState(false);
+
+  // Cart and wishlist operation states
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [addingToWishlist, setAddingToWishlist] = useState(false);
 
   // State to store shop information
   const [shopInfo, setShopInfo] = useState(null);
@@ -202,6 +215,7 @@ const ProductPage = () => {
   if (listingDetailLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <ToastNotification ref={toastRef} />
         <div className="text-center">
           <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-gray-600">Loading product details...</p>
@@ -214,6 +228,7 @@ const ProductPage = () => {
   if (listingDetailError || !product) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <ToastNotification ref={toastRef} />
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
@@ -327,52 +342,101 @@ const ProductPage = () => {
     }
   };
 
+  // Updated Add to Cart with toast notifications (like ProductCollection)
   const handleAddToCart = async () => {
-    if (!authUser) {
-      navigate("/login");
+    // Check authentication first
+    if (!authUser?._id) {
+      showToast.error("Please log in to add products to your cart!");
       return;
     }
 
-    if (!currentVariation) return;
+    if (!currentVariation) {
+      showToast.error("Please select product options before adding to cart.");
+      return;
+    }
+
+    // Check if item is already in cart
+    if (isItemInCart(product._id)) {
+      showToast.cart("Item is already in your cart", {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
+      return;
+    }
+
+    setAddingToCart(true);
 
     try {
-      await addItemToCart(authUser._id, product._id, quantity);
+      await addItemToCart(authUser._id, product._id, quantity).unwrap();
+      await fetchCartItems(authUser._id, 1, 100);
+
+      const productName =
+        product.title || product.name || product.productName || "Item";
+      showToast.success(`"${productName}" added to cart successfully!`, {
+        text: "View Cart",
+        action: () => navigate("/shopping-cart"),
+      });
     } catch (error) {
-      console.error("Error adding to cart:", error);
-    }
-  };
-
-  const handleBuyNow = () => {
-    if (!authUser) {
-      navigate("/login");
-      return;
-    }
-    // Add to cart first, then navigate to checkout
-    handleAddToCart();
-    navigate("/checkout");
-  };
-
-  const handleWishlistToggle = async () => {
-    if (!authUser) {
-      navigate("/login");
-      return;
-    }
-
-    if (wishlistOperationLoading) return; // Prevent double-clicking
-
-    setWishlistOperationLoading(true);
-
-    try {
-      await quickToggleWishlist(authUser._id, product._id, "product");
-      // The state will be updated automatically by the useEffect that watches wishlist changes
-      // But we can also update it immediately for better UX
-      setIsWishlisted(!isWishlisted);
-    } catch (error) {
-      console.error("Error toggling wishlist:", error);
-      // Revert the state if there was an error
-      setIsWishlisted(isWishlisted);
+      console.error("Failed to add to cart:", error);
+      showToast.error("Failed to add to cart. Please try again.", {
+        text: "Retry",
+        action: () => handleAddToCart(),
+      });
     } finally {
-      setWishlistOperationLoading(false);
+      setAddingToCart(false);
+    }
+  };
+
+  // Buy Now - NO authentication check, direct navigation (exact same as ProductCollection)
+  const handleBuyNow = (e) => {
+    if (e) e.stopPropagation();
+
+    // Direct navigation to checkout like ProductCollection - no auth check
+    navigate(`/checkout?product=${product._id}&quantity=${quantity}`);
+  };
+
+  // Updated Wishlist Toggle with toast notifications (like ProductCollection)
+  const handleWishlistToggle = async () => {
+    // Check authentication first
+    if (!authUser?._id) {
+      showToast.error("Please log in to add products to your wishlist!");
+      return;
+    }
+
+    if (addingToWishlist) return; // Prevent double-clicking
+
+    const productId = product._id;
+    const isInWishlist = isItemInProductWishlist(productId);
+
+    setAddingToWishlist(true);
+
+    try {
+      const productName =
+        product.title || product.name || product.productName || "Item";
+
+      if (isInWishlist) {
+        await removeFromWishlist(authUser._id, productId);
+        setIsWishlisted(false);
+        showToast.success(`"${productName}" removed from wishlist`);
+      } else {
+        await quickToggleWishlist(authUser._id, productId, "product");
+        setIsWishlisted(true);
+        showToast.success(`"${productName}" added to wishlist!`, {
+          text: "View Wishlist",
+          action: () => navigate("/wishlist"),
+        });
+      }
+
+      await fetchWishlist(authUser._id);
+    } catch (error) {
+      console.error("Failed to update wishlist:", error);
+      const action = isInWishlist ? "remove from" : "add to";
+      showToast.error(`Failed to ${action} wishlist. Please try again.`, {
+        text: "Retry",
+        action: () => handleWishlistToggle(),
+      });
+    } finally {
+      setAddingToWishlist(false);
     }
   };
 
@@ -387,6 +451,9 @@ const ProductPage = () => {
       navigate(`/shop/${seller._id}`);
     } else {
       console.error("Neither shop ID nor seller ID available");
+      showToast.error(
+        "Unable to visit shop. Seller information not available."
+      );
     }
   };
 
@@ -443,8 +510,78 @@ const ProductPage = () => {
 
   const shopDisplayInfo = getShopDisplayInfo();
 
+  // Helper function to get cart button content
+  const getCartButtonContent = () => {
+    const inCart = isItemInCart(product._id);
+    const isOutOfStock = !isInStock;
+
+    if (addingToCart) {
+      return {
+        text: "Adding to Cart...",
+        icon: <Loader2 className="h-5 w-5 mr-2 animate-spin" />,
+        disabled: true,
+        variant: "primary",
+      };
+    }
+
+    if (inCart) {
+      return {
+        text: "Added to Cart",
+        icon: <CheckCircle className="h-5 w-5 mr-2" />,
+        disabled: false,
+        variant: "success",
+      };
+    }
+
+    if (isOutOfStock) {
+      return {
+        text: "Out of Stock",
+        icon: <AlertCircle className="h-5 w-5 mr-2" />,
+        disabled: true,
+        variant: "outline",
+      };
+    }
+
+    return {
+      text: "Add to Cart",
+      icon: <ShoppingCart className="h-5 w-5 mr-2" />,
+      disabled: false,
+      variant: "primary",
+    };
+  };
+
+  // Helper function to get wishlist button content
+  const getWishlistButtonContent = () => {
+    if (addingToWishlist) {
+      return {
+        className: "text-gray-500",
+        icon: <Loader2 className="h-4 w-4 animate-spin" />,
+        disabled: true,
+      };
+    }
+
+    if (isWishlisted) {
+      return {
+        className: "text-red-600",
+        icon: <Heart className="h-4 w-4 fill-current" />,
+        disabled: false,
+      };
+    }
+
+    return {
+      className: "text-gray-600 hover:text-red-600",
+      icon: <Heart className="h-4 w-4" />,
+      disabled: false,
+    };
+  };
+
+  const cartButton = getCartButtonContent();
+  const wishlistButton = getWishlistButtonContent();
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <ToastNotification ref={toastRef} />
+
       {/* Breadcrumb & Back */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
@@ -480,18 +617,10 @@ const ProductPage = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleWishlistToggle}
-                disabled={wishlistOperationLoading}
-                className={`touch-manipulation ${
-                  isWishlisted ? "text-red-600" : "text-gray-600"
-                }`}
+                disabled={wishlistButton.disabled}
+                className={`touch-manipulation ${wishlistButton.className}`}
               >
-                {wishlistOperationLoading ? (
-                  <Loader className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Heart
-                    className={`h-4 w-4 ${isWishlisted ? "fill-current" : ""}`}
-                  />
-                )}
+                {wishlistButton.icon}
               </Button>
               <Button variant="ghost" size="sm" className="touch-manipulation">
                 <Share2 className="h-4 w-4" />
@@ -616,11 +745,11 @@ const ProductPage = () => {
             <div className="space-y-2">
               <div className="flex items-baseline space-x-3">
                 <span className="text-3xl font-bold text-gray-900">
-                  ${getCurrentPrice().toFixed(2)}
+                  LKR {getCurrentPrice().toFixed(2)}
                 </span>
                 {getOriginalPrice() > getCurrentPrice() && (
                   <span className="text-xl text-gray-500 line-through">
-                    ${getOriginalPrice().toFixed(2)}
+                    LKR {getOriginalPrice().toFixed(2)}
                   </span>
                 )}
                 {getDiscount() > 0 && (
@@ -631,7 +760,7 @@ const ProductPage = () => {
               </div>
               {getDiscount() > 0 && (
                 <p className="text-sm text-green-600 font-medium">
-                  You save $
+                  You save LKR{" "}
                   {(getOriginalPrice() - getCurrentPrice()).toFixed(2)}
                 </p>
               )}
@@ -750,16 +879,18 @@ const ProductPage = () => {
               <div className="flex space-x-3">
                 <Button
                   onClick={handleAddToCart}
-                  className="flex-1 py-3 text-lg font-semibold touch-manipulation"
+                  className={`flex-1 py-3 text-lg font-semibold touch-manipulation transition-all duration-200 ${
+                    cartButton.variant === "success"
+                      ? "bg-green-600 hover:bg-green-700 text-white shadow-md"
+                      : cartButton.variant === "primary"
+                      ? "bg-blue-600 hover:bg-blue-700 text-white"
+                      : "bg-gray-400 text-gray-700"
+                  }`}
                   size="lg"
-                  disabled={!isInStock || cartLoading}
+                  disabled={cartButton.disabled}
                 >
-                  {cartLoading ? (
-                    <Loader className="h-5 w-5 animate-spin mr-2" />
-                  ) : (
-                    <ShoppingCart className="h-5 w-5 mr-2" />
-                  )}
-                  {isItemInCart(product._id) ? "Added to Cart" : "Add to Cart"}
+                  {cartButton.icon}
+                  {cartButton.text}
                 </Button>
                 <Button
                   onClick={handleBuyNow}
@@ -768,7 +899,7 @@ const ProductPage = () => {
                   size="lg"
                   disabled={!isInStock}
                 >
-                  Buy It Now
+                  {!isInStock ? "Unavailable" : "Buy It Now"}
                 </Button>
               </div>
 
@@ -781,7 +912,7 @@ const ProductPage = () => {
                 disabled={shopLoading}
               >
                 {shopLoading ? (
-                  <Loader className="h-5 w-5 mr-2 animate-spin" />
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                 ) : (
                   <Building className="h-5 w-5 mr-2" />
                 )}
@@ -875,7 +1006,7 @@ const ProductPage = () => {
                   disabled={shopLoading}
                 >
                   {shopLoading ? (
-                    <Loader className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Building className="h-4 w-4" />
                   )}
@@ -1002,9 +1133,9 @@ const ProductPage = () => {
                         Weight: currentVariation.weight || product.weight,
                         Colors: currentVariation.color?.join(", "),
                         Sizes: currentVariation.sizes?.join(", "),
-                        Price: `$${currentVariation.price}`,
+                        Price: `LKR ${currentVariation.price}`,
                         "Original Price": currentVariation.originalPrice
-                          ? `$${currentVariation.originalPrice}`
+                          ? `LKR ${currentVariation.originalPrice}`
                           : "N/A",
                         Stock: currentVariation.quantity,
                       })

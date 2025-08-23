@@ -22,6 +22,7 @@ import { Button, Badge, ContactCard as Card } from "../../ui/ContactUis/Uis";
 import useUser from "../../../hooks/useUser";
 import { useSelector } from "react-redux";
 import { selectUser as selectAuthUser } from "../../../store/slices/authSlice";
+import ToastNotification, { useToast } from "../../ui/ToastNotification";
 
 const ShopHeader = ({
   shop,
@@ -36,6 +37,7 @@ const ShopHeader = ({
 }) => {
   const navigate = useNavigate();
   const authUser = useSelector(selectAuthUser);
+  const { toastRef, showToast } = useToast();
 
   // Redux hooks for wishlist management
   const {
@@ -51,7 +53,7 @@ const ShopHeader = ({
 
   const handleWishlistToggle = async () => {
     if (!authUser?._id) {
-      navigate("/login");
+      showToast.error("Please log in to add shops to your whishlist!");
       return;
     }
 
@@ -127,6 +129,7 @@ const ShopHeader = ({
     <div
       className={`bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden ${className}`}
     >
+      <ToastNotification ref={toastRef} />
       {/* Cover Image */}
       <div className="relative h-48 md:h-64 bg-gradient-to-r from-blue-600 to-purple-600">
         {shop.shopMedia?.bannerImage ? (

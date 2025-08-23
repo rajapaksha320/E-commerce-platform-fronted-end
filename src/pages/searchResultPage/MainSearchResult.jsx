@@ -165,7 +165,7 @@ const MainSearchResult = () => {
 
   const handleAddToCart = async (product) => {
     if (!authUser) {
-      navigate("/login");
+        showToast.error("Please log in to add products to your cart!");
       return;
     }
 
@@ -207,7 +207,7 @@ const MainSearchResult = () => {
 
   const handleToggleFavorite = async (product) => {
     if (!authUser) {
-      navigate("/login");
+     showToast.error("Please log in to add products to your whishlist!");
       return;
     }
 

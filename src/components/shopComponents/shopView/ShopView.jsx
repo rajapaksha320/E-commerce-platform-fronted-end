@@ -311,7 +311,7 @@ const ShopView = () => {
 
   const handleAddToCart = async (product) => {
     if (!authUser) {
-      navigate("/login");
+      showToast.error("Please log in to add products to your cart!");
       return;
     }
 
@@ -353,7 +353,7 @@ const ShopView = () => {
 
   const handleToggleFavorite = async (product) => {
     if (!authUser) {
-      navigate("/login");
+      showToast.error("Please log in to add products to your whishlist!");
       return;
     }
 
