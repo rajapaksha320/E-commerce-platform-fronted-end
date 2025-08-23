@@ -316,7 +316,7 @@ const WishList = () => {
   // Handle add to cart
   const handleAddToCart = async (product) => {
     if (!authUser?._id) {
-      navigate("/login");
+      showToast.error("Please log in to add products to your whishlist!");
       return;
     }
 

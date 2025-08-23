@@ -7,21 +7,21 @@ const userService = {
   // Get all stores
   getAllStores: async (page = 1, pageSize = 10) => {
     return await axiosInstance.get(
-      `/api/v1/store/get-all-store?page=${page}&pageSize=${pageSize}`
+      `/api/v1/store/get-all-store?isDiactivate=false&page=${page}&pageSize=${pageSize}`
     );
   },
 
   // Filter stores by category
   filterStoresByCategory: async (categoryMain, page = 1, pageSize = 10) => {
     return await axiosInstance.get(
-      `/api/v1/store/filter-category?categoryMain=${categoryMain}&page=${page}&pageSize=${pageSize}`
+      `/api/v1/store/filter-category?categoryMain=${categoryMain}&isDiactivate=false&page=${page}&pageSize=${pageSize}`
     );
   },
 
   // Get shop listings by seller ID
   getShopListings: async (sellerId, page = 1, pageSize = 10) => {
     return await axiosInstance.get(
-      `/api/v1/store/get-each-shop-listing?sellerId=${sellerId}&page=${page}&pageSize=${pageSize}`
+      `/api/v1/store/get-each-shop-listing?sellerId=${sellerId}&isDiactivate=false&page=${page}&pageSize=${pageSize}`
     );
   },
 

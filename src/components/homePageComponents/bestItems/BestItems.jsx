@@ -494,7 +494,7 @@ const BestItems = () => {
     e.stopPropagation();
 
     if (!authUser) {
-      navigate("/login");
+      showToast.error("Please log in to add products to your cart!");
       return;
     }
 
@@ -533,7 +533,7 @@ const BestItems = () => {
     e.stopPropagation();
 
     if (!authUser) {
-      navigate("/login");
+      showToast.error("Please log in to add products to your wishlist!");
       return;
     }
 

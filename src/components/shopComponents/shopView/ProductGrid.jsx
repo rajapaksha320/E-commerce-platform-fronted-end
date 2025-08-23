@@ -5,6 +5,8 @@ import { Button, Badge, ContactCard as Card } from "../../ui/ContactUis/Uis";
 import useUser from "../../../hooks/useUser";
 import { useSelector } from "react-redux";
 import { selectUser as selectAuthUser } from "../../../store/slices/authSlice";
+import ToastNotification, { useToast } from "../ui/ToastNotification";
+
 
 const ProductGrid = ({
   products,
@@ -16,6 +18,7 @@ const ProductGrid = ({
 }) => {
   const navigate = useNavigate();
   const authUser = useSelector(selectAuthUser);
+   const { toastRef, showToast } = useToast();
 
   // Redux hooks
   const {
@@ -34,7 +37,7 @@ const ProductGrid = ({
     e.stopPropagation();
 
     if (!authUser) {
-      navigate("/login");
+      showToast.error("Please log in to add products to your cart!");
       return;
     }
 
@@ -49,7 +52,7 @@ const ProductGrid = ({
     e.stopPropagation();
 
     if (!authUser) {
-      navigate("/login");
+      showToast.error("Please log in to manage your wishlist!");
       return;
     }
 
@@ -457,17 +460,20 @@ const ProductGrid = ({
   }
 
   return (
-    <div className={`${className}`}>
-      <div
-        className={`grid gap-6 ${
-          viewMode === "grid"
-            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-            : "grid-cols-1"
-        }`}
-      >
-        {products.map(renderProductCard)}
+    <section>
+      <ToastNotification ref={toastRef} />
+      <div className={`${className}`}>
+        <div
+          className={`grid gap-6 ${
+            viewMode === "grid"
+              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              : "grid-cols-1"
+          }`}
+        >
+          {products.map(renderProductCard)}
+        </div>
       </div>
-    </div>
+    </section>
   );
 };
 

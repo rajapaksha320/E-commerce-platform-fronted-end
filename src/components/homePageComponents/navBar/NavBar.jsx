@@ -214,6 +214,7 @@ const NavBar = () => {
   const handleLogout = () => {
     dispatch(logout());
     setIsProfileMenuOpen(false);
+    window.location.reload();
   };
 
   const handleWishlistClick = () => {

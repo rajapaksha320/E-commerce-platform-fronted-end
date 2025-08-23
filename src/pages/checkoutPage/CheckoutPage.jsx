@@ -91,7 +91,7 @@ const CheckoutPage = () => {
   // Initialize data on component mount
   useEffect(() => {
     if (!authUser?._id) {
-      navigate("/login");
+      showToast.error("Please log in to proceed with checkout!");
       return;
     }
 
