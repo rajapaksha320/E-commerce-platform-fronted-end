@@ -287,13 +287,6 @@ const SellerLayout = ({ children }) => {
                       <User className="mr-3 h-4 w-4" />
                       Profile Settings
                     </button>
-                    <button
-                      className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center text-left"
-                      onClick={() => navigate("/seller-dashboard")}
-                    >
-                      <Settings className="mr-3 h-4 w-4" />
-                      Dashboard
-                    </button>
                   </div>
 
                   <div className="border-t border-gray-100 py-2">
