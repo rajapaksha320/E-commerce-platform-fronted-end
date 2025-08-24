@@ -1,14 +1,19 @@
 // store/slices/sellerSlice.js
-import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
-import sellerService from '../../services/sellerListingService';
+import {
+  createSlice,
+  createAsyncThunk,
+  createSelector,
+} from "@reduxjs/toolkit";
+import sellerService from "../../services/sellerListingService";
+import axiosInstance from "../../services/axiosInstance";
 
 // Backend status constants
 const BACKEND_STATUSES = {
-  ACTIVE: 'active',
-  INACTIVE: 'inactive', 
-  DRAFT: 'draft',
-  OUT_OF_STOCK: 'outOfStock',
-  SOLD: 'sold'
+  ACTIVE: "active",
+  INACTIVE: "inactive",
+  DRAFT: "draft",
+  OUT_OF_STOCK: "outOfStock",
+  SOLD: "sold",
 };
 
 // Normalized state structure for performance
@@ -37,14 +42,14 @@ const initialState = {
       sold: 0,
     },
   },
-  
+
   // Store/Shop state
   stores: {
     byId: {},
     allIds: [],
     currentStoreId: null,
   },
-  
+
   // UI state
   ui: {
     listingsLoading: false,
@@ -56,12 +61,12 @@ const initialState = {
     imageUploadLoading: false,
     error: null,
     success: false,
-    message: '',
+    message: "",
     selectedListingId: null,
     pendingImageUploads: [],
     isEmpty: false, // New state to track empty results
   },
-  
+
   // Cache management
   cache: {
     listingsLastFetch: null,
@@ -74,12 +79,12 @@ const initialState = {
 const normalizeListings = (listings) => {
   const byId = {};
   const allIds = [];
-  
-  listings.forEach(listing => {
+
+  listings.forEach((listing) => {
     byId[listing._id] = listing;
     allIds.push(listing._id);
   });
-  
+
   return { byId, allIds };
 };
 
@@ -87,12 +92,12 @@ const normalizeListings = (listings) => {
 const normalizeStores = (stores) => {
   const byId = {};
   const allIds = [];
-  
-  stores.forEach(store => {
+
+  stores.forEach((store) => {
     byId[store._id] = store;
     allIds.push(store._id);
   });
-  
+
   return { byId, allIds };
 };
 
@@ -100,40 +105,51 @@ const normalizeStores = (stores) => {
 
 // Listing Operations
 export const createListing = createAsyncThunk(
-  'seller/createListing',
+  "seller/createListing",
   async (listingData, { rejectWithValue }) => {
     try {
       const response = await sellerService.createListing(listingData);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to create listing'
+        error.response?.data?.message || "Failed to create listing"
       );
     }
   }
 );
 
 export const updateListing = createAsyncThunk(
-  'seller/updateListing',
+  "seller/updateListing",
   async ({ listingId, updateData }, { rejectWithValue }) => {
     try {
       const response = await sellerService.updateListing(listingId, updateData);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to update listing'
+        error.response?.data?.message || "Failed to update listing"
       );
     }
   }
 );
 
+// UPDATED: Fetch All Listings with sellerId
 export const fetchAllListings = createAsyncThunk(
-  'seller/fetchAllListings',
-  async ({ page = 1, pageSize = 10, useCache = true } = {}, { getState, rejectWithValue }) => {
+  "seller/fetchAllListings",
+  async (
+    { page = 1, pageSize = 10, useCache = true } = {},
+    { getState, rejectWithValue }
+  ) => {
     try {
       const state = getState();
       const { cache } = state.seller;
-      
+
+      // Get sellerId from auth state
+      const sellerId = state.auth.user?._id;
+
+      if (!sellerId) {
+        return rejectWithValue("Seller ID not found. Please log in again.");
+      }
+
       // Cache check
       if (useCache && cache.listingsLastFetch) {
         const timeSinceLastFetch = Date.now() - cache.listingsLastFetch;
@@ -141,103 +157,150 @@ export const fetchAllListings = createAsyncThunk(
           return { cached: true };
         }
       }
-      
-      const response = await sellerService.getAllListings(page, pageSize);
+
+      const response = await sellerService.getAllListings(
+        page,
+        pageSize,
+        sellerId
+      );
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to fetch listings'
+        error.response?.data?.message || "Failed to fetch listings"
       );
     }
   }
 );
 
 export const fetchListingById = createAsyncThunk(
-  'seller/fetchListingById',
+  "seller/fetchListingById",
   async (listingId, { rejectWithValue }) => {
     try {
       const response = await sellerService.getListingById(listingId);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to fetch listing details'
+        error.response?.data?.message || "Failed to fetch listing details"
       );
     }
   }
 );
 
+// UPDATED: Fetch Listings By Status with sellerId
 export const fetchListingsByStatus = createAsyncThunk(
-  'seller/fetchListingsByStatus',
-  async ({ status, page = 1, pageSize = 10 }, { rejectWithValue }) => {
+  "seller/fetchListingsByStatus",
+  async (
+    { status, page = 1, pageSize = 10 },
+    { getState, rejectWithValue }
+  ) => {
     try {
+      const state = getState();
+      const sellerId = state.auth.user?._id;
+
+      if (!sellerId) {
+        return rejectWithValue("Seller ID not found. Please log in again.");
+      }
+
       // Map frontend status to backend status
       const backendStatus = sellerService.mapFrontendToBackendStatus(status);
-      const response = await sellerService.getListingsByStatus(backendStatus, page, pageSize);
+      const response = await sellerService.getListingsByStatus(
+        backendStatus,
+        page,
+        pageSize,
+        sellerId
+      );
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to fetch listings by status'
+        error.response?.data?.message || "Failed to fetch listings by status"
       );
     }
   }
 );
 
 export const deleteListing = createAsyncThunk(
-  'seller/deleteListing',
+  "seller/deleteListing",
   async (listingId, { rejectWithValue }) => {
     try {
       const response = await sellerService.deleteListing(listingId);
       return { ...response.data, listingId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to delete listing'
+        error.response?.data?.message || "Failed to delete listing"
       );
     }
   }
 );
 
+// UPDATED: Filter Listings with sellerId
 export const filterListings = createAsyncThunk(
-  'seller/filterListings',
-  async (filters, { rejectWithValue }) => {
+  "seller/filterListings",
+  async (filters, { getState, rejectWithValue }) => {
     try {
-      // Map frontend status to backend status
-      const processedFilters = { ...filters };
-      if (processedFilters.status) {
-        processedFilters.status = sellerService.mapFrontendToBackendStatus(processedFilters.status);
+      const state = getState();
+      const sellerId = state.auth.user?._id;
+
+      if (!sellerId) {
+        return rejectWithValue("Seller ID not found. Please log in again.");
       }
-      
+
+      // Map frontend status to backend status
+      const processedFilters = {
+        ...filters,
+        sellerId, // Add sellerId to filters
+      };
+
+      if (processedFilters.status) {
+        processedFilters.status = sellerService.mapFrontendToBackendStatus(
+          processedFilters.status
+        );
+      }
+
       const response = await sellerService.filterListings(processedFilters);
       return { ...response.data, filters: processedFilters };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to filter listings'
+        error.response?.data?.message || "Failed to filter listings"
       );
     }
   }
 );
 
-// Search listings
+// UPDATED: Search listings with sellerId
 export const searchListings = createAsyncThunk(
-  'seller/searchListings',
-  async ({ searchTerm, additionalFilters = {} }, { rejectWithValue }) => {
+  "seller/searchListings",
+  async (
+    { searchTerm, additionalFilters = {} },
+    { getState, rejectWithValue }
+  ) => {
     try {
+      const state = getState();
+      const sellerId = state.auth.user?._id;
+
+      if (!sellerId) {
+        return rejectWithValue("Seller ID not found. Please log in again.");
+      }
+
       const filters = {
         search: searchTerm,
+        sellerId, // Add sellerId to search filters
         ...additionalFilters,
         page: 1,
         pageSize: 10,
       };
-      
-      // Map frontend status to backend status 
+
+      // Map frontend status to backend status
       if (filters.status) {
-        filters.status = sellerService.mapFrontendToBackendStatus(filters.status);
+        filters.status = sellerService.mapFrontendToBackendStatus(
+          filters.status
+        );
       }
-      
+
       const response = await sellerService.filterListings(filters);
       return { ...response.data, filters };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to search listings'
+        error.response?.data?.message || "Failed to search listings"
       );
     }
   }
@@ -245,79 +308,128 @@ export const searchListings = createAsyncThunk(
 
 // Bulk operations
 export const bulkUpdateListings = createAsyncThunk(
-  'seller/bulkUpdateListings',
+  "seller/bulkUpdateListings",
   async ({ listingIds, updateData }, { rejectWithValue }) => {
     try {
       // Map frontend status to backend status if present
       const processedUpdateData = { ...updateData };
       if (processedUpdateData.status) {
-        processedUpdateData.status = sellerService.mapFrontendToBackendStatus(processedUpdateData.status);
+        processedUpdateData.status = sellerService.mapFrontendToBackendStatus(
+          processedUpdateData.status
+        );
       }
-      
-      const promises = listingIds.map(id => 
+
+      const promises = listingIds.map((id) =>
         sellerService.updateListing(id, processedUpdateData)
       );
       const responses = await Promise.all(promises);
-      return responses.map(r => r.data);
+      return responses.map((r) => r.data);
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to bulk update listings'
+        error.response?.data?.message || "Failed to bulk update listings"
       );
     }
   }
 );
 
 export const bulkDeleteListings = createAsyncThunk(
-  'seller/bulkDeleteListings',
+  "seller/bulkDeleteListings",
   async (listingIds, { rejectWithValue }) => {
     try {
-      const promises = listingIds.map(id => sellerService.deleteListing(id));
+      const promises = listingIds.map((id) => sellerService.deleteListing(id));
       await Promise.all(promises);
       return listingIds;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to bulk delete listings'
+        error.response?.data?.message || "Failed to bulk delete listings"
       );
+    }
+  }
+);
+
+// NEW: Fetch Listing Statistics with sellerId
+export const fetchListingStatistics = createAsyncThunk(
+  "seller/fetchListingStatistics",
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const state = getState();
+      const sellerId = state.auth.user?._id;
+
+      if (!sellerId) {
+        return rejectWithValue("Seller ID not found. Please log in again.");
+      }
+
+      const [active, inactive, draft, outOfStock, sold] = await Promise.all([
+        axiosInstance.get("/api/v1/listing/listing-filter", {
+          params: { status: "active", sellerId, page: 1, pageSize: 1 },
+        }),
+        axiosInstance.get("/api/v1/listing/listing-filter", {
+          params: { status: "inactive", sellerId, page: 1, pageSize: 1 },
+        }),
+        axiosInstance.get("/api/v1/listing/listing-filter", {
+          params: { status: "draft", sellerId, page: 1, pageSize: 1 },
+        }),
+        axiosInstance.get("/api/v1/listing/listing-filter", {
+          params: { status: "outOfStock", sellerId, page: 1, pageSize: 1 },
+        }),
+        axiosInstance.get("/api/v1/listing/listing-filter", {
+          params: { status: "sold", sellerId, page: 1, pageSize: 1 },
+        }),
+      ]);
+
+      return {
+        active: active.data.pagination?.total || 0,
+        inactive: inactive.data.pagination?.total || 0,
+        draft: draft.data.pagination?.total || 0,
+        outOfStock: outOfStock.data.pagination?.total || 0,
+        sold: sold.data.pagination?.total || 0,
+      };
+    } catch (error) {
+      console.error("Error fetching statistics:", error);
+      return rejectWithValue("Failed to fetch listing statistics");
     }
   }
 );
 
 // Store/Shop Operations
 export const createStoreProfile = createAsyncThunk(
-  'seller/createStoreProfile',
+  "seller/createStoreProfile",
   async (storeData, { rejectWithValue }) => {
     try {
       const response = await sellerService.createStoreProfile(storeData);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to create store profile'
+        error.response?.data?.message || "Failed to create store profile"
       );
     }
   }
 );
 
 export const updateStoreProfile = createAsyncThunk(
-  'seller/updateStoreProfile',
+  "seller/updateStoreProfile",
   async ({ storeId, updateData }, { rejectWithValue }) => {
     try {
-      const response = await sellerService.updateStoreProfile(storeId, updateData);
+      const response = await sellerService.updateStoreProfile(
+        storeId,
+        updateData
+      );
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to update store profile'
+        error.response?.data?.message || "Failed to update store profile"
       );
     }
   }
 );
 
 export const fetchStoreProfiles = createAsyncThunk(
-  'seller/fetchStoreProfiles',
+  "seller/fetchStoreProfiles",
   async ({ useCache = true } = {}, { getState, rejectWithValue }) => {
     try {
       const state = getState();
       const { cache } = state.seller;
-      
+
       // Cache check
       if (useCache && cache.storesLastFetch) {
         const timeSinceLastFetch = Date.now() - cache.storesLastFetch;
@@ -325,12 +437,12 @@ export const fetchStoreProfiles = createAsyncThunk(
           return { cached: true };
         }
       }
-      
+
       const response = await sellerService.getStoreProfiles();
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to fetch store profiles'
+        error.response?.data?.message || "Failed to fetch store profiles"
       );
     }
   }
@@ -338,33 +450,33 @@ export const fetchStoreProfiles = createAsyncThunk(
 
 // Image Operations
 export const uploadImage = createAsyncThunk(
-  'seller/uploadImage',
+  "seller/uploadImage",
   async (imageFile, { rejectWithValue }) => {
     try {
       const response = await sellerService.uploadImage(imageFile);
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to upload image'
+        error.response?.data?.message || "Failed to upload image"
       );
     }
   }
 );
 
 export const uploadMultipleImages = createAsyncThunk(
-  'seller/uploadMultipleImages',
+  "seller/uploadMultipleImages",
   async (imageFiles, { dispatch }) => {
-    const uploadPromises = imageFiles.map(file => 
+    const uploadPromises = imageFiles.map((file) =>
       dispatch(uploadImage(file))
     );
     const results = await Promise.all(uploadPromises);
-    return results.map(r => r.payload);
+    return results.map((r) => r.payload);
   }
 );
 
 // Seller Slice
 const sellerSlice = createSlice({
-  name: 'seller',
+  name: "seller",
   initialState,
   reducers: {
     // UI Actions
@@ -373,12 +485,12 @@ const sellerSlice = createSlice({
     },
     clearSuccess: (state) => {
       state.ui.success = false;
-      state.ui.message = '';
+      state.ui.message = "";
     },
     clearMessages: (state) => {
       state.ui.error = null;
       state.ui.success = false;
-      state.ui.message = '';
+      state.ui.message = "";
     },
     setSelectedListing: (state, action) => {
       state.ui.selectedListingId = action.payload;
@@ -400,7 +512,7 @@ const sellerSlice = createSlice({
     setCurrentStore: (state, action) => {
       state.stores.currentStoreId = action.payload;
     },
-    
+
     // Optimistic Updates
     optimisticUpdateListing: (state, action) => {
       const { listingId, updates } = action.payload;
@@ -411,20 +523,20 @@ const sellerSlice = createSlice({
         };
       }
     },
-    
+
     // Cache Management
     invalidateCache: (state, action) => {
       const cacheType = action.payload;
-      if (cacheType === 'listings') {
+      if (cacheType === "listings") {
         state.cache.listingsLastFetch = null;
-      } else if (cacheType === 'stores') {
+      } else if (cacheType === "stores") {
         state.cache.storesLastFetch = null;
       } else {
         state.cache.listingsLastFetch = null;
         state.cache.storesLastFetch = null;
       }
     },
-    
+
     // Pagination
     setPagination: (state, action) => {
       state.listings.pagination = {
@@ -433,7 +545,7 @@ const sellerSlice = createSlice({
       };
     },
   },
-  
+
   extraReducers: (builder) => {
     // Create Listing
     builder
@@ -445,14 +557,17 @@ const sellerSlice = createSlice({
         state.ui.createListingLoading = false;
         state.ui.success = true;
         state.ui.message = action.payload.message;
-        
+
         const listing = action.payload.listing;
         state.listings.byId[listing._id] = listing;
         state.listings.allIds.unshift(listing._id);
         state.listings.pagination.total += 1;
-        
+
         // Update status count with backend status
-        if (listing.status && state.listings.statusCounts[listing.status] !== undefined) {
+        if (
+          listing.status &&
+          state.listings.statusCounts[listing.status] !== undefined
+        ) {
           state.listings.statusCounts[listing.status] += 1;
         }
       })
@@ -460,7 +575,7 @@ const sellerSlice = createSlice({
         state.ui.createListingLoading = false;
         state.ui.error = action.payload;
       });
-    
+
     // Update Listing
     builder
       .addCase(updateListing.pending, (state) => {
@@ -470,19 +585,26 @@ const sellerSlice = createSlice({
       .addCase(updateListing.fulfilled, (state, action) => {
         state.ui.updateListingLoading = false;
         state.ui.success = true;
-        state.ui.message = action.payload.message || 'Listing updated successfully';
-        
+        state.ui.message =
+          action.payload.message || "Listing updated successfully";
+
         const listing = action.payload.listing || action.payload;
         if (listing && listing._id) {
           const oldStatus = state.listings.byId[listing._id]?.status;
           state.listings.byId[listing._id] = listing;
-          
+
           // Update status counts with backend statuses
           if (oldStatus !== listing.status) {
-            if (oldStatus && state.listings.statusCounts[oldStatus] !== undefined) {
+            if (
+              oldStatus &&
+              state.listings.statusCounts[oldStatus] !== undefined
+            ) {
               state.listings.statusCounts[oldStatus] -= 1;
             }
-            if (listing.status && state.listings.statusCounts[listing.status] !== undefined) {
+            if (
+              listing.status &&
+              state.listings.statusCounts[listing.status] !== undefined
+            ) {
               state.listings.statusCounts[listing.status] += 1;
             }
           }
@@ -492,7 +614,7 @@ const sellerSlice = createSlice({
         state.ui.updateListingLoading = false;
         state.ui.error = action.payload;
       });
-    
+
     // Fetch All Listings
     builder
       .addCase(fetchAllListings.pending, (state) => {
@@ -502,7 +624,7 @@ const sellerSlice = createSlice({
       })
       .addCase(fetchAllListings.fulfilled, (state, action) => {
         state.ui.listingsLoading = false;
-        
+
         if (!action.payload.cached) {
           if (action.payload.isEmpty) {
             // Handle empty results case
@@ -512,7 +634,7 @@ const sellerSlice = createSlice({
               total: 0,
               page: 1,
               pageSize: 10,
-              totalPages: 0
+              totalPages: 0,
             };
             state.ui.isEmpty = true;
             state.ui.message = action.payload.message || "No listings found";
@@ -524,11 +646,20 @@ const sellerSlice = createSlice({
             state.listings.pagination = action.payload.pagination;
             state.cache.listingsLastFetch = Date.now();
             state.ui.isEmpty = false;
-            
+
             // Calculate status counts with backend statuses
-            const statusCounts = { active: 0, inactive: 0, draft: 0, outOfStock: 0, sold: 0 };
-            (action.payload.listings || []).forEach(listing => {
-              if (listing.status && statusCounts[listing.status] !== undefined) {
+            const statusCounts = {
+              active: 0,
+              inactive: 0,
+              draft: 0,
+              outOfStock: 0,
+              sold: 0,
+            };
+            (action.payload.listings || []).forEach((listing) => {
+              if (
+                listing.status &&
+                statusCounts[listing.status] !== undefined
+              ) {
                 statusCounts[listing.status]++;
               }
             });
@@ -541,7 +672,7 @@ const sellerSlice = createSlice({
         state.ui.error = action.payload;
         state.ui.isEmpty = false;
       });
-    
+
     // Fetch Listing By ID
     builder
       .addCase(fetchListingById.pending, (state) => {
@@ -560,7 +691,7 @@ const sellerSlice = createSlice({
         state.ui.listingDetailsLoading = false;
         state.ui.error = action.payload;
       });
-    
+
     // Fetch Listings By Status
     builder
       .addCase(fetchListingsByStatus.pending, (state) => {
@@ -571,21 +702,22 @@ const sellerSlice = createSlice({
       })
       .addCase(fetchListingsByStatus.fulfilled, (state, action) => {
         state.ui.listingsLoading = false;
-        
-        // Always clear existing data when fetching 
+
+        // Always clear existing data when fetching
         state.listings.byId = {};
         state.listings.allIds = [];
-        
+
         if (action.payload.isEmpty) {
           // Handle empty results
           state.ui.isEmpty = true;
-          state.ui.message = action.payload.message || "No listings found for this status";
-          state.ui.error = null; 
+          state.ui.message =
+            action.payload.message || "No listings found for this status";
+          state.ui.error = null;
           state.listings.pagination = action.payload.pagination || {
             total: 0,
             page: 1,
             pageSize: 10,
-            totalPages: 0
+            totalPages: 0,
           };
         } else {
           // Handle normal results
@@ -594,14 +726,14 @@ const sellerSlice = createSlice({
           state.listings.allIds = normalized.allIds;
           state.listings.pagination = action.payload.pagination;
           state.ui.isEmpty = false;
-          state.ui.message = '';
+          state.ui.message = "";
         }
       })
       .addCase(fetchListingsByStatus.rejected, (state, action) => {
         state.ui.listingsLoading = false;
         state.ui.error = action.payload;
         state.ui.isEmpty = false;
-        
+
         // Clear listings on error to show empty state
         state.listings.byId = {};
         state.listings.allIds = [];
@@ -609,10 +741,10 @@ const sellerSlice = createSlice({
           total: 0,
           page: 1,
           pageSize: 10,
-          totalPages: 0
+          totalPages: 0,
         };
       });
-    
+
     // Delete Listing
     builder
       .addCase(deleteListing.pending, (state) => {
@@ -623,24 +755,29 @@ const sellerSlice = createSlice({
         state.ui.deleteListingLoading = false;
         state.ui.success = true;
         state.ui.message = action.payload.message;
-        
+
         const listingId = action.payload.listingId;
         const deletedListing = state.listings.byId[listingId];
-        
+
         // Update status count with backend status
-        if (deletedListing?.status && state.listings.statusCounts[deletedListing.status] !== undefined) {
+        if (
+          deletedListing?.status &&
+          state.listings.statusCounts[deletedListing.status] !== undefined
+        ) {
           state.listings.statusCounts[deletedListing.status] -= 1;
         }
-        
+
         delete state.listings.byId[listingId];
-        state.listings.allIds = state.listings.allIds.filter(id => id !== listingId);
+        state.listings.allIds = state.listings.allIds.filter(
+          (id) => id !== listingId
+        );
         state.listings.pagination.total -= 1;
       })
       .addCase(deleteListing.rejected, (state, action) => {
         state.ui.deleteListingLoading = false;
         state.ui.error = action.payload;
       });
-    
+
     // Filter Listings - Fixed to handle empty results
     builder
       .addCase(filterListings.pending, (state) => {
@@ -651,20 +788,22 @@ const sellerSlice = createSlice({
       })
       .addCase(filterListings.fulfilled, (state, action) => {
         state.ui.listingsLoading = false;
-        
+
         // Always clear existing data when filtering
         state.listings.byId = {};
         state.listings.allIds = [];
-        
+
         if (action.payload.isEmpty) {
           state.ui.isEmpty = true;
-          state.ui.message = action.payload.message || "No listings found with the specified filters";
-          state.ui.error = null; 
+          state.ui.message =
+            action.payload.message ||
+            "No listings found with the specified filters";
+          state.ui.error = null;
           state.listings.pagination = action.payload.pagination || {
             total: 0,
             page: 1,
             pageSize: 10,
-            totalPages: 0
+            totalPages: 0,
           };
         } else {
           // Handle normal results
@@ -673,9 +812,9 @@ const sellerSlice = createSlice({
           state.listings.allIds = normalized.allIds;
           state.listings.pagination = action.payload.pagination;
           state.ui.isEmpty = false;
-          state.ui.message = '';
+          state.ui.message = "";
         }
-        
+
         // Store the original filters
         state.listings.filters = action.meta.arg;
       })
@@ -683,7 +822,7 @@ const sellerSlice = createSlice({
         state.ui.listingsLoading = false;
         state.ui.error = action.payload;
         state.ui.isEmpty = false;
-        
+
         // Clear listings on error to show empty state
         state.listings.byId = {};
         state.listings.allIds = [];
@@ -691,11 +830,11 @@ const sellerSlice = createSlice({
           total: 0,
           page: 1,
           pageSize: 10,
-          totalPages: 0
+          totalPages: 0,
         };
       });
 
-    // Search Listings 
+    // Search Listings
     builder
       .addCase(searchListings.pending, (state) => {
         state.ui.listingsLoading = true;
@@ -705,20 +844,21 @@ const sellerSlice = createSlice({
       })
       .addCase(searchListings.fulfilled, (state, action) => {
         state.ui.listingsLoading = false;
-        
+
         // Always clear existing data when searching
         state.listings.byId = {};
         state.listings.allIds = [];
-        
+
         if (action.payload.isEmpty) {
           state.ui.isEmpty = true;
-          state.ui.message = action.payload.message || "No listings found for your search";
+          state.ui.message =
+            action.payload.message || "No listings found for your search";
           state.ui.error = null; // Clear any previous errors
           state.listings.pagination = action.payload.pagination || {
             total: 0,
             page: 1,
             pageSize: 10,
-            totalPages: 0
+            totalPages: 0,
           };
         } else {
           // Handle normal results
@@ -727,9 +867,9 @@ const sellerSlice = createSlice({
           state.listings.allIds = normalized.allIds;
           state.listings.pagination = action.payload.pagination;
           state.ui.isEmpty = false;
-          state.ui.message = '';
+          state.ui.message = "";
         }
-        
+
         // Store the search filters
         state.listings.filters = {
           ...state.listings.filters,
@@ -740,7 +880,7 @@ const sellerSlice = createSlice({
         state.ui.listingsLoading = false;
         state.ui.error = action.payload;
         state.ui.isEmpty = false;
-        
+
         // Clear listings on error to show empty state
         state.listings.byId = {};
         state.listings.allIds = [];
@@ -748,10 +888,10 @@ const sellerSlice = createSlice({
           total: 0,
           page: 1,
           pageSize: 10,
-          totalPages: 0
+          totalPages: 0,
         };
       });
-    
+
     // Bulk Update Listings
     builder
       .addCase(bulkUpdateListings.pending, (state) => {
@@ -761,9 +901,9 @@ const sellerSlice = createSlice({
       .addCase(bulkUpdateListings.fulfilled, (state, action) => {
         state.ui.updateListingLoading = false;
         state.ui.success = true;
-        state.ui.message = 'Listings updated successfully';
-        
-        action.payload.forEach(response => {
+        state.ui.message = "Listings updated successfully";
+
+        action.payload.forEach((response) => {
           const listing = response.listing || response;
           if (listing && listing._id) {
             state.listings.byId[listing._id] = listing;
@@ -774,7 +914,7 @@ const sellerSlice = createSlice({
         state.ui.updateListingLoading = false;
         state.ui.error = action.payload;
       });
-    
+
     // Bulk Delete Listings
     builder
       .addCase(bulkDeleteListings.pending, (state) => {
@@ -784,18 +924,21 @@ const sellerSlice = createSlice({
       .addCase(bulkDeleteListings.fulfilled, (state, action) => {
         state.ui.deleteListingLoading = false;
         state.ui.success = true;
-        state.ui.message = 'Listings deleted successfully';
-        
-        action.payload.forEach(listingId => {
+        state.ui.message = "Listings deleted successfully";
+
+        action.payload.forEach((listingId) => {
           const deletedListing = state.listings.byId[listingId];
-          if (deletedListing?.status && state.listings.statusCounts[deletedListing.status] !== undefined) {
+          if (
+            deletedListing?.status &&
+            state.listings.statusCounts[deletedListing.status] !== undefined
+          ) {
             state.listings.statusCounts[deletedListing.status] -= 1;
           }
           delete state.listings.byId[listingId];
         });
-        
+
         state.listings.allIds = state.listings.allIds.filter(
-          id => !action.payload.includes(id)
+          (id) => !action.payload.includes(id)
         );
         state.listings.pagination.total -= action.payload.length;
       })
@@ -803,7 +946,22 @@ const sellerSlice = createSlice({
         state.ui.deleteListingLoading = false;
         state.ui.error = action.payload;
       });
-    
+
+    // Fetch Listing Statistics
+    builder
+      .addCase(fetchListingStatistics.pending, (state) => {
+        state.ui.listingsLoading = true;
+        state.ui.error = null;
+      })
+      .addCase(fetchListingStatistics.fulfilled, (state, action) => {
+        state.ui.listingsLoading = false;
+        state.listings.statusCounts = action.payload;
+      })
+      .addCase(fetchListingStatistics.rejected, (state, action) => {
+        state.ui.listingsLoading = false;
+        state.ui.error = action.payload;
+      });
+
     // Create Store Profile
     builder
       .addCase(createStoreProfile.pending, (state) => {
@@ -814,7 +972,7 @@ const sellerSlice = createSlice({
         state.ui.storeLoading = false;
         state.ui.success = true;
         state.ui.message = action.payload.message;
-        
+
         const store = action.payload.data;
         state.stores.byId[store._id] = store;
         state.stores.allIds.push(store._id);
@@ -824,7 +982,7 @@ const sellerSlice = createSlice({
         state.ui.storeLoading = false;
         state.ui.error = action.payload;
       });
-    
+
     // Update Store Profile
     builder
       .addCase(updateStoreProfile.pending, (state) => {
@@ -834,8 +992,9 @@ const sellerSlice = createSlice({
       .addCase(updateStoreProfile.fulfilled, (state, action) => {
         state.ui.storeLoading = false;
         state.ui.success = true;
-        state.ui.message = action.payload.message || 'Store updated successfully';
-        
+        state.ui.message =
+          action.payload.message || "Store updated successfully";
+
         const store = action.payload.data || action.payload;
         if (store && store._id) {
           state.stores.byId[store._id] = store;
@@ -845,7 +1004,7 @@ const sellerSlice = createSlice({
         state.ui.storeLoading = false;
         state.ui.error = action.payload;
       });
-    
+
     // Fetch Store Profiles
     builder
       .addCase(fetchStoreProfiles.pending, (state) => {
@@ -854,18 +1013,18 @@ const sellerSlice = createSlice({
       })
       .addCase(fetchStoreProfiles.fulfilled, (state, action) => {
         state.ui.storeLoading = false;
-        
+
         if (!action.payload.cached) {
           const stores = action.payload.data || [];
           const normalized = normalizeStores(stores);
           state.stores.byId = normalized.byId;
           state.stores.allIds = normalized.allIds;
-          
+
           // Set current store if only one exists
           if (stores.length === 1) {
             state.stores.currentStoreId = stores[0]._id;
           }
-          
+
           state.cache.storesLastFetch = Date.now();
         }
       })
@@ -873,7 +1032,7 @@ const sellerSlice = createSlice({
         state.ui.storeLoading = false;
         state.ui.error = action.payload;
       });
-    
+
     // Upload Image
     builder
       .addCase(uploadImage.pending, (state) => {
@@ -888,7 +1047,7 @@ const sellerSlice = createSlice({
         state.ui.imageUploadLoading = false;
         state.ui.error = action.payload;
       });
-    
+
     // Upload Multiple Images
     builder
       .addCase(uploadMultipleImages.pending, (state) => {
@@ -896,7 +1055,7 @@ const sellerSlice = createSlice({
       })
       .addCase(uploadMultipleImages.fulfilled, (state, action) => {
         state.ui.imageUploadLoading = false;
-        const urls = action.payload.filter(p => p?.url).map(p => p.url);
+        const urls = action.payload.filter((p) => p?.url).map((p) => p.url);
         state.ui.pendingImageUploads.push(...urls);
       })
       .addCase(uploadMultipleImages.rejected, (state) => {
@@ -923,43 +1082,41 @@ export const {
 export const selectSellerState = (state) => state.seller;
 
 // Memoized selectors for performance
-export const selectAllListings = createSelector(
-  [selectSellerState],
-  (seller) => seller.listings.allIds.map(id => seller.listings.byId[id])
+export const selectAllListings = createSelector([selectSellerState], (seller) =>
+  seller.listings.allIds.map((id) => seller.listings.byId[id])
 );
 
-export const selectListingById = (listingId) => createSelector(
-  [selectSellerState],
-  (seller) => seller.listings.byId[listingId]
-);
+export const selectListingById = (listingId) =>
+  createSelector(
+    [selectSellerState],
+    (seller) => seller.listings.byId[listingId]
+  );
 
-export const selectListingsByStatus = (status) => createSelector(
-  [selectSellerState],
-  (seller) => {
+export const selectListingsByStatus = (status) =>
+  createSelector([selectSellerState], (seller) => {
     // Map frontend status to backend status for filtering
     const backendStatus = sellerService.mapFrontendToBackendStatus(status);
     return seller.listings.allIds
-      .map(id => seller.listings.byId[id])
-      .filter(listing => listing.status === backendStatus);
-  }
-);
+      .map((id) => seller.listings.byId[id])
+      .filter((listing) => listing.status === backendStatus);
+  });
 
 export const selectActiveListings = createSelector(
   [selectSellerState],
   (seller) => {
     return seller.listings.allIds
-      .map(id => seller.listings.byId[id])
-      .filter(listing => listing.status === BACKEND_STATUSES.ACTIVE);
+      .map((id) => seller.listings.byId[id])
+      .filter((listing) => listing.status === BACKEND_STATUSES.ACTIVE);
   }
 );
 
-export const selectListingsPagination = (state) => state.seller.listings.pagination;
+export const selectListingsPagination = (state) =>
+  state.seller.listings.pagination;
 export const selectListingsFilters = (state) => state.seller.listings.filters;
 export const selectStatusCounts = (state) => state.seller.listings.statusCounts;
 
-export const selectAllStores = createSelector(
-  [selectSellerState],
-  (seller) => seller.stores.allIds.map(id => seller.stores.byId[id])
+export const selectAllStores = createSelector([selectSellerState], (seller) =>
+  seller.stores.allIds.map((id) => seller.stores.byId[id])
 );
 
 export const selectCurrentStore = createSelector(
@@ -970,10 +1127,8 @@ export const selectCurrentStore = createSelector(
   }
 );
 
-export const selectStoreById = (storeId) => createSelector(
-  [selectSellerState],
-  (seller) => seller.stores.byId[storeId]
-);
+export const selectStoreById = (storeId) =>
+  createSelector([selectSellerState], (seller) => seller.stores.byId[storeId]);
 
 export const selectHasStore = createSelector(
   [selectSellerState],
@@ -986,32 +1141,43 @@ export const selectError = (state) => state.seller.ui.error;
 export const selectSuccess = (state) => state.seller.ui.success;
 export const selectMessage = (state) => state.seller.ui.message;
 export const selectIsEmpty = (state) => state.seller.ui.isEmpty;
-export const selectPendingImageUploads = (state) => state.seller.ui.pendingImageUploads;
+export const selectPendingImageUploads = (state) =>
+  state.seller.ui.pendingImageUploads;
 
 // Statistics selectors
 export const selectListingsStatistics = createSelector(
   [selectSellerState],
   (seller) => {
-    const listings = seller.listings.allIds.map(id => seller.listings.byId[id]);
-    
+    const listings = seller.listings.allIds.map(
+      (id) => seller.listings.byId[id]
+    );
+
     const totalListings = listings.length;
     const totalValue = listings.reduce((sum, listing) => {
-      const price = parseFloat(listing.variations?.[0]?.price || listing.price || 0);
-      const quantity = parseInt(listing.variations?.[0]?.quantity || listing.quantity || 0);
-      return sum + (price * quantity);
+      const price = parseFloat(
+        listing.variations?.[0]?.price || listing.price || 0
+      );
+      const quantity = parseInt(
+        listing.variations?.[0]?.quantity || listing.quantity || 0
+      );
+      return sum + price * quantity;
     }, 0);
-    
-    const averagePrice = listings.reduce((sum, listing) => {
-      const price = parseFloat(listing.variations?.[0]?.price || listing.price || 0);
-      return sum + price;
-    }, 0) / (totalListings || 1);
-    
-    const outOfStock = listings.filter(l => 
-      l.status === BACKEND_STATUSES.OUT_OF_STOCK || 
-      l.variations?.some(v => parseInt(v.quantity) === 0) ||
-      parseInt(l.quantity) === 0
+
+    const averagePrice =
+      listings.reduce((sum, listing) => {
+        const price = parseFloat(
+          listing.variations?.[0]?.price || listing.price || 0
+        );
+        return sum + price;
+      }, 0) / (totalListings || 1);
+
+    const outOfStock = listings.filter(
+      (l) =>
+        l.status === BACKEND_STATUSES.OUT_OF_STOCK ||
+        l.variations?.some((v) => parseInt(v.quantity) === 0) ||
+        parseInt(l.quantity) === 0
     ).length;
-    
+
     return {
       totalListings,
       totalValue,
