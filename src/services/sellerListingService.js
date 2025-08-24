@@ -13,12 +13,21 @@ const sellerService = {
     return await axiosInstance.post(`/api/v1/listing/update/${listingId}`, updateData);
   },
 
-  // Get all listings with pagination and filtering
-  getAllListings: async (page = 1, pageSize = 10) => {
+  // Get all listings with pagination and filtering - UPDATED
+  getAllListings: async (page = 1, pageSize = 10, sellerId) => {
     try {
-      const response = await axiosInstance.get('/api/v1/listing/all', {
-        params: { page, pageSize }
-      });
+      const params = {};
+      
+      // Add sellerId first if provided
+      if (sellerId) {
+        params.sellerId = sellerId;
+      }
+      
+      // Add pagination parameters
+      params.page = page;
+      params.pageSize = pageSize;
+
+      const response = await axiosInstance.get('/api/v1/listing/all', { params });
 
       // Check if the response indicates no listings found
       if (response.data.message === "No listings found with the specified filters" || 
@@ -66,12 +75,22 @@ const sellerService = {
     return await axiosInstance.get(`/api/v1/listing/one-listing/${listingId}`);
   },
 
-// Get listings by status with pagination
-  getListingsByStatus: async (status, page = 1, pageSize = 10) => {
+  // Get listings by status with pagination - UPDATED
+  getListingsByStatus: async (status, page = 1, pageSize = 10, sellerId) => {
     try {
-      const response = await axiosInstance.get('/api/v1/listing/listing-filter', {
-        params: { status, page, pageSize }
-      });
+      const params = {};
+      
+      // Add sellerId first if provided
+      if (sellerId) {
+        params.sellerId = sellerId;
+      }
+      
+      // Add other parameters
+      params.status = status;
+      params.page = page;
+      params.pageSize = pageSize;
+
+      const response = await axiosInstance.get('/api/v1/listing/listing-filter', { params });
 
       // Check if the response indicates no listings found
       if (response.data.message === "No listings found with the specified filters") {
@@ -118,17 +137,23 @@ const sellerService = {
     return await axiosInstance.get(`/api/v1/listing/listing-delete/${listingId}`);
   },
 
-  // Filter listings with various criteria
+  // Filter listings with various criteria - UPDATED
   filterListings: async (filters) => {
     try {
       const params = {};
 
+      // Add sellerId first if provided
+      if (filters.sellerId) params.sellerId = filters.sellerId;
+      
+      // Add other filter parameters
       if (filters.category) params.category = filters.category;
       if (filters.priceRange) params.priceRange = filters.priceRange;
       if (filters.search) params.search = filters.search;
       if (filters.status) params.status = filters.status;
       if (filters.minPrice !== undefined) params.minPrice = filters.minPrice;
       if (filters.maxPrice !== undefined) params.maxPrice = filters.maxPrice;
+      
+      // Add pagination parameters
       params.page = filters.page || 1;
       params.pageSize = filters.pageSize || 10;
 
@@ -274,66 +299,26 @@ const sellerService = {
     }));
   },
 
-
-  // Get listing statistics for dashboard
-  getListingStatistics: async () => {
-    try {
-      const [active, inactive, draft, outOfStock, sold] = await Promise.all([
-        axiosInstance.get('/api/v1/listing/listing-filter', {
-          params: { status: 'active', page: 1, pageSize: 1 }
-        }),
-        axiosInstance.get('/api/v1/listing/listing-filter', {
-          params: { status: 'inactive', page: 1, pageSize: 1 }
-        }),
-        axiosInstance.get('/api/v1/listing/listing-filter', {
-          params: { status: 'draft', page: 1, pageSize: 1 }
-        }),
-        axiosInstance.get('/api/v1/listing/listing-filter', {
-          params: { status: 'outOfStock', page: 1, pageSize: 1 }
-        }),
-        axiosInstance.get('/api/v1/listing/listing-filter', {
-          params: { status: 'sold', page: 1, pageSize: 1 }
-        }),
-      ]);
-
-      return {
-        data: {
-          active: active.data.pagination?.total || 0,
-          inactive: inactive.data.pagination?.total || 0,
-          draft: draft.data.pagination?.total || 0,
-          outOfStock: outOfStock.data.pagination?.total || 0,
-          sold: sold.data.pagination?.total || 0,
-        }
-      };
-    } catch (error) {
-      console.error('Error fetching statistics:', error);
-      return {
-        data: {
-          active: 0,
-          inactive: 0,
-          draft: 0,
-          outOfStock: 0,
-          sold: 0,
-        }
-      };
-    }
-  },
-
   // Search Operations
 
-
-  // Search listings by keyword using the filter API
-  searchListings: async (searchTerm, page = 1, pageSize = 10) => {
-    return await axiosInstance.get('/api/v1/listing/listing-filter', {
-      params: {
-        search: searchTerm,
-        page,
-        pageSize,
-      }
-    });
+  // Search listings by keyword using the filter API - UPDATED
+  searchListings: async (searchTerm, page = 1, pageSize = 10, sellerId) => {
+    const params = {};
+    
+    // Add sellerId first if provided
+    if (sellerId) {
+      params.sellerId = sellerId;
+    }
+    
+    // Add search and pagination parameters
+    params.search = searchTerm;
+    params.page = page;
+    params.pageSize = pageSize;
+    
+    return await axiosInstance.get('/api/v1/listing/listing-filter', { params });
   },
 
-  // Advanced search with multiple filters
+  // Advanced search with multiple filters - UPDATED
   advancedSearchListings: async (searchParams) => {
     const {
       keyword,
@@ -346,15 +331,21 @@ const sellerService = {
       tags,
       sortBy,
       sortOrder,
+      sellerId, // Added sellerId parameter
       page = 1,
       pageSize = 10,
     } = searchParams;
 
-    const params = {
-      page,
-      pageSize,
-    };
+    const params = {};
 
+    // Add sellerId first if provided
+    if (sellerId) params.sellerId = sellerId;
+    
+    // Add pagination parameters
+    params.page = page;
+    params.pageSize = pageSize;
+
+    // Add other filter parameters
     if (keyword) params.search = keyword;
     if (category) params.category = category;
     if (subCategory) params.subCategory = subCategory;

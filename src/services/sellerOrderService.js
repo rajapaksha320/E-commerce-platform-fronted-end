@@ -125,7 +125,7 @@ const sellerOrderService = {
   // Get order statistics for dashboard
   getOrderStatistics: async (sellerId) => {
     try {
-      const [pending, shipped, delivered, cancelled, confirmed, confimed] =
+      const [pending, shipped, delivered, cancelled, confirmed] =
         await Promise.all([
           axiosInstance.get("/api/v1/order/filter-order-status", {
             params: { status: "pending", page: 1, size: 1 },
@@ -143,7 +143,7 @@ const sellerOrderService = {
             params: { status: "confirmed", page: 1, size: 1 },
           }),
           axiosInstance.get("/api/v1/order/filter-order-status", {
-            params: { status: "confimed", page: 1, size: 1 },
+            params: { status: "confirmed", page: 1, size: 1 },
           }),
         ]);
 
@@ -155,8 +155,7 @@ const sellerOrderService = {
           cancelled: cancelled.data.pagination?.totalOrders || 0,
           
           confirmed:
-            (confirmed.data.pagination?.totalOrders || 0) +
-            (confimed.data.pagination?.totalOrders || 0),
+            (confirmed.data.pagination?.totalOrders || 0)
         },
       };
     } catch (error) {
