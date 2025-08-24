@@ -744,7 +744,7 @@ const ListingManagement = ({ activeSection = "all-listings", backendStatus = nul
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1 relative">
                 <SearchInput
-                  placeholder="Search listings by title, SKU, or tags..."
+                  placeholder="Search listings by title..."
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   disabled={currentIsLoading}
