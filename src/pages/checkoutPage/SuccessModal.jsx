@@ -96,7 +96,7 @@ const SuccessModal = ({ isOpen, onClose, orderData, type = "order" }) => {
                 {isReturnType ? "selected" : "ordered"}
               </span>
             </div>
-            <div className="flex items-center text-sm">
+            {/* <div className="flex items-center text-sm">
               {isReturnType ? (
                 <>
                   <Clock className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
@@ -113,7 +113,7 @@ const SuccessModal = ({ isOpen, onClose, orderData, type = "order" }) => {
                   </span>
                 </>
               )}
-            </div>
+            </div> */}
             {!isReturnType && orderData?.total && (
               <div className="flex items-center text-sm">
                 <CreditCard className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
@@ -132,18 +132,12 @@ const SuccessModal = ({ isOpen, onClose, orderData, type = "order" }) => {
                 What happens next?
               </h4>
               <div className="space-y-1 text-sm text-blue-800">
-                <div className="flex items-center">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
-                  <span>Order confirmation email sent</span>
-                </div>
+                
                 <div className="flex items-center">
                   <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
                   <span>Processing within 24 hours</span>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
-                  <span>Shipping notification with tracking</span>
-                </div>
+                
               </div>
             </div>
           )}
