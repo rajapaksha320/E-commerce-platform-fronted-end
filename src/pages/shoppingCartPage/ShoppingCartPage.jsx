@@ -750,7 +750,7 @@ const ShoppingCartPage = () => {
                                   <div className="flex items-center text-green-600 text-sm mb-3">
                                     <Truck className="h-4 w-4 mr-2" />
                                     <span className="font-medium">
-                                      FREE Shipping
+                                      FREE Delivery
                                     </span>
                                   </div>
                                 )}
@@ -939,7 +939,7 @@ const ShoppingCartPage = () => {
                             </span>
                           </div>
                           <div className="flex justify-between text-base">
-                            <span className="text-gray-600">Shipping</span>
+                            <span className="text-gray-600">Delivery</span>
                             <span
                               className={
                                 finalShipping === 0

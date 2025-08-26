@@ -17,8 +17,8 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
   const shippingOptions = [
     {
       id: "standard",
-      name: "Standard Shipping",
-     
+      name: "Standard Delivery",
+
       price: 0,
       originalPrice: 9.99,
       estimatedDays: "5-7 business days",
@@ -35,7 +35,7 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
     },
     {
       id: "express",
-      name: "Express Shipping",
+      name: "Express Delivery",
       description: "Faster delivery for urgent orders",
       price: 3500,
       originalPrice: null,
@@ -53,7 +53,7 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
     },
     {
       id: "overnight",
-      name: "Overnight Shipping",
+      name: "Overnight Delivery",
       description: "Next business day delivery",
       price: 6500,
       originalPrice: null,
@@ -80,7 +80,7 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900 flex items-center">
           <Package className="h-5 w-5 text-blue-600 mr-2" />
-          Shipping Options
+          Delivery Options
         </h2>
         <div className="text-sm text-gray-600">
           <div className="flex items-center">
@@ -241,10 +241,10 @@ const ShippingOptions = ({ selectedShipping, onShippingChange }) => {
           </div>
           <div className="flex-1">
             <h4 className="font-medium text-blue-900 mb-1">
-              Shipping Information
+              Delivery Information
             </h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Orders placed before 2 PM EST ship the same day</li>
+              <li>• Orders placed before 2 PM EST, if choose the same day delivery</li>
               <li>• Delivery estimates exclude weekends and holidays</li>
               <li>• Signature may be required for high-value items</li>
             </ul>

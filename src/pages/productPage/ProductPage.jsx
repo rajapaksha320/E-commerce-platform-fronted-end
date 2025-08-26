@@ -330,7 +330,7 @@ const ProductPage = () => {
     { id: "description", name: "Description", count: null },
     { id: "specifications", name: "Specifications", count: null },
     { id: "reviews", name: "Reviews", count: 0 },
-    { id: "shipping", name: "Shipping & Returns", count: null },
+    { id: "shipping", name: "Delivery & Returns", count: null },
   ];
 
   const handleQuantityChange = (action) => {
@@ -940,7 +940,7 @@ const ProductPage = () => {
                 <Truck className="h-5 w-5 text-green-600" />
                 <div>
                   <p className="text-sm font-medium text-green-800">
-                    Free Shipping
+                    Free Delivery
                   </p>
                   <p className="text-xs text-green-600">
                     {product.shippingClass?.returnPolicy || "Standard delivery"}
@@ -1174,12 +1174,12 @@ const ProductPage = () => {
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                       <Truck className="h-5 w-5 mr-2 text-blue-600" />
-                      Shipping Information
+                      Delivery Information
                     </h3>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
                         <span className="text-sm text-gray-600">
-                          Shipping Class
+                          Delivery Class
                         </span>
                         <span className="text-sm font-medium text-gray-900">
                           {product.shippingClass?.shippingClass || "Standard"}
@@ -1187,7 +1187,7 @@ const ProductPage = () => {
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
                         <span className="text-sm text-gray-600">
-                          Shipping Weight
+                          Delivery Weight
                         </span>
                         <span className="text-sm font-medium text-gray-900">
                           {product.shippingClass?.shippingWeight || "N/A"}

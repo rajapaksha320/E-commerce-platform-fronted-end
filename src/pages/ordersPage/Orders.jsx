@@ -348,7 +348,7 @@ const Orders = () => {
       } ${addr.zipCode || ""}`.replace(/^,\s*|,\s*$/g, ""); // Clean up leading/trailing commas
     }
 
-    return "Shipping address provided";
+    return "Delivery address provided";
   };
 
   // Transform order data for display
@@ -630,7 +630,7 @@ const Orders = () => {
                           <MapPin className="h-4 w-4 mt-0.5 text-blue-600 flex-shrink-0" />
                           <div className="flex-1">
                             <span className="font-medium text-blue-900">
-                              Shipping to:
+                              Delivering to:
                             </span>
                             <p className="mt-1 text-gray-700">
                               {orderData.shippingAddress}

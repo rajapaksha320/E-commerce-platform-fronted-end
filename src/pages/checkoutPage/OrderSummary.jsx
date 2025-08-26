@@ -32,13 +32,13 @@ const OrderSummary = ({
   const getShippingName = (type) => {
     switch (type) {
       case "standard":
-        return "Standard Shipping";
+        return "Standard Delivery";
       case "express":
-        return "Express Shipping";
+        return "Express Delivery";
       case "overnight":
-        return "Overnight Shipping";
+        return "Overnight Delivery";
       default:
-        return "Standard Shipping";
+        return "Standard Delivery";
     }
   };
 
@@ -134,7 +134,7 @@ const OrderSummary = ({
 
           <div className="flex justify-between">
             <span className="text-gray-600 flex items-center">
-              Shipping
+              Delivery
               <span className="ml-1 text-xs">
                 ({getShippingName(selectedShipping)})
               </span>
@@ -277,7 +277,7 @@ const OrderSummary = ({
           <div className="text-lg font-bold text-blue-700">
             {shipping === 0 ? "Free" : "Paid"}
           </div>
-          <div className="text-xs text-blue-600">Shipping</div>
+          <div className="text-xs text-blue-600">Delivery</div>
         </div>
       </div>
     </div>
