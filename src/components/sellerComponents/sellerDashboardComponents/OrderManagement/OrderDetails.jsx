@@ -296,7 +296,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                       <CreditCard className="h-5 w-5 text-white" />
                     </div>
                     <span className="text-sm font-semibold text-purple-800">
-                      Shipping
+                      Delivery
                     </span>
                   </div>
                   <p className="text-xl font-bold text-purple-900">
@@ -360,7 +360,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                   copied={copiedFields.customerName}
                 />
                 <CopyField
-                  label="Shipping Option"
+                  label="Delivery Option"
                   value={order.shippingOption}
                   icon={<Truck />}
                   onCopy={() => handleCopy("shippingOption")}
@@ -376,12 +376,12 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                   <div className="p-2 bg-green-600 rounded-lg">
                     <MapPin className="h-5 w-5 text-white" />
                   </div>
-                  Shipping Information
+                  Delivery Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <CopyField
-                  label="Full Shipping Address"
+                  label="Full Delivery Address"
                   value={order.shippingAddress}
                   icon={<MapPin />}
                   onCopy={() => handleCopy("fullAddress")}
@@ -389,7 +389,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                 />
 
                 <CopyField
-                  label="Shipping Method"
+                  label="Delivery Method"
                   value={order.shippingOption}
                   icon={<Truck />}
                   onCopy={() => handleCopy("shippingMethod")}
