@@ -940,7 +940,7 @@ const ProductPage = () => {
                 <Truck className="h-5 w-5 text-green-600" />
                 <div>
                   <p className="text-sm font-medium text-green-800">
-                    Free Shipping
+                    Free Delivery
                   </p>
                   <p className="text-xs text-green-600">
                     {product.shippingClass?.returnPolicy || "Standard delivery"}
