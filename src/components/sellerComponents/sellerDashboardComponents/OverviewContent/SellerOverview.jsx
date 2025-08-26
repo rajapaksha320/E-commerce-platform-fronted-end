@@ -207,7 +207,7 @@ const SellerOverview = ({ onNavigate }) => {
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-orange-600 mb-1">Awaiting shipment</p>
+              <p className="text-xs text-orange-600 mb-1">Awaiting delivery</p>
               <p className="text-lg font-bold text-orange-900">
                 {awaitingShipmentCount}
               </p>
@@ -326,7 +326,7 @@ const SellerOverview = ({ onNavigate }) => {
                         Order #{order._id.slice(-8)}
                       </p>
                       <p className="text-xs text-gray-600">
-                        {formatCurrency(order.totalAmount)} • Awaiting shipment
+                        {formatCurrency(order.totalAmount)} • Awaiting delivery
                       </p>
                     </div>
                    
@@ -422,7 +422,7 @@ const SellerOverview = ({ onNavigate }) => {
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-orange-500" />
                   <span className="text-sm text-gray-600">
-                    Awaiting Shipment
+                    Awaiting Delivery
                   </span>
                 </div>
                 <Badge
@@ -436,7 +436,7 @@ const SellerOverview = ({ onNavigate }) => {
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <Truck className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm text-gray-600">Shipped</span>
+                  <span className="text-sm text-gray-600">Start Delivering</span>
                 </div>
                 <Badge variant="secondary">{shippedOrdersCount}</Badge>
               </div>

@@ -82,8 +82,8 @@ const SellerLayout = ({ children }) => {
   const sidebarNavigation = {
     orders: [
       { id: "all-orders", name: "All orders", status: null },
-      { id: "pending", name: "Awaiting shipment", status: "pending" },
-      { id: "shipped", name: "Paid and shipped", status: "shipped" },
+      { id: "pending", name: "Awaiting delivery", status: "pending" },
+      { id: "shipped", name: "Paid and delivering", status: "shipped" },
       { id: "delivered", name: "Delivered orders", status: "delivered" },
       { id: "confirmed", name: "Completed orders", status: "confirmed" },
       { id: "cancelled", name: "Cancelled orders", status: "cancelled" },

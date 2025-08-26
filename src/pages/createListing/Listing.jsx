@@ -2161,11 +2161,11 @@ const Listing = () => {
               <TabsContent value="shipping">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Shipping & Policies</CardTitle>
+                    <CardTitle>Delivering & Policies</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField label="Shipping Weight in lbs">
+                      <FormField label="Delivering Weight in lbs">
                         <Input
                           type="number"
                           step="0.1"
@@ -2177,17 +2177,17 @@ const Listing = () => {
                         />
                       </FormField>
 
-                      <FormField label="Shipping Class">
+                      <FormField label="Delivering Class">
                         <Select
                           value={formData.shippingClass}
                           onChange={(e) =>
                             handleInputChange("shippingClass", e.target.value)
                           }
                         >
-                          <option value="standard">Standard Shipping</option>
-                          <option value="express">Express Shipping</option>
-                          <option value="overnight">Overnight Shipping</option>
-                          <option value="free">Free Shipping</option>
+                          <option value="standard">Standard Delivery</option>
+                          <option value="express">Express Delivery</option>
+                          <option value="overnight">Overnight Delivery</option>
+                          <option value="free">Free Delivery</option>
                         </Select>
                       </FormField>
                     </div>
