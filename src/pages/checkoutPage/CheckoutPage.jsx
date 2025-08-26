@@ -527,7 +527,7 @@ const CheckoutPage = () => {
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-gray-900 flex items-center">
                       <MapPin className="h-5 w-5 text-blue-600 mr-2" />
-                      Shipping Address
+                      Delivery Address
                     </h2>
                     <Button
                       onClick={handleAddressAdd}
@@ -689,7 +689,7 @@ const CheckoutPage = () => {
                 {selectedAddress && (
                   <Card>
                     <h3 className="font-bold text-gray-900 mb-4">
-                      Shipping Address
+                      Delivery Address
                     </h3>
                     <div className="text-sm text-gray-600">
                       <p className="font-semibold text-gray-900">
