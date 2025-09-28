@@ -570,8 +570,8 @@ const ShoppingCartPage = () => {
               </p>
               <Button
                 size="lg"
-                className="px-8 py-3"
-                onClick={() => navigate("/")}
+                className="px-8 py-3 cursor-pointer"
+                onClick={() => window.location.replace("/")}
               >
                 <ShoppingBag className="h-5 w-5 mr-2" />
                 Continue Shopping

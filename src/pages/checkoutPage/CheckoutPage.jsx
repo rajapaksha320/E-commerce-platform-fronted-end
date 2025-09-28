@@ -406,12 +406,12 @@ const CheckoutPage = () => {
         <Card className="text-center p-8 max-w-md">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Error Loading Checkout
+            Cannot Loading Checkout
           </h3>
           <p className="text-gray-600 mb-4">
             {cartError || addressesError || "Something went wrong"}
           </p>
-          <Button onClick={() => navigate("/shopping-cart")}>
+          <Button onClick={() => navigate("/shopping-cart")} className="cursor-pointer">
             Back to Cart
           </Button>
         </Card>
