@@ -22,6 +22,7 @@ import {
   FileText,
   AlertTriangle,
   Star,
+  ImageOff,
 } from "lucide-react";
 
 // Import UI components
@@ -48,6 +49,37 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
   const [showContactModal, setShowContactModal] = useState(false);
   const [customerMessage, setCustomerMessage] = useState("");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  // Helper function to safely get listing data
+  const getSafeListingData = (item) => {
+    if (!item) {
+      return {
+        title: "Product Not Available",
+        brand: "Unknown Brand",
+        images: [],
+        category: { main: "Unknown", sub: "Unknown" },
+        id: "N/A",
+        averageRating: 0,
+        review: null,
+      };
+    }
+
+    return {
+      title: item.title || "Product Not Available",
+      brand: item.brand || "Unknown Brand",
+      images: item.images || [],
+      category: item.category || { main: "Unknown", sub: "Unknown" },
+      id: item.id || "N/A",
+      averageRating: item.averageRating || 0,
+      review: item.review || null,
+    };
+  };
+
+  // Helper function to get safe image URL
+  const getSafeImageUrl = (item) => {
+    const safeItem = getSafeListingData(item);
+    return safeItem.images?.[0]?.url || "/placehold.png";
+  };
 
   const handleCopy = (fieldName) => {
     setCopiedFields((prev) => ({ ...prev, [fieldName]: true }));
@@ -300,7 +332,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                     </span>
                   </div>
                   <p className="text-xl font-bold text-purple-900">
-                    {order.shippingOption}
+                    {order.shippingOption || "Standard Delivery"}
                   </p>
                   {order.isReviewed && (
                     <p className="text-sm text-purple-700 capitalize">
@@ -361,7 +393,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                 />
                 <CopyField
                   label="Delivery Option"
-                  value={order.shippingOption}
+                  value={order.shippingOption || "Standard Delivery"}
                   icon={<Truck />}
                   onCopy={() => handleCopy("shippingOption")}
                   copied={copiedFields.shippingOption}
@@ -382,7 +414,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
               <CardContent className="space-y-6">
                 <CopyField
                   label="Full Delivery Address"
-                  value={order.shippingAddress}
+                  value={order.shippingAddress || "Address not available"}
                   icon={<MapPin />}
                   onCopy={() => handleCopy("fullAddress")}
                   copied={copiedFields.fullAddress}
@@ -390,7 +422,7 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
 
                 <CopyField
                   label="Delivery Method"
-                  value={order.shippingOption}
+                  value={order.shippingOption || "Standard Delivery"}
                   icon={<Truck />}
                   onCopy={() => handleCopy("shippingMethod")}
                   copied={copiedFields.shippingMethod}
@@ -427,79 +459,106 @@ const OrderDetails = ({ order, onClose, onOrderUpdate }) => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {order.listings?.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-6 p-6 bg-gray-50 rounded-xl border border-gray-100"
-                  >
-                    <img
-                      src={item.images?.[0]?.url || "/placehold.png"}
-                      alt={item.title}
-                      className="w-20 h-20 object-cover rounded-xl border-2 border-gray-200 shadow-sm"
-                      onError={(e) => {
-                        e.target.src = "/placehold.png";
-                      }}
-                    />
-                    <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                        {item.title}
-                      </h4>
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-sm text-gray-600 font-medium">
-                          Brand:
-                        </span>
-                        <span className="text-sm font-medium text-gray-900">
-                          {item.brand}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-sm text-gray-600 font-medium">
-                          SKU:
-                        </span>
-                        <CopyField
-                          label=""
-                          value={item.id}
-                          onCopy={() => handleCopy(`sku-${index}`)}
-                          copied={copiedFields[`sku-${index}`]}
-                          className="bg-white"
-                        />
-                      </div>
-                      <div className="flex items-center gap-8">
-                        <div className="text-center">
-                          <p className="text-xs text-gray-500 uppercase tracking-wide">
-                            Category
-                          </p>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {item.category?.main} / {item.category?.sub}
-                          </p>
+                {order.listings && order.listings.length > 0 ? (
+                  order.listings.map((item, index) => {
+                    const safeItem = getSafeListingData(item);
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-center gap-6 p-6 bg-gray-50 rounded-xl border border-gray-100"
+                      >
+                        <div className="relative w-20 h-20 rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden bg-gray-100 flex items-center justify-center">
+                          {safeItem.images.length > 0 ? (
+                            <img
+                              src={getSafeImageUrl(item)}
+                              alt={safeItem.title}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                                e.target.nextSibling.style.display = "flex";
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className="absolute inset-0 flex items-center justify-center bg-gray-100"
+                            style={{
+                              display:
+                                safeItem.images.length > 0 ? "none" : "flex",
+                            }}
+                          >
+                            <ImageOff className="h-8 w-8 text-gray-400" />
+                          </div>
                         </div>
-                        {item.averageRating > 0 && (
-                          <div className="text-center">
-                            <p className="text-xs text-gray-500 uppercase tracking-wide">
-                              Product Rating
-                            </p>
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                              <span className="text-sm font-semibold text-gray-900">
-                                {item.averageRating}
-                              </span>
+                        <div className="flex-1">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                            {safeItem.title}
+                          </h4>
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-sm text-gray-600 font-medium">
+                              Brand:
+                            </span>
+                            <span className="text-sm font-medium text-gray-900">
+                              {safeItem.brand}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-sm text-gray-600 font-medium">
+                              SKU:
+                            </span>
+                            <CopyField
+                              label=""
+                              value={safeItem.id}
+                              onCopy={() => handleCopy(`sku-${index}`)}
+                              copied={copiedFields[`sku-${index}`]}
+                              className="bg-white"
+                            />
+                          </div>
+                          <div className="flex items-center gap-8">
+                            <div className="text-center">
+                              <p className="text-xs text-gray-500 uppercase tracking-wide">
+                                Category
+                              </p>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {safeItem.category.main} /{" "}
+                                {safeItem.category.sub}
+                              </p>
                             </div>
+                            {safeItem.averageRating > 0 && (
+                              <div className="text-center">
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">
+                                  Product Rating
+                                </p>
+                                <div className="flex items-center gap-1">
+                                  <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                                  <span className="text-sm font-semibold text-gray-900">
+                                    {safeItem.averageRating}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                            {safeItem.review && (
+                              <div className="text-center">
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">
+                                  Review
+                                </p>
+                                <p className="text-sm italic text-gray-700">
+                                  "{safeItem.review}"
+                                </p>
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {item.review && (
-                          <div className="text-center">
-                            <p className="text-xs text-gray-500 uppercase tracking-wide">
-                              Review
-                            </p>
-                            <p className="text-sm italic text-gray-700">
-                              "{item.review}"
-                            </p>
-                          </div>
-                        )}
+                        </div>
                       </div>
-                    </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex items-center justify-center gap-3 p-8 bg-gray-50 rounded-xl border border-gray-100">
+                    <Package className="h-8 w-8 text-gray-400" />
+                    <span className="text-gray-600">
+                      No items available for this order
+                    </span>
                   </div>
-                ))}
+                )}
 
                 {/* Order Total */}
                 <div className="pt-6 border-t-2 border-gray-200">

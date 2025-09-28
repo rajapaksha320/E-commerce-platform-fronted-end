@@ -20,6 +20,7 @@ import {
   Printer,
   Download,
   Star,
+  ImageOff,
 } from "lucide-react";
 
 // Import Redux hooks
@@ -126,6 +127,37 @@ const OrderManagement = ({
     { value: "other", label: "Other" },
   ];
 
+  // Helper function to safely get listing data
+  const getSafeListingData = (item) => {
+    if (!item) {
+      return {
+        title: "Product Not Available",
+        brand: "Unknown Brand",
+        images: [],
+        category: { main: "Unknown", sub: "Unknown" },
+        id: "N/A",
+        averageRating: 0,
+        review: null,
+      };
+    }
+
+    return {
+      title: item.title || "Product Not Available",
+      brand: item.brand || "Unknown Brand",
+      images: item.images || [],
+      category: item.category || { main: "Unknown", sub: "Unknown" },
+      id: item.id || "N/A",
+      averageRating: item.averageRating || 0,
+      review: item.review || null,
+    };
+  };
+
+  // Helper function to get safe image URL
+  const getSafeImageUrl = (item) => {
+    const safeItem = getSafeListingData(item);
+    return safeItem.images?.[0]?.url || "/placehold.png";
+  };
+
   // Load orders based on active section and status
   useEffect(() => {
     const loadOrders = async () => {
@@ -185,12 +217,14 @@ const OrderManagement = ({
       return (
         formattedOrderId.includes(query) ||
         orderId.includes(query) ||
-        // Also search in listings
-        order.listings?.some(
-          (listing) =>
-            listing.title?.toLowerCase().includes(query) ||
-            listing.brand?.toLowerCase().includes(query)
-        )
+        // Also search in listings with safe access
+        order.listings?.some((listing) => {
+          const safeItem = getSafeListingData(listing);
+          return (
+            safeItem.title.toLowerCase().includes(query) ||
+            safeItem.brand.toLowerCase().includes(query)
+          );
+        })
       );
     });
   }, [orders, searchQuery]);
@@ -676,7 +710,7 @@ const OrderManagement = ({
                               {getCustomerName(order)}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {order.shippingOption}
+                              {order.shippingOption || "Standard Delivery"}
                             </div>
                           </div>
                         </div>
@@ -686,29 +720,56 @@ const OrderManagement = ({
                     {config.showColumns.includes("items") && (
                       <TableCell>
                         <div className="max-w-xs">
-                          {order.listings?.map((item, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-2 mb-1"
-                            >
-                              <img
-                                src={item.images?.[0]?.url || "/placehold.png"}
-                                alt={item.title}
-                                className="h-8 w-8 rounded object-cover"
-                                onError={(e) => {
-                                  e.target.src = "/placehold.png";
-                                }}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <div className="text-sm font-medium text-gray-900 truncate">
-                                  {item.title}
+                          {order.listings && order.listings.length > 0 ? (
+                            order.listings.map((item, index) => {
+                              const safeItem = getSafeListingData(item);
+                              return (
+                                <div
+                                  key={index}
+                                  className="flex items-center gap-2 mb-1"
+                                >
+                                  <div className="relative h-8 w-8 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
+                                    {safeItem.images.length > 0 ? (
+                                      <img
+                                        src={getSafeImageUrl(item)}
+                                        alt={safeItem.title}
+                                        className="h-full w-full object-cover"
+                                        onError={(e) => {
+                                          e.target.style.display = "none";
+                                          e.target.nextSibling.style.display =
+                                            "flex";
+                                        }}
+                                      />
+                                    ) : null}
+                                    <div
+                                      className="absolute inset-0 flex items-center justify-center bg-gray-100"
+                                      style={{
+                                        display:
+                                          safeItem.images.length > 0
+                                            ? "none"
+                                            : "flex",
+                                      }}
+                                    >
+                                      <ImageOff className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-sm font-medium text-gray-900 truncate">
+                                      {safeItem.title}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Brand: {safeItem.brand}
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  Brand: {item.brand}
-                                </div>
-                              </div>
+                              );
+                            })
+                          ) : (
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <Package className="h-4 w-4" />
+                              <span>No items available</span>
                             </div>
-                          ))}
+                          )}
                         </div>
                       </TableCell>
                     )}
@@ -741,7 +802,7 @@ const OrderManagement = ({
                     {config.showColumns.includes("shippingMethod") && (
                       <TableCell>
                         <div className="text-sm text-gray-900">
-                          {order.shippingOption}
+                          {order.shippingOption || "Standard Delivery"}
                         </div>
                       </TableCell>
                     )}
@@ -835,7 +896,6 @@ const OrderManagement = ({
                               <CheckCircle className="h-4 w-4" />
                             </IconButton>
                           )}
-
                         </div>
                       </TableCell>
                     )}
