@@ -151,41 +151,63 @@ const CategoriesCollection = () => {
   const fetchCategoryData = async () => {
     setIsLoadingCategories(true);
     try {
-    
-      const result = await fetchStoresByCategory("fashion", 1, 1).unwrap();
+      // Extract category keys from existing categoryDefinitions
+      const categoryKeys = Object.keys(categoryDefinitions);
+      console.log("Fetching data for categories:", categoryKeys);
 
-      console.log("Full API response:", result);
+      // Fetch data for each predefined category
+      const categoryPromises = categoryKeys.map(async (categoryKey) => {
+        try {
+          const result = await fetchStoresByCategory(
+            categoryKey,
+            1,
+            1
+          ).unwrap();
+          const responseData = result?.data?.[0];
 
-  
-      const responseData = result?.data?.[0];
+          return {
+            category: categoryKey,
+            count: responseData?.categoryCounts?.[categoryKey] || 0,
+            totalProducts: responseData?.totalProductsInCategory || 0,
+          };
+        } catch (error) {
+          console.warn(`Failed to fetch data for ${categoryKey}:`, error);
+          return {
+            category: categoryKey,
+            count: 0,
+            totalProducts: 0,
+          };
+        }
+      });
 
-      if (responseData?.categoryCounts) {
-        setCategoryData({
-          categoryCounts: responseData.categoryCounts,
-          totalProductsInCategory: responseData.totalProductsInCategory || 0,
-        });
-        console.log("Category counts from API:", responseData.categoryCounts);
-        console.log(
-          "Total products in category:",
-          responseData.totalProductsInCategory
-        );
-      } else {
-        console.warn(
-          "No categoryCounts in API response, checking alternative paths"
-        );
-        console.log("Response data:", responseData);
+      // Wait for all category data to be fetched
+      const categoryResults = await Promise.all(categoryPromises);
 
-        // If no categoryCounts in expected location, set empty data
-        setCategoryData({
-          categoryCounts: {},
-          totalProductsInCategory: 0,
-        });
-      }
+      // Build categoryCounts object
+      const categoryCounts = {};
+      let totalProductsAllCategories = 0;
+
+      categoryResults.forEach((result) => {
+        // Include all categories from categoryDefinitions, even if count is 0
+        categoryCounts[result.category] = result.count;
+        totalProductsAllCategories += result.totalProducts;
+      });
+
+      console.log("Combined category counts:", categoryCounts);
+      console.log(
+        "Total products across all categories:",
+        totalProductsAllCategories
+      );
+
+      setCategoryData({
+        categoryCounts: categoryCounts,
+        totalProductsInCategory: totalProductsAllCategories,
+      });
     } catch (error) {
       console.error("Failed to fetch category data:", error);
       console.error("Error details:", error.message);
 
-      // On error, set empty data instead of hardcoded numbers
+      // On error, set empty data
       setCategoryData({
         categoryCounts: {},
         totalProductsInCategory: 0,
