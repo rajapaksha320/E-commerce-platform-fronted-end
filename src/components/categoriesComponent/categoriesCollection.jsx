@@ -151,41 +151,63 @@ const CategoriesCollection = () => {
   const fetchCategoryData = async () => {
     setIsLoadingCategories(true);
     try {
-    
-      const result = await fetchStoresByCategory("fashion", 1, 1).unwrap();
+      // Extract category keys from existing categoryDefinitions
+      const categoryKeys = Object.keys(categoryDefinitions);
+      console.log("Fetching data for categories:", categoryKeys);
 
-      console.log("Full API response:", result);
+      // Fetch data for each predefined category
+      const categoryPromises = categoryKeys.map(async (categoryKey) => {
+        try {
+          const result = await fetchStoresByCategory(
+            categoryKey,
+            1,
+            1
+          ).unwrap();
+          const responseData = result?.data?.[0];
 
-  
-      const responseData = result?.data?.[0];
+          return {
+            category: categoryKey,
+            count: responseData?.categoryCounts?.[categoryKey] || 0,
+            totalProducts: responseData?.totalProductsInCategory || 0,
+          };
+        } catch (error) {
+          console.warn(`Failed to fetch data for ${categoryKey}:`, error);
+          return {
+            category: categoryKey,
+            count: 0,
+            totalProducts: 0,
+          };
+        }
+      });
 
-      if (responseData?.categoryCounts) {
-        setCategoryData({
-          categoryCounts: responseData.categoryCounts,
-          totalProductsInCategory: responseData.totalProductsInCategory || 0,
-        });
-        console.log("Category counts from API:", responseData.categoryCounts);
-        console.log(
-          "Total products in category:",
-          responseData.totalProductsInCategory
-        );
-      } else {
-        console.warn(
-          "No categoryCounts in API response, checking alternative paths"
-        );
-        console.log("Response data:", responseData);
+      // Wait for all category data to be fetched
+      const categoryResults = await Promise.all(categoryPromises);
 
-        // If no categoryCounts in expected location, set empty data
-        setCategoryData({
-          categoryCounts: {},
-          totalProductsInCategory: 0,
-        });
-      }
+      // Build categoryCounts object
+      const categoryCounts = {};
+      let totalProductsAllCategories = 0;
+
+      categoryResults.forEach((result) => {
+        // Include all categories from categoryDefinitions, even if count is 0
+        categoryCounts[result.category] = result.count;
+        totalProductsAllCategories += result.totalProducts;
+      });
+
+      console.log("Combined category counts:", categoryCounts);
+      console.log(
+        "Total products across all categories:",
+        totalProductsAllCategories
+      );
+
+      setCategoryData({
+        categoryCounts: categoryCounts,
+        totalProductsInCategory: totalProductsAllCategories,
+      });
     } catch (error) {
       console.error("Failed to fetch category data:", error);
       console.error("Error details:", error.message);
 
-      // On error, set empty data instead of hardcoded numbers
+      // On error, set empty data
       setCategoryData({
         categoryCounts: {},
         totalProductsInCategory: 0,
@@ -208,40 +230,37 @@ const CategoriesCollection = () => {
   }, [clearErrors]);
 
   // Build category types from real API data only
-  const categoryTypes = useMemo(() => {
-    if (
-      !categoryData?.categoryCounts ||
-      Object.keys(categoryData.categoryCounts).length === 0
-    ) {
-      return [{ id: "all", name: "All Categories", count: 0 }];
-    }
+const categoryTypes = useMemo(() => {
+  if (
+    !categoryData?.categoryCounts ||
+    Object.keys(categoryData.categoryCounts).length === 0
+  ) {
+    return [{ id: "all", name: "All Categories", count: 0 }];
+  }
 
-    const counts = categoryData.categoryCounts;
-    const totalCount = Object.values(counts).reduce(
-      (sum, count) => sum + count,
-      0
-    );
+  const counts = categoryData.categoryCounts;
+  const totalCount = Object.values(counts).reduce(
+    (sum, count) => sum + count,
+    0
+  );
 
-    const categories = [
-      { id: "all", name: "All Categories", count: totalCount },
-    ];
+  const categories = [{ id: "all", name: "All Categories", count: totalCount }];
 
-    // Add categories that exist in both API data and current definitions
-    Object.entries(counts).forEach(([categoryKey, count]) => {
-      if (categoryDefinitions[categoryKey] && count > 0) {
-        categories.push({
-          id: categoryKey,
-          name: categoryDefinitions[categoryKey].name,
-          count: count,
-        });
-      }
+  // Show ALL categories from categoryDefinitions, even if count is 0
+  Object.keys(categoryDefinitions).forEach((categoryKey) => {
+    categories.push({
+      id: categoryKey,
+      name: categoryDefinitions[categoryKey].name,
+      count: counts[categoryKey] || 0, // Use 0 if no count exists
     });
+  });
 
-    const sortedCategories = categories
-      .slice(1)
-      .sort((a, b) => b.count - a.count);
-    return [categories[0], ...sortedCategories];
-  }, [categoryData]);
+  const sortedCategories = categories
+    .slice(1) // Remove "All Categories" for sorting
+    .sort((a, b) => b.count - a.count); // Sort by count, highest first
+
+  return [categories[0], ...sortedCategories]; // Put "All Categories" first
+}, [categoryData]);
 
   // Generate detailed category data for display using real backend data
   const generateCategoryDetails = useMemo(() => {
@@ -488,9 +507,9 @@ const CategoriesCollection = () => {
                     className="flex items-center gap-2 touch-manipulation"
                   >
                     <span>{category.name}</span>
-                    <Badge variant="default" size="sm">
+                    {/* <Badge variant="default" size="sm">
                       {category.count}
-                    </Badge>
+                    </Badge> */}
                   </Button>
                 ))}
             </div>
