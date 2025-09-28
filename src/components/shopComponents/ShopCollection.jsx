@@ -82,26 +82,64 @@ const ShopCollection = () => {
   const fetchCategoryData = async () => {
     setIsLoadingCategories(true);
     try {
-      // Fetch fashion category to get categoryCounts 
-      const result = await fetchStoresByCategory("fashion", 1, 1).unwrap();
-      const responseData = result?.data?.[0];
+      // Extract category keys from existing categoryDefinitions
+      const categoryKeys = Object.keys(categoryDefinitions);
+      console.log("Fetching shop data for categories:", categoryKeys);
 
-      if (responseData?.categoryCounts) {
-        setCategoryData({
-          categoryCounts: responseData.categoryCounts,
-        });
-      } else {
-        setCategoryData({ categoryCounts: {} });
-      }
+      // Fetch data for each predefined category
+      const categoryPromises = categoryKeys.map(async (categoryKey) => {
+        try {
+          const result = await fetchStoresByCategory(
+            categoryKey,
+            1,
+            1
+          ).unwrap();
+          const responseData = result?.data?.[0];
+
+          return {
+            category: categoryKey,
+            count: responseData?.categoryCounts?.[categoryKey] || 0,
+          };
+        } catch (error) {
+          console.warn(`Failed to fetch shop data for ${categoryKey}:`, error);
+          return {
+            category: categoryKey,
+            count: 0,
+          };
+        }
+      });
+
+      // Wait for all category data to be fetched
+      const categoryResults = await Promise.all(categoryPromises);
+
+      // Build categoryCounts object
+      const categoryCounts = {};
+
+      categoryResults.forEach((result) => {
+        // Include all categories from categoryDefinitions, even if count is 0
+        categoryCounts[result.category] = result.count;
+      });
+
+      console.log("Combined shop category counts:", categoryCounts);
+
+      setCategoryData({
+        categoryCounts: categoryCounts,
+      });
     } catch (error) {
-      console.error("Failed to fetch category data:", error);
-      setCategoryData({ categoryCounts: {} });
+      console.error("Failed to fetch shop category data:", error);
+      console.error("Error details:", error.message);
+
+      // On error, set empty data
+      setCategoryData({
+        categoryCounts: {},
+      });
     } finally {
       setIsLoadingCategories(false);
     }
   };
 
   // Build categories from API data
+
   const categories = useMemo(() => {
     if (!categoryData?.categoryCounts) {
       return [{ id: "all", name: "All Shops", count: 0 }];
@@ -115,20 +153,19 @@ const ShopCollection = () => {
 
     const categoryList = [{ id: "all", name: "All Shops", count: totalCount }];
 
-    Object.entries(counts).forEach(([categoryKey, count]) => {
-      if (categoryDefinitions[categoryKey] && count > 0) {
-        categoryList.push({
-          id: categoryKey,
-          name: categoryDefinitions[categoryKey],
-          count: count,
-        });
-      }
+    // Show ALL categories from categoryDefinitions, even if count is 0
+    Object.keys(categoryDefinitions).forEach((categoryKey) => {
+      categoryList.push({
+        id: categoryKey,
+        name: categoryDefinitions[categoryKey],
+        count: counts[categoryKey] || 0, // Use 0 if no count exists
+      });
     });
 
     return categoryList.sort((a, b) => {
       if (a.id === "all") return -1;
       if (b.id === "all") return 1;
-      return b.count - a.count;
+      return b.count - a.count; // Sort by count, highest first
     });
   }, [categoryData]);
 
@@ -514,7 +551,7 @@ const ShopCollection = () => {
                     }`}
                   >
                     <span>{category.name}</span>
-                    <span
+                    {/* <span
                       className={`text-xs px-2 py-0.5 rounded-full ${
                         selectedCategory === category.id
                           ? "bg-blue-500 text-white"
@@ -522,7 +559,7 @@ const ShopCollection = () => {
                       }`}
                     >
                       {category.count}
-                    </span>
+                    </span> */}
                   </button>
                 ))}
             </div>

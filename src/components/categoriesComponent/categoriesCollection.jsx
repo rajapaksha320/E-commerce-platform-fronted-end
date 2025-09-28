@@ -230,40 +230,37 @@ const CategoriesCollection = () => {
   }, [clearErrors]);
 
   // Build category types from real API data only
-  const categoryTypes = useMemo(() => {
-    if (
-      !categoryData?.categoryCounts ||
-      Object.keys(categoryData.categoryCounts).length === 0
-    ) {
-      return [{ id: "all", name: "All Categories", count: 0 }];
-    }
+const categoryTypes = useMemo(() => {
+  if (
+    !categoryData?.categoryCounts ||
+    Object.keys(categoryData.categoryCounts).length === 0
+  ) {
+    return [{ id: "all", name: "All Categories", count: 0 }];
+  }
 
-    const counts = categoryData.categoryCounts;
-    const totalCount = Object.values(counts).reduce(
-      (sum, count) => sum + count,
-      0
-    );
+  const counts = categoryData.categoryCounts;
+  const totalCount = Object.values(counts).reduce(
+    (sum, count) => sum + count,
+    0
+  );
 
-    const categories = [
-      { id: "all", name: "All Categories", count: totalCount },
-    ];
+  const categories = [{ id: "all", name: "All Categories", count: totalCount }];
 
-    // Add categories that exist in both API data and current definitions
-    Object.entries(counts).forEach(([categoryKey, count]) => {
-      if (categoryDefinitions[categoryKey] && count > 0) {
-        categories.push({
-          id: categoryKey,
-          name: categoryDefinitions[categoryKey].name,
-          count: count,
-        });
-      }
+  // Show ALL categories from categoryDefinitions, even if count is 0
+  Object.keys(categoryDefinitions).forEach((categoryKey) => {
+    categories.push({
+      id: categoryKey,
+      name: categoryDefinitions[categoryKey].name,
+      count: counts[categoryKey] || 0, // Use 0 if no count exists
     });
+  });
 
-    const sortedCategories = categories
-      .slice(1)
-      .sort((a, b) => b.count - a.count);
-    return [categories[0], ...sortedCategories];
-  }, [categoryData]);
+  const sortedCategories = categories
+    .slice(1) // Remove "All Categories" for sorting
+    .sort((a, b) => b.count - a.count); // Sort by count, highest first
+
+  return [categories[0], ...sortedCategories]; // Put "All Categories" first
+}, [categoryData]);
 
   // Generate detailed category data for display using real backend data
   const generateCategoryDetails = useMemo(() => {
@@ -510,9 +507,9 @@ const CategoriesCollection = () => {
                     className="flex items-center gap-2 touch-manipulation"
                   >
                     <span>{category.name}</span>
-                    <Badge variant="default" size="sm">
+                    {/* <Badge variant="default" size="sm">
                       {category.count}
-                    </Badge>
+                    </Badge> */}
                   </Button>
                 ))}
             </div>

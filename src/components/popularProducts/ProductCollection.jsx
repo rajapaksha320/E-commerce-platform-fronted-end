@@ -138,66 +138,108 @@ const ProductCollection = () => {
   ];
 
   // Fetch category data and store shop information
-  const fetchCategoryData = async () => {
-    setIsLoadingCategories(true);
-    try {
-      const result = await fetchStoresByCategory("fashion", 1, 1).unwrap();
-      const responseData = result?.data?.[0];
+ const fetchCategoryData = async () => {
+   setIsLoadingCategories(true);
+   try {
+     // Extract category keys from existing categoryDefinitions
+     const categoryKeys = Object.keys(categoryDefinitions);
+     console.log("Fetching product data for categories:", categoryKeys);
 
-      if (responseData?.categoryCounts) {
-        setCategoryData({
-          categoryCounts: responseData.categoryCounts,
-        });
-      } else {
-        setCategoryData({ categoryCounts: {} });
-      }
+     // Fetch data for each predefined category
+     const categoryPromises = categoryKeys.map(async (categoryKey) => {
+       try {
+         const result = await fetchStoresByCategory(categoryKey, 1, 1).unwrap();
+         const responseData = result?.data?.[0];
 
-      // Store shop data from the response
-      if (result?.data && Array.isArray(result.data)) {
-        const shops = result.data.map((item) => item.shop).filter(Boolean);
-        console.log("Storing shops data from category fetch:", shops);
-        setShopsData(shops);
-      }
-    } catch (error) {
-      console.error("Failed to fetch category data:", error);
-      setCategoryData({ categoryCounts: {} });
-    } finally {
-      setIsLoadingCategories(false);
-    }
-  };
+         return {
+           category: categoryKey,
+           count: responseData?.categoryCounts?.[categoryKey] || 0,
+           shops:
+             result?.data && Array.isArray(result.data)
+               ? result.data.map((item) => item.shop).filter(Boolean)
+               : [],
+         };
+       } catch (error) {
+         console.warn(
+           `Failed to fetch product data for ${categoryKey}:`,
+           error
+         );
+         return {
+           category: categoryKey,
+           count: 0,
+           shops: [],
+         };
+       }
+     });
+
+     // Wait for all category data to be fetched
+     const categoryResults = await Promise.all(categoryPromises);
+
+     // Build categoryCounts object
+     const categoryCounts = {};
+     let allShops = [];
+
+     categoryResults.forEach((result) => {
+       // Include all categories from categoryDefinitions, even if count is 0
+       categoryCounts[result.category] = result.count;
+       allShops = [...allShops, ...result.shops];
+     });
+
+     console.log("Combined product category counts:", categoryCounts);
+
+     setCategoryData({
+       categoryCounts: categoryCounts,
+     });
+
+     // Store all unique shops data
+     const uniqueShops = allShops.filter(
+       (shop, index, self) =>
+         index === self.findIndex((s) => s._id === shop._id)
+     );
+     console.log("Storing shops data from category fetch:", uniqueShops);
+     setShopsData(uniqueShops);
+   } catch (error) {
+     console.error("Failed to fetch product category data:", error);
+     console.error("Error details:", error.message);
+
+     // On error, set empty data
+     setCategoryData({ categoryCounts: {} });
+   } finally {
+     setIsLoadingCategories(false);
+   }
+ };
 
   // Build categories from backend data
-  const categories = useMemo(() => {
-    if (!categoryData?.categoryCounts) {
-      return [{ id: "all", name: "All Categories", count: 0 }];
-    }
+ const categories = useMemo(() => {
+   if (!categoryData?.categoryCounts) {
+     return [{ id: "all", name: "All Categories", count: 0 }];
+   }
 
-    const counts = categoryData.categoryCounts;
-    const totalCount = Object.values(counts).reduce(
-      (sum, count) => sum + count,
-      0
-    );
+   const counts = categoryData.categoryCounts;
+   const totalCount = Object.values(counts).reduce(
+     (sum, count) => sum + count,
+     0
+   );
 
-    const categoryList = [
-      { id: "all", name: "All Categories", count: totalCount },
-    ];
+   const categoryList = [
+     { id: "all", name: "All Categories", count: totalCount },
+   ];
 
-    Object.entries(counts).forEach(([categoryKey, count]) => {
-      if (categoryDefinitions[categoryKey] && count > 0) {
-        categoryList.push({
-          id: categoryKey,
-          name: categoryDefinitions[categoryKey],
-          count: count,
-        });
-      }
-    });
+   // Show ALL categories from categoryDefinitions, even if count is 0
+   Object.keys(categoryDefinitions).forEach((categoryKey) => {
+     categoryList.push({
+       id: categoryKey,
+       name: categoryDefinitions[categoryKey],
+       count: counts[categoryKey] || 0, // Use 0 if no count exists
+     });
+   });
 
-    return categoryList.sort((a, b) => {
-      if (a.id === "all") return -1;
-      if (b.id === "all") return 1;
-      return b.count - a.count;
-    });
-  }, [categoryData]);
+   return categoryList.sort((a, b) => {
+     if (a.id === "all") return -1;
+     if (b.id === "all") return 1;
+     return b.count - a.count; // Sort by count, highest first
+   });
+ }, [categoryData]);
 
   // Simple function to get shop ID from stored shop data
   const getShopIdForSeller = (sellerId) => {
@@ -753,9 +795,9 @@ const ProductCollection = () => {
                     <span className="truncate max-w-20 sm:max-w-none">
                       {category.name}
                     </span>
-                    <Badge variant="default" size="sm" className="text-xs">
+                    {/* <Badge variant="default" size="sm" className="text-xs">
                       {category.count}
-                    </Badge>
+                    </Badge> */}
                   </Button>
                 ))}
               </div>
