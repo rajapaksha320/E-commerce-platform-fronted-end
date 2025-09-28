@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // components/seller/SellerLayout.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -21,6 +22,8 @@ import {
   Filter,
   Users,
   CreditCard,
+  Lock,
+  AlertTriangle,
 } from "lucide-react";
 
 // Import Redux actions and selectors
@@ -29,6 +32,12 @@ import {
   selectUser,
   selectIsAuthenticated,
 } from "../../../store/slices/authSlice";
+
+// Import store selectors
+import {
+  selectHasStore,
+  selectAllStores,
+} from "../../../store/slices/sellerListingSlice";
 
 // Import UI components
 import {
@@ -44,6 +53,7 @@ import {
   CardContent,
   Avatar,
   Dropdown,
+  Alert,
 } from "../../ui/sellerUis/Uis";
 
 // Import child components
@@ -59,6 +69,8 @@ const SellerLayout = ({ children }) => {
   // Redux selectors
   const user = useSelector(selectUser);
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  const hasStore = useSelector(selectHasStore);
+  const stores = useSelector(selectAllStores);
 
   const [activeTab, setActiveTab] = useState("overview");
   const [activeSubTab, setActiveSubTab] = useState(null);
@@ -71,11 +83,29 @@ const SellerLayout = ({ children }) => {
     }
   }, [isAuthenticated, navigate]);
 
+  // Updated navigation with conditional enabling
   const navigation = [
-    { id: "overview", name: "Overview", href: "/seller/overview" },
-    { id: "orders", name: "Orders", href: "/seller/orders" },
-    { id: "listings", name: "Listings", href: "/seller/listings" },
-    { id: "store", name: "Store", href: "/seller/profile" },
+    {
+      id: "overview",
+      name: "Overview",
+      href: "/seller/overview",
+      enabled: true,
+    },
+    {
+      id: "orders",
+      name: "Orders",
+      href: "/seller/orders",
+      enabled: hasStore,
+      disabledReason: "Create your store first to manage orders",
+    },
+    {
+      id: "listings",
+      name: "Listings",
+      href: "/seller/listings",
+      enabled: hasStore,
+      disabledReason: "Create your store first to manage listings",
+    },
+    { id: "store", name: "Store", href: "/seller/profile", enabled: true },
   ];
 
   // Updated sidebar navigation with actual order statuses
@@ -115,6 +145,13 @@ const SellerLayout = ({ children }) => {
 
   // Navigation handlers
   const handleNavigation = (tabId) => {
+    const navItem = navigation.find((item) => item.id === tabId);
+
+    // Check if tab is enabled
+    if (!navItem?.enabled) {
+      return; // Don't navigate to disabled tabs
+    }
+
     setActiveTab(tabId);
     if (tabId === "overview" || tabId === "store") {
       setActiveSubTab(null);
@@ -220,6 +257,14 @@ const SellerLayout = ({ children }) => {
 
             {/* Right side */}
             <div className="flex items-center space-x-4">
+              {/* Store Status Indicator */}
+              {!hasStore && (
+                <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>Store setup required</span>
+                </div>
+              )}
+
               {/* Profile Dropdown */}
               {isAuthenticated && user ? (
                 <Dropdown
@@ -312,23 +357,41 @@ const SellerLayout = ({ children }) => {
             <nav className="flex space-x-8 overflow-x-auto">
               {navigation.map((item) => {
                 const isActive = activeTab === item.id;
+                const isDisabled = !item.enabled;
+
                 return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavigation(item.id)}
-                    className={`relative py-4 px-1 text-sm font-medium whitespace-nowrap transition-colors ${
-                      isActive
-                        ? "text-blue-600 border-b-2 border-blue-600"
-                        : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    {item.name}
-                    {item.badge && (
-                      <Badge variant="danger" size="xs" className="ml-2">
-                        {item.badge}
-                      </Badge>
+                  <div key={item.id} className="relative group">
+                    <button
+                      onClick={() => handleNavigation(item.id)}
+                      disabled={isDisabled}
+                      className={`relative py-4 px-1 text-sm font-medium whitespace-nowrap transition-colors ${
+                        isActive
+                          ? "text-blue-600 border-b-2 border-blue-600"
+                          : isDisabled
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                      title={isDisabled ? item.disabledReason : item.name}
+                    >
+                      <div className="flex items-center gap-2">
+                        {item.name}
+                        {isDisabled && <Lock className="h-4 w-4" />}
+                      </div>
+                      {item.badge && (
+                        <Badge variant="danger" size="xs" className="ml-2">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </button>
+
+                    {/* Tooltip for disabled items */}
+                    {isDisabled && (
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                        {item.disabledReason}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                      </div>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </nav>
@@ -336,10 +399,37 @@ const SellerLayout = ({ children }) => {
         </div>
       </header>
 
+      {/* Store Setup Alert */}
+      {!hasStore && activeTab !== "store" && (
+        <div className="bg-amber-50 border-b border-amber-200">
+          <div className="px-4 sm:px-6 lg:px-8 py-3">
+            <Alert
+              variant="warning"
+              title="Store Setup Required"
+              className="bg-transparent border-0 p-0"
+            >
+              <div className="flex items-center justify-between">
+                <span>
+                  Complete your store setup to access listings and orders
+                  management.
+                </span>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => handleNavigation("store")}
+                >
+                  Setup Store
+                </Button>
+              </div>
+            </Alert>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="flex">
-        {/* Sidebar */}
-        {showSidebar && (
+        {/* Sidebar - only show if tab is enabled and has sidebar */}
+        {showSidebar && hasStore && (
           <aside className="w-64 bg-white border-r border-gray-200 min-h-screen">
             <div className="p-4">
               <nav className="space-y-1">
@@ -367,7 +457,7 @@ const SellerLayout = ({ children }) => {
         <main className="flex-1">
           {children || (
             <>
-              {/* Overview Dashboard - Now using the separate component */}
+              {/* Overview Dashboard */}
               {activeTab === "overview" && (
                 <div className="px-4 sm:px-6 lg:px-8 py-8">
                   <SellerOverview onNavigate={handleInternalNavigation} />
@@ -383,85 +473,112 @@ const SellerLayout = ({ children }) => {
                 </div>
               )}
 
-              {/* Other tabs content */}
+              {/* Other tabs content - only show if enabled */}
               {activeTab !== "overview" && activeTab !== "store" && (
                 <div className="space-y-0">
-                  <div className="px-4 sm:px-6 lg:px-8 py-8">
-                    <div className="space-y-6">
-                      {/* Orders Management */}
-                      {activeTab === "orders" && activeSubTab && (
-                        <OrderManagement
-                          activeSection={activeSubTab}
-                          orderStatus={
-                            sidebarNavigation.orders.find(
-                              (item) => item.id === activeSubTab
-                            )?.status
-                          }
-                        />
-                      )}
+                  {hasStore ? (
+                    <div className="px-4 sm:px-6 lg:px-8 py-8">
+                      <div className="space-y-6">
+                        {/* Orders Management */}
+                        {activeTab === "orders" && activeSubTab && (
+                          <OrderManagement
+                            activeSection={activeSubTab}
+                            orderStatus={
+                              sidebarNavigation.orders.find(
+                                (item) => item.id === activeSubTab
+                              )?.status
+                            }
+                          />
+                        )}
 
-                      {/* Listings Management - Pass the backend status */}
-                      {activeTab === "listings" && activeSubTab && (
-                        <ListingManagement
-                          activeSection={activeSubTab}
-                          backendStatus={
-                            sidebarNavigation.listings.find(
-                              (item) => item.id === activeSubTab
-                            )?.backendStatus
-                          }
-                        />
-                      )}
+                        {/* Listings Management */}
+                        {activeTab === "listings" && activeSubTab && (
+                          <ListingManagement
+                            activeSection={activeSubTab}
+                            backendStatus={
+                              sidebarNavigation.listings.find(
+                                (item) => item.id === activeSubTab
+                              )?.backendStatus
+                            }
+                          />
+                        )}
 
-                      {/* Other sections content */}
-                      {activeTab !== "orders" && activeTab !== "listings" && (
-                        <>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h1 className="text-2xl font-bold text-gray-900">
-                                {activeSubTab
-                                  ? sidebarNavigation[activeTab]?.find(
-                                      (item) => item.id === activeSubTab
-                                    )?.name
-                                  : navigation.find(
-                                      (nav) => nav.id === activeTab
-                                    )?.name}
-                              </h1>
-                              <p className="text-gray-600">
-                                {activeSubTab
-                                  ? `Manage your ${activeSubTab.replace(
-                                      "-",
-                                      " "
-                                    )}`
-                                  : `Select a section from the sidebar`}
-                              </p>
-                            </div>
-                          </div>
-
-                          <Card>
-                            <CardContent className="text-center py-12">
-                              <div className="text-gray-400 mb-4">
-                                {activeTab === "payments" && (
-                                  <CreditCard className="h-16 w-16 mx-auto" />
-                                )}
+                        {/* Other sections content */}
+                        {activeTab !== "orders" && activeTab !== "listings" && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h1 className="text-2xl font-bold text-gray-900">
+                                  {activeSubTab
+                                    ? sidebarNavigation[activeTab]?.find(
+                                        (item) => item.id === activeSubTab
+                                      )?.name
+                                    : navigation.find(
+                                        (nav) => nav.id === activeTab
+                                      )?.name}
+                                </h1>
+                                <p className="text-gray-600">
+                                  {activeSubTab
+                                    ? `Manage your ${activeSubTab.replace(
+                                        "-",
+                                        " "
+                                      )}`
+                                    : `Select a section from the sidebar`}
+                                </p>
                               </div>
-                              <h3 className="text-xl font-medium text-gray-900 mb-2">
-                                {activeSubTab
-                                  ? sidebarNavigation[activeTab]?.find(
-                                      (item) => item.id === activeSubTab
-                                    )?.name
-                                  : `Select a ${activeTab} section`}
-                              </h3>
-                              <p className="text-gray-500">
-                                {activeSubTab
-                                  ? "Add your content here."
-                                  : "Choose an option from the sidebar to get started."}
-                              </p>
-                            </CardContent>
-                          </Card>
-                        </>
-                      )}
+                            </div>
+
+                            <Card>
+                              <CardContent className="text-center py-12">
+                                <div className="text-gray-400 mb-4">
+                                  {activeTab === "payments" && (
+                                    <CreditCard className="h-16 w-16 mx-auto" />
+                                  )}
+                                </div>
+                                <h3 className="text-xl font-medium text-gray-900 mb-2">
+                                  {activeSubTab
+                                    ? sidebarNavigation[activeTab]?.find(
+                                        (item) => item.id === activeSubTab
+                                      )?.name
+                                    : `Select a ${activeTab} section`}
+                                </h3>
+                                <p className="text-gray-500">
+                                  {activeSubTab
+                                    ? "Add your content here."
+                                    : "Choose an option from the sidebar to get started."}
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    // Store setup required message
+                    <div className="px-4 sm:px-6 lg:px-8 py-8">
+                      <Card>
+                        <CardContent className="text-center py-12">
+                          <div className="text-amber-400 mb-4">
+                            <Lock className="h-16 w-16 mx-auto" />
+                          </div>
+                          <h3 className="text-xl font-medium text-gray-900 mb-2">
+                            Store Setup Required
+                          </h3>
+                          <p className="text-gray-500 mb-6">
+                            You need to create your store before you can access{" "}
+                            {activeTab} management.
+                          </p>
+                          <Button
+                            variant="primary"
+                            onClick={() => handleNavigation("store")}
+                            icon={<ArrowRight />}
+                          >
+                            Setup Your Store
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
                 </div>
               )}
             </>
